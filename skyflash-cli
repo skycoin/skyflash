@@ -6,11 +6,21 @@
 #
 
 # DEFAULT vars:
-GW='192.168.0.1'
-MAN='192.168.0.2'
-NOD='3-9'
-NETM='24'
+DGW='192.168.0.1'
+DMAN='192.168.0.2'
+DNOD='3-9'
+DNETM='24'
+SCRIPVERSION=0.0.1
+
+# play vars
+GW=''
+MAN=''
+NOD=''
+NETM=$DNETM
 BNET=''
+IMG=''
+NODEIPS=''
+NAMOUNT=''
 ARGS=$@
 
 
@@ -19,7 +29,7 @@ function usage() {
     # used when no arguments or explicit -h has been passed
 
 cat << EOF
-usage: $0 [options] name-of-base-image.img
+usage: $0 [options]
 
 Configure a skybian image
 
@@ -30,6 +40,8 @@ OPTIONS:
     -n: [A-B] the range of the IPs to use on the network
     -s: Size of the subnet (/24)
     -a: All defaults set networks by the defaults
+    -v: Version of the script
+    -i: Image file
 
 Network defaults:
     Network:    192.168.0.0/24
@@ -40,14 +52,14 @@ Network defaults:
 
 Warnings:
     * By now you need to provide the downloaded image to the script, no download
-      attempt is made yet.
+      attempt is made yet (check -i switch).
     * Options '-g', '-m' & '-n' are inclusive: if you set one of them then you
       need to set them all
     * Options '-g', '-m' & '-n' are exclusive against '-a': you need to choose
       default or custom options, not both.
     * Option '-s' is /24 or 255.255.255.0 if not specified
     * Option '-n' refers to the last digit of the IPv4 address, base is taken
-      from the manager. It´s a continuous range from A to B [A-B]
+      from the manager. It´s a continuous range from A to B [A-B] both inclusive
 
 Configured images will be placed on the same directory of the base image and will be
 appened the suffixes: '-manager' and 'node-N' where N is a incremental number from 0  
@@ -59,23 +71,199 @@ Examples:
     $0 -a skybian.img
 
     Configure 1 manager and 10 nodes, network 192.168.100.0/24, gw is 192.168.100.254
-    manager is 192.168.100.50 & nodes are 192.168.100.90..192.168.100.99
+    manager is 192.168.100.50 & nodes are 192.168.100.90 - 192.168.100.99
 
-    $0 -s 24 -g 192.168.100.254 -m 192.168.100.50 -n 90..99 skybian.img
+    $0 -s 24 -g 192.168.100.254 -m 192.168.100.50 -n 90-99 -i skybian.img
 
 EOF
     exit 1
 }
 
 
-# Main action goes here
-function main() {
-    # check for arguments to show usage
-    if [ $# -lt 2 ] ; then
-        # not enough arguments, also covered the -h option already.
-        usage
+# process options
+function arg_process() {
+    while getopts ":h:g:m:n:s:a:v:i:" opt; do
+        case $opt in
+            h)  usage ;;
+            \?) usage ;;
+            v)
+                show_version
+                exit 1 ;;
+            g)  GW=$OPTARG ;;
+            m)  MAN=$OPTARG ;;
+            n)  NOD=$OPTARG ;;
+            s)  NETM=$OPTARG ;;
+            a)
+                IMG=$OPTARG
+                set_defaults ;;
+            i)  IMG=$OPTARG ;;
+            :)
+                echo "option -$OPTARG requires an argument"
+                usage
+            ;;
+        esac
+    done
+
+    # check for missing
+    blank_bad_args $GW $MAN $NOD $NETM $IMG
+
+    # validate and generate nodes IP
+    validate_generate_nodes $BNET $NOD
+}
+
+
+# show version
+function show_version() {
+    echo "Version is: $SCRIPVERSION"
+}
+
+
+# set default values
+function set_defaults() {
+    # Set play vars to the default
+    GW=$DGW
+    MAN=$DMAN
+    NOD=$DNOD
+    NETM=$DNETM
+}
+
+
+# check for blank/bad arguments.
+function blank_bad_args() {
+    # exits with an error if an arg is missing, else pass silent
+    local raw=`echo "Gateway:$1 Manager:$2 Nodes:$3 Netmask:$4 Image:$5" | xargs`
+
+    for arg in $raw ; do
+        # extract
+        local Name=`echo $arg | awk -F ':' '{print $1}'`
+        local Argument=`echo $arg | awk -F ':' '{print $2}'`
+
+        # check if empty
+        if [ -z "$Argument" ] ; then
+            echo "Error: Option '$Name' needs an argument, check usage: '$0 -h'"
+            exit 1
+        fi
+    done
+
+    # IP options are valid IPs?
+    check_valid_ips "Gateway:$1 Manager:$2"
+
+    # extract base network from gateway and check it on the manager
+    BNET=`echo $1 | rev | cut -d "." -f 2- | rev`"."
+
+    # check is manager has the same base network
+    local ISTHESAME=`echo $2 | grep "$BNET"`
+    if [ -z "$ISTHESAME" ] ; then
+        # base address for manager & gateway is not the same
+        echo "Error: Passed Gateway and Manager IPs are not in the same subnet"
+        echo "Gateway: $1, Manager: $2"
+        exit 1
+    fi
+}
+
+
+# check for valid IPs in passed string name:ip
+function check_valid_ips() {
+    # argument is passed in this format "Gateway:$1 Manager:$2" etc...
+    local raw=`echo "$1" | xargs`
+
+    for arg in $raw ; do
+        # extract
+        local Name=`echo $arg | awk -F ':' '{print $1}'`
+        local Argument=`echo $arg | awk -F ':' '{print $2}'`
+        # TODO improve the regular expression for IP detection
+        local IP=`echo $Argument | grep -E "([0-9]{1,3}\.){3}[0-9]{1,3}" `
+
+        # test for a valid IP
+        if [ -z "$IP" ] ; then
+            echo "The argument you passed to '$Name' ($Argument) is not a valid IP."
+            echo "Please fix that."
+            exit 1
+        fi
+    done
+
+}
+
+
+# validate and generate node IPS
+function validate_generate_nodes() {
+    # arguments are the base network IP and the range of ips
+    local bnet=$1
+    local start=`echo $2 | awk -F '-' '{print $1}'`
+    local stop=`echo $2 | awk -F '-' '{print $2}'`
+
+    # validate start </!= stop
+    if [ $start -eq $stop -o $start -gt $stop ] ; then
+        # not equal, nor backwards
+        echo "Error: Node start number in range must be lower than end one [$2] is wrong"
+        echo "Please fix that"
+        exit 1
     fi
 
+    # validate stop being less than 254
+    if [ $stop -gt 254 ] ; then
+        # can't fit on a subnet
+        echo "Error: last digit of a node IP can be 255 or greater"
+        echo "Please fix that"
+        exit 1
+    fi
+
+    # calc the amount of nodes
+    NAMOUNT=`echo "$stop - $start +1" | bc`
+
+    # iterate and build the ip list
+    local ARGS=`shuf -i $start-$stop -n $NAMOUNT | sort -h | xargs`
+    NODEIPS=''
+    for i in $ARGS ; do
+        NODEIPS="$NODEIPS$bnet$i "
+    done
+
+    # check for gw or manager in node ranges
+    local isgwt=`echo $NODEIPS | grep "$GW"`
+    local ismgt=`echo $NODEIPS | grep "$MAN"`
+    if [ -n "$isgwt" -o -n "$ismgt" ] ; then
+        # manager or gateway in node range
+        echo "Error: manager and gateway IPs can be on the node ranges"
+        echo "Please fix that"
+        exit 1
+    fi
+}
+
+
+# display the ooperations we will made & ask if proceed
+function display_proceed() {
+    echo "Options parsing done successfuly:"
+    echo ""
+    echo "Base skybian image is: $IMG"
+    echo "Gateway is: $GW"
+    echo "Manager is: $MAN"
+    echo "Will build $NAMOUNT nodes with the following IPs:"
+    echo "$NODEIPS"
+    echo ""
+    echo "Press any key to proceed or Ctrl+C to abort."
+}
+
+
+# Main action goes here
+function main() {
+    # check for arguments to show usage/version
+    if [ $# -lt 2 ] ; then
+        # version & help switchs
+        if [ "$1" = "-v" ] ; then
+            show_version
+        else
+            usage
+        fi
+
+        # terminate
+        exit 1
+    fi
+
+    # process arguments
+    arg_process ${ARGS}
+
+    # operational display.
+    display_proceed
 
 }
 
