@@ -1,0 +1,84 @@
+#!/bin/bash
+#
+# skyflash-cli: Linux & Mac CLI interface for skyflash.
+#
+# Linux initial version by stdevPavelmc@github.com
+#
+
+# DEFAULT vars:
+GW='192.168.0.1'
+MAN='192.168.0.2'
+NOD='3-9'
+NETM='24'
+BNET=''
+ARGS=$@
+
+
+# show cli usage data
+function usage() {
+    # used when no arguments or explicit -h has been passed
+
+cat << EOF
+usage: $0 [options] name-of-base-image.img
+
+Configure a skybian image
+
+OPTIONS:
+    -h: Show this help
+    -g: Gateway IP for the network
+    -m: Manager IP on the network
+    -n: [A-B] the range of the IPs to use on the network
+    -s: Size of the subnet (/24)
+    -a: All defaults set networks by the defaults
+
+Network defaults:
+    Network:    192.168.0.0/24
+    Netmask:    255.255.255.0 (aka: /24)
+    Gateway:    192.168.0.1
+    Manager IP: 192.168.0.2
+    Node IPs:   192.168.0.[3-9] (7 nodes)
+
+Warnings:
+    * By now you need to provide the downloaded image to the script, no download
+      attempt is made yet.
+    * Options '-g', '-m' & '-n' are inclusive: if you set one of them then you
+      need to set them all
+    * Options '-g', '-m' & '-n' are exclusive against '-a': you need to choose
+      default or custom options, not both.
+    * Option '-s' is /24 or 255.255.255.0 if not specified
+    * Option '-n' refers to the last digit of the IPv4 address, base is taken
+      from the manager. It´s a continuous range from A to B [A-B]
+
+Configured images will be placed on the same directory of the base image and will be
+appened the suffixes: '-manager' and 'node-N' where N is a incremental number from 0  
+
+Examples:
+    Configure a base image with defaults: 8 images, one manager and 7 nodes, gw is 
+    192.168.0.1, 192.168.1.2 is the manager and 192.168.1.3..192.168.1.9 are nodes 
+
+    $0 -a skybian.img
+
+    Configure 1 manager and 10 nodes, network 192.168.100.0/24, gw is 192.168.100.254
+    manager is 192.168.100.50 & nodes are 192.168.100.90..192.168.100.99
+
+    $0 -s 24 -g 192.168.100.254 -m 192.168.100.50 -n 90..99 skybian.img
+
+EOF
+    exit 1
+}
+
+
+# Main action goes here
+function main() {
+    # check for arguments to show usage
+    if [ $# -lt 2 ] ; then
+        # not enough arguments, also covered the -h option already.
+        usage
+    fi
+
+
+}
+
+
+# run it
+main $ARGS
