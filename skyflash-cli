@@ -10,7 +10,13 @@ DGW='192.168.0.1'
 DMAN='192.168.0.2'
 DNOD='3-9'
 DNETM='24'
+DNS='1.0.0.1, 1.1.1.1'
 SCRIPVERSION=0.0.1
+CONFFILE=`mktemp`
+
+# img related vars
+DATASTART=3670016
+DATASIZE=256
 
 # play vars
 GW=''
@@ -246,6 +252,73 @@ function display_proceed() {
 }
 
 
+# update conf file
+function conf_file_update() {
+    # takes some arguments:
+    # 1 - node IP
+    # 2 - gateway
+    # 3 - DNS as comma separated values [1.0.0.1, 1.1.1.1]
+    # 4 - kind of image literal all lowercase manager|node
+    # 5 - manager IP [needed even if we are manager]
+
+    # build the conf file
+    echo "IP=${1}" > ${CONFFILE}
+    echo "GW=${2}" >> ${CONFFILE}
+    echo 'DNS="'${3}'"' >> ${CONFFILE}
+    echo "MODE=${4}" >> ${CONFFILE}
+    echo "MIP=${5}" >> ${CONFFILE}
+}
+
+
+# create images with the data
+function create_images() {
+    # iterate over the IPs and create the images
+
+    local ALL=`echo "$MAN $NODEIPS" | xargs`
+    local count=0
+
+    # iterate
+    for ip in $ALL ; do
+        # local vars
+        local type=`[[ "$ip" = "$MAN" ]] && echo "manager" || echo "node"`
+        local name=`echo $IMG | rev | cut -d '.' -f 2- | rev`
+        local IMAGE=''
+
+        # build propper name
+        if [ "$type" = "manager" ] ; then
+            IMAGE=$name-$type.img
+        else
+            IMAGE=$name-$type$count.img
+            count=`echo "$count + 1" | bc`
+        fi
+
+        # advice
+        echo "Creating image: $IMAGE"
+
+        # create the config file for this image
+        conf_file_update "${ip}" "${GW}" "${DNS}" "$type" "${MAN}"
+
+        # advice
+        echo "Updated conf to write to the image, creating the image..."
+
+        # copy the manager image
+        cp ${IMG} ${IMAGE}
+
+        # advice
+        echo "Updating new image with custom conf"
+
+        # erase the settings zone in the image, just to be sure
+        dd if=/dev/zero conv=notrunc seek=$DATASTART bs=1 count=$DATASIZE of="$IMAGE"
+
+        # copy the config file to the image
+        dd if=$CONFFILE conv=notrunc bs=1 seek=$DATASTART of="$IMAGE"
+
+        # advice
+        echo "Done with $IMAGE"
+    done
+}
+
+
 # Main action goes here
 function main() {
     # check for arguments to show usage/version
@@ -275,6 +348,9 @@ function main() {
     # operational display.
     display_proceed
 
+    # Create images
+    echo "Creating images, this may take a while depending on the amount of images you need to build"
+    create_images
 }
 
 
