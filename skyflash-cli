@@ -9,8 +9,7 @@
 DGW='192.168.0.1'
 DMAN='192.168.0.2'
 DNOD='3-9'
-DNETM='24'
-DNS='1.0.0.1, 1.1.1.1'
+DDNS='1.0.0.1, 1.1.1.1'
 SCRIPVERSION=0.0.1
 CONFFILE=`mktemp`
 
@@ -22,7 +21,7 @@ DATASIZE=256
 GW=''
 MAN=''
 NOD=''
-NETM=$DNETM
+DNS="$DDNS"
 BNET=''
 IMG=''
 NODEIPS=''
@@ -37,24 +36,26 @@ function usage() {
 cat << EOF
 usage: $0 [options]
 
-Configure a skybian image
+Configure & optionally burn the skybian images into a uSD card.
+Please note that this tool is intended for developers and advanced users.
 
 OPTIONS:
     -h: Show this help
     -g: Gateway IP for the network
     -m: Manager IP on the network
+    -d: DNS to use, can be more than one like this "1.0.0.1, 1.1.1.1"
     -n: [A-B] the range of the IPs to use on the network
-    -s: Size of the subnet (/24)
     -a: All defaults set networks by the defaults
     -v: Version of the script
     -i: Image file
 
 Network defaults:
-    Network:    192.168.0.0/24
-    Netmask:    255.255.255.0 (aka: /24)
-    Gateway:    192.168.0.1
-    Manager IP: 192.168.0.2
-    Node IPs:   192.168.0.[3-9] (7 nodes)
+    Network:     192.168.0.0/24
+    Netmask:     Always will be: 255.255.255.0 (aka: /24)
+    Gateway:     192.168.0.1
+    DNS servers: 1.0.0.1, 1.1.1.1
+    Manager IP:  192.168.0.2
+    Node IPs:    192.168.0.[3-9] (7 nodes)
 
 Warnings:
     * By now you need to provide the downloaded image to the script, no download
@@ -63,12 +64,14 @@ Warnings:
       need to set them all
     * Options '-g', '-m' & '-n' are exclusive against '-a': you need to choose
       default or custom options, not both.
-    * Option '-s' is /24 or 255.255.255.0 if not specified
+    * Option '-d' is optional will use "1.0.0.1, 1.1.1.1" if not specified
+      if you need to pass more than one please surround it with double quotes
+      and separate them by coma and space like the example above 
     * Option '-n' refers to the last digit of the IPv4 address, base is taken
       from the manager. It´s a continuous range from A to B [A-B] both inclusive
 
 Configured images will be placed on the same directory of the base image and will be
-appened the suffixes: '-manager' and 'node-N' where N is a incremental number from 0  
+appened the suffixes: '-manager' and 'nodeN' where N is a incremental number from 0  
 
 Examples:
     Configure a base image with defaults: 8 images, one manager and 7 nodes, gw is 
@@ -79,7 +82,14 @@ Examples:
     Configure 1 manager and 10 nodes, network 192.168.100.0/24, gw is 192.168.100.254
     manager is 192.168.100.50 & nodes are 192.168.100.90 - 192.168.100.99
 
-    $0 -s 24 -g 192.168.100.254 -m 192.168.100.50 -n 90-99 -i skybian.img
+    $0 -g 192.168.100.254 -m 192.168.100.50 -n 90-100 -i skybian.img
+
+    The same of above but with custom DNS servers (using a local forwarder) please
+    note the use of the "" to glob both servers on one argument and the ', ' 
+    separating the DNS servers IPs
+
+    $0 -g 192.168.100.254 -m 192.168.100.50 -n 90-100 \
+      -d "192.168.100.254, 1.1.1.1" -i skybian.img
 
 EOF
     exit 1
@@ -88,7 +98,7 @@ EOF
 
 # process options
 function arg_process() {
-    while getopts ":h:g:m:n:s:a:v:i:" opt; do
+    while getopts ":h:g:m:n:a:v:i:d:" opt; do
         case $opt in
             h)  usage ;;
             \?) usage ;;
@@ -98,11 +108,11 @@ function arg_process() {
             g)  GW=$OPTARG ;;
             m)  MAN=$OPTARG ;;
             n)  NOD=$OPTARG ;;
-            s)  NETM=$OPTARG ;;
             a)
                 IMG=$OPTARG
                 set_defaults ;;
             i)  IMG=$OPTARG ;;
+            d)  DNS=$OPTARG ;;
             :)
                 echo "option -$OPTARG requires an argument"
                 usage
@@ -111,7 +121,7 @@ function arg_process() {
     done
 
     # check for missing
-    blank_bad_args $GW $MAN $NOD $NETM $IMG
+    blank_bad_args $GW $MAN $NOD $IMG $DNS
 
     # validate and generate nodes IP
     validate_generate_nodes $BNET $NOD
@@ -130,14 +140,13 @@ function set_defaults() {
     GW=$DGW
     MAN=$DMAN
     NOD=$DNOD
-    NETM=$DNETM
 }
 
 
 # check for blank/bad arguments.
 function blank_bad_args() {
     # exits with an error if an arg is missing, else pass silent
-    local raw=`echo "Gateway:$1 Manager:$2 Nodes:$3 Netmask:$4 Image:$5" | xargs`
+    local raw=`echo "Gateway:$1 Manager:$2 Nodes:$3 Image:$4 DNS:$5" | xargs`
 
     for arg in $raw ; do
         # extract
@@ -242,13 +251,15 @@ function display_proceed() {
     echo ""
     echo "Base skybian image is: $IMG"
     echo "Gateway is: $GW"
+    echo "DNS is: $DNS"
     echo "Manager is: $MAN"
     echo "Will build $NAMOUNT nodes with the following IPs:"
     echo "$NODEIPS"
     echo ""
-    echo "All looks good, take 10 seconds to review the info and will resume the work."
-    echo "If you see something wrong press Ctrl+C to abort or any key to continue"
-    read -t 10 -n 1 REPLY
+    echo "All looks good, take a time to review the info, will resume the work in"
+    echo "30 seconds if no answer, this is the last chance to quit."
+    echo "Press Ctrl+C to abort or any other key to continue"
+    read -t 30 -n 1 REPLY
 }
 
 
