@@ -241,7 +241,7 @@ function display_proceed() {
     echo "$NODEIPS"
     echo ""
     echo "All looks good, take 10 seconds to review the info and will resume the work."
-    echo "If you see something wrong press Ctrl+C to abort."
+    echo "If you see something wrong press Ctrl+C to abort or any key to continue"
     read -t 10 -n 1 REPLY
 }
 
@@ -263,6 +263,14 @@ function main() {
 
     # process arguments
     arg_process ${ARGS}
+
+    # check if the base image is there
+    if [ ! -f ${IMG} -o ! -r ${IMG} ] ; then
+        # file not there of not readable
+        echo "Error: image file: ${IMG} is not reachable or readable"
+        echo "Plase fix that and try again.."
+        exit 1
+    fi
 
     # operational display.
     display_proceed
