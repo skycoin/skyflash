@@ -288,6 +288,17 @@ function create_images() {
     local ALL=`echo "$MAN $NODEIPS" | xargs`
     local count=0
 
+    # check for old files
+    local OLDMAN=`ls | grep manager | grep \.img`
+    local OLDNOD=`ls | grep node | grep \.img`
+    if [ -n "$OLDMAN" -o -n "$OLDNOD" ] ; then
+        # yes, there is old files here
+        echo "Warning: there are old generated files on the FS, will erase them"
+        echo ""
+        rm -f *manager*img
+        rm -f *node*img
+    fi
+
     # iterate
     for ip in $ALL ; do
         # local vars
@@ -313,7 +324,7 @@ function create_images() {
         echo "Updated conf to write to the image, creating the image..."
 
         # copy the manager image
-        cp ${IMG} ${IMAGE}
+        cp -f ${IMG} ${IMAGE}
 
         # advice
         echo "Updating new image with custom conf"
@@ -326,6 +337,7 @@ function create_images() {
 
         # advice
         echo "Done with $IMAGE"
+        echo ""
     done
 }
 
@@ -361,6 +373,7 @@ function main() {
 
     # Create images
     echo "Creating images, this may take a while depending on the amount of images you need to build"
+    echo ""
     create_images
 }
 
