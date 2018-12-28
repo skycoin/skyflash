@@ -36,7 +36,7 @@ function usage() {
 cat << EOF
 usage: $0 [options]
 
-Configure & optionally burn the skybian images into a uSD card.
+Configure & create the skybian images.
 Please note that this tool is intended for developers and advanced users.
 
 OPTIONS:
