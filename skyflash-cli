@@ -240,7 +240,9 @@ function display_proceed() {
     echo "Will build $NAMOUNT nodes with the following IPs:"
     echo "$NODEIPS"
     echo ""
-    echo "Press any key to proceed or Ctrl+C to abort."
+    echo "All looks good, take 10 seconds to review the info and will resume the work."
+    echo "If you see something wrong press Ctrl+C to abort."
+    read -t 10 -n 1 REPLY
 }
 
 
