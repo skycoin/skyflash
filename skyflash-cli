@@ -10,7 +10,7 @@ DGW='192.168.0.1'
 DMAN='192.168.0.2'
 DNOD='3-9'
 DDNS='1.0.0.1, 1.1.1.1'
-SCRIPVERSION=0.0.1
+SCRIPVERSION=0.1.0
 CONFFILE=`mktemp`
 
 # img related vars
