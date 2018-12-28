@@ -219,8 +219,8 @@ function validate_generate_nodes() {
     done
 
     # check for gw or manager in node ranges
-    local isgwt=`echo $NODEIPS | grep "$GW"`
-    local ismgt=`echo $NODEIPS | grep "$MAN"`
+    local isgwt=`echo $NODEIPS | grep "$GW "`
+    local ismgt=`echo $NODEIPS | grep "$MAN "`
     if [ -n "$isgwt" -o -n "$ismgt" ] ; then
         # manager or gateway in node range
         echo "Error: manager and gateway IPs can be on the node ranges"
