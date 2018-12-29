@@ -17,7 +17,7 @@ Then you need to use a tool to burn these images to the uSD cards, we recommend 
 
 ### Step 1: Download the default skybian image
 
-Go to [skybian](https://github.com/simelo/skybian) releases and download the latest image, decompress it and put the base image on the folder where `skyflash-cli` resides.
+Go to [skybian](https://github.com/simelo/skybian) releases and download the latest image, decompress it and put the base image on the folder where `skyflash-cli` resides; or copy the `skyflash-cli` tool to the folder where you have the skybian image.
 
 ### Step 2: Run the tool
 
@@ -51,6 +51,8 @@ If you need a different setup just check the `skyflash-cli -h` to know more, for
 ```
 ./skyflash-cli -g 172.16.22.1 -d "172.16.22.1, 1.1.1.1" -m 172.16.22.10 -n 100-121 -i Skybian-0.1.0.img
 ```
+
+Please note that in the case of the DNS (option '-d') if you need to pass more than one IP you need to surround it with double quotes and separate it with a comma and a space, just like the example above.
 
 ## skyflash.py tool
 
