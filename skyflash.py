@@ -149,7 +149,6 @@ class ApplicationWindow(QMainWindow):
 
         # add it to main widget
         mainLayout.addLayout(build_widget)
-        mainLayout.addSeparator()
 
         #### flash widget definition
         flash_widget = QVBoxLayout()
