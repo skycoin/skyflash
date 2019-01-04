@@ -10,6 +10,22 @@ import os, sys, subprocess, webbrowser
 skybianUrl = "http://localhost:8080/skybian.tar.xz"
 manualUrl = "http://github.com/simelo/skyflash"
 
+# utils classs
+class Utils(object):
+    def __init__(self):
+        return super(Utils, self).__init__()
+
+    def shortenPath(self, fullpath, ccount):
+        # TODO OS dependent FS char
+        fpath = fullpath.split("/")
+        spath = fpath[-1]
+        if len(spath) > ccount:
+            spath = ".../" + spath[-ccount:]
+        else:
+            spath = ".../" + spath
+
+        return spath
+
 
 # main object definition
 class skyFlash(QObject):
@@ -80,13 +96,8 @@ class skyFlash(QObject):
             self.setStatus.emit("Selected file is not readable.")
             return
 
-        # detect the filename
-        # TODO OS dependent FS char
-        fpath = file.split("/")
-        filename = fpath[-1]
-        if len(filename) > 26:
-            filename = "..." + filename[-26:]
-
+        # shorten the filename to fit on the label
+        filename = utils.shortenPath(file, 26)
         self.downloadFinished.emit(filename)
         
 
@@ -98,6 +109,8 @@ engine.rootContext().setContextProperty("skf", skyflash)
 engine.load("skyflash.qml")
 engine.quit.connect(app.quit)
 
+# instance of utils
+utils = Utils()
 
 if __name__ == "__main__":
     try:
