@@ -28,7 +28,6 @@ ApplicationWindow {
         selectMultiple: false
 
         onAccepted: {
-            console.log("You chose to load: " + fileDialog.fileUrls)
             skf.localFile(fileDialog.fileUrls)
         }
 

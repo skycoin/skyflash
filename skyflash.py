@@ -101,19 +101,20 @@ class skyFlash(QObject):
         self.downloadFinished.emit(filename)
         
 
-app = QGuiApplication(sys.argv)
-# app = QApplication(sys.argv)
-skyflash = skyFlash()
-engine = QQmlApplicationEngine()
-engine.rootContext().setContextProperty("skf", skyflash)
-engine.load("skyflash.qml")
-engine.quit.connect(app.quit)
-
-# instance of utils
-utils = Utils()
-
 if __name__ == "__main__":
     try:
+        app = QGuiApplication(sys.argv)
+        # app = QApplication(sys.argv)
+        skyflash = skyFlash()
+        engine = QQmlApplicationEngine()
+        engine.rootContext().setContextProperty("skf", skyflash)
+        engine.load("skyflash.qml")
+        engine.quit.connect(app.quit)
+
+        # instance of utils
+        utils = Utils()
+
+        # main GUI call
         sys.exit(app.exec_())
     except:
         sys.exit("Ooops!")
