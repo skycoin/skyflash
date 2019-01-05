@@ -38,7 +38,7 @@ class Utils(object):
 class WorkerSignals(QObject):
     data = pyqtSignal(str)
     error = pyqtSignal(tuple)
-    progress = pyqtSignal(int)
+    progress = pyqtSignal(float)
     result = pyqtSignal(str)
     finished = pyqtSignal(str)
 
@@ -146,7 +146,7 @@ class skyFlash(QObject):
         fileName = url.split("/")[-1]
 
         # emit data of the download
-        data_callback.emit("~" + str(self.size/1000) + "MB" )
+        data_callback.emit("There is {:04.1f}MB to download...".format(self.size/1000/1000))
 
         # start download
         downloadedChunk = 0

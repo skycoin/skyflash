@@ -7,7 +7,7 @@ ApplicationWindow {
     id: windows
     width: 398
     //height: 420
-    height: 120
+    height: 148
     visible: true
     title: qsTr("Skyflash tool")
 
@@ -65,10 +65,11 @@ ApplicationWindow {
     // main placeholder
     ColumnLayout {
         id: mainBox
-        anchors.left: parent.left
-        anchors.leftMargin: 3
-        anchors.top: parent.top
-        anchors.topMargin: 3
+        anchors.rightMargin: 4
+        anchors.leftMargin: 4
+        anchors.bottomMargin: 4
+        anchors.topMargin: 4
+        anchors.fill: parent
         Layout.fillWidth: true
         Layout.fillHeight: true
         clip: false
@@ -103,12 +104,7 @@ ApplicationWindow {
                     text: "Download"
                     tooltip: "Click here to download the base Skybian image from the official site"
 
-                    onClicked: {
-                        // start download, hide the label and show progress bar
-                        lbImageComment.visible = false
-                        pbDownload.visible = true
-                        skf.downloadSkybian()
-                    }
+                    onClicked: { skf.downloadSkybian() }
                 }
 
                 // Browse button
@@ -119,9 +115,7 @@ ApplicationWindow {
                     text: "Browse"
                     tooltip: "Click here to browse a already downloaded Skybian image"
 
-                    onClicked: {
-                        fileDialog.open()
-                    }
+                    onClicked: { fileDialog.open() }
                 }
 
                 // label
@@ -323,7 +317,7 @@ ApplicationWindow {
         // receiving the percent of the download
         onDProg: {
             pbDownload.value = percent
-            sbText.text = "Downloaded " + percent + "% so far"
+            sbText.text = "Downloaded " + Number(percent).toLocaleString(Qt.locale("en_US")) + "% so far"
         }
 
         // download / local done
