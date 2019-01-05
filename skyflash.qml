@@ -325,7 +325,12 @@ ApplicationWindow {
 
         // receiving the percent of the download
         onDProg: {
-            pbDownload.value = percent
+            if (percent > 0) {
+                pbDownload.indeterminate = false
+                pbDownload.value = percent
+            } else {
+                pbDownload.indeterminate = true
+            }
         }
 
         // download / local done

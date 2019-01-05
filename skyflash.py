@@ -17,8 +17,8 @@ from PyQt5.QtCore import *
 
 # environment vars
 # TODO, set final real URLS
-skybianUrl = "http://192.168.200.1:8080/d.big"
-# skybianUrl = "https://github.com/simelo/skyflash/issues/1"
+# skybianUrl = "http://192.168.200.1:8080/d.big"
+skybianUrl = "https://github.com/skycoin/skycoin/archive/develop.zip"
 manualUrl = "http://github.com/simelo/skyflash"
 
 # utils class
@@ -82,23 +82,42 @@ class Utils(object):
     def speed(self, speed):
         # takes speeds in bytes per second
         # return str like this
-        #  < 1 kb/s: 256 b/s
-        #  > 1 kb/s & < 1 Mb/s: 23 kb/s
-        #  > 1 Mb/s: 2.1 Mb/s
+        #  < 1 KB/s: 256 b/s
+        #  > 1 KB/s & < 1 MB/s: 23 KB/s
+        #  > 1 MB/s: 2.1 MB/s
 
         k = speed / 1000
         M = k / 1000
         out = ""
 
         if M > 1:
-            out = "{:0.1f} Mb/s".format(M)
+            out = "{:0.1f} MB/s".format(M)
         elif k > 1:
-            out = "{:0.1f} kb/s".format(k)
+            out = "{:0.1f} KB/s".format(k)
         else:
             out = "{} b/s".format(int(speed))
 
         return out
 
+    def size(self, size):
+        # takes size in bytes
+        # return str like this
+        #  < 1 KB: 256 bytes
+        #  > 1 KB & < 1 MB:  235.3 KB
+        #  > 1 MB: 2.1 MB
+
+        k = size / 1000
+        M = k / 1000
+        out = ""
+
+        if M > 1:
+            out = "{:0.3f} MB".format(M)
+        elif k > 1:
+            out = "{:0.3f} KB".format(k)
+        else:
+            out = "{} bytes".format(int(speed))
+
+        return out
 
 # signals class, to be used on threads; for all major tasks
 class WorkerSignals(QObject):
@@ -173,6 +192,9 @@ class skyFlash(QObject):
     # thread pool
     threadpool = QThreadPool()
 
+    # size of the downloaded file
+    size = 0
+
     ### init procedure
     def __init__(self, parent=None):
         return super(skyFlash, self).__init__(parent=parent)
@@ -182,7 +204,7 @@ class skyFlash(QObject):
         self.dData.emit(data)
 
     def downloadSkybianProg(self, percent, data):
-        self.dProg.emit(int(percent))
+        self.dProg.emit(percent)
         self.setStatus.emit(data)
 
     def downloadSkybianError(self, error):
@@ -263,18 +285,28 @@ class skyFlash(QObject):
         else:
             req = urlopen(r)
 
-        self.size = int(req.info()['Content-Length'])
+        # check if we have a size or it's nit known (wtf Github!)
+        info = req.info()
+        if not "Content-Length" in info:
+            self.size = -1
+        else:
+            self.size = int(req.info()['Content-Length'])
+
+        # extract filename
         fileName = url.split("/")[-1]
 
         # emit data of the download
-        data_callback.emit("Downloading {:04.1f} MB".format(self.size/1000/1000))
+        if self.size > 0:
+            data_callback.emit("Downloading {:04.1f} MB".format(self.size/1000/1000))
+        else:
+            data_callback.emit("Downloading size is unknown")
 
         # start download
         downloadedChunk = 0
 
-        # chuck size @ 100kb
+        # chuck size @ 100KB
         blockSize = 102400
-        # TODO folder separator can be os depenndent, review
+        # TODO folder separator can be os dependent, review
         filePath = os.getcwd() + "/" + fileName
         startTime = 0
         elapsedTime = 0
@@ -292,14 +324,24 @@ class skyFlash(QObject):
                         break
                     downloadedChunk += len(chunk)
                     finalImg.write(chunk)
-                    progress = (float(downloadedChunk) / self.size) * 100
+                    if self.size > 0:
+                        progress = (float(downloadedChunk) / self.size) * 100
+                    else:
+                        progress = -1
 
                     # calc speed and ETA
                     elapsedTime = time.time() - startTime
                     bps = int(downloadedChunk/elapsedTime) # b/s
-                    etas = int((self.size - downloadedChunk)/bps) # seconds
+                    if self.size > 0:
+                        etas = int((self.size - downloadedChunk)/bps) # seconds
+
                     # emit progress
-                    prog = "{:.1%}, {}, {} to go.".format(progress/100,  utils.speed(bps), utils.eta(etas))
+                    if self.size > 0:
+                        prog = "{:.1%}, {}, {} to go".format(progress/100,  utils.speed(bps), utils.eta(etas))
+                    else:
+                        prog = "{} so far at {}, unknown ETA".format(utils.size(downloadedChunk),  utils.speed(bps))
+
+                    # emit progress
                     progress_callback.emit(progress, prog)
 
                     # check if the terminate flag is raised
