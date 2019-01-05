@@ -128,19 +128,18 @@ ApplicationWindow {
                 Label {
                     id: lbImageComment
                     Layout.fillWidth: true
-                    text: "Path to local image"
-                    visible: false
+                    text: ""
                 }
+            }
 
-                // download ProgressBar
-                ProgressBar {
-                    id: pbDownload
-                    Layout.fillWidth: true
-                    visible: false
-                    maximumValue: 100
-                    minimumValue: 0
-                    value: 0.5
-                }
+            // download ProgressBar
+            ProgressBar {
+                id: pbDownload
+                Layout.fillWidth: true
+                visible: true
+                maximumValue: 100
+                minimumValue: 0
+                value: 0.5
             }
         }
 
@@ -316,27 +315,31 @@ ApplicationWindow {
     Connections {
         target: skf
 
-        // receiving the percent of the download
-        onDownloadUpdate: {
-            pbDownload.value = percent
+        // data from the download size, filename
+        onDData: {
+            lbImageComment.text = data
         }
 
-        // status bar messages
-        onSetStatus: {
-            sbText.text = msg
+        // receiving the percent of the download
+        onDProg: {
+            pbDownload.value = percent
+            sbText.text = "Downloaded " + percent + "% so far"
         }
 
         // download / local done
-        onDownloadFinished: {
+        onDDone: {
             // inmediate actions
-            lbImageComment.text = msg
-            pbDownload.visible = false
-            lbImageComment.visible = true
+            lbImageComment.text = result
 
             // set next step visible
             boxNetwork.visible = true
             windows.height = 300
 
+        }
+
+        // status bar messages
+        onSetStatus: {
+            sbText.text = msg
         }
     }
 }
