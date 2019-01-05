@@ -96,26 +96,35 @@ ApplicationWindow {
             // buttons
             RowLayout {
 
-                // Download button
-                Button {
-                    id: btDown
-                    Layout.preferredHeight: 30
-                    Layout.preferredWidth: 80
-                    text: "Download"
-                    tooltip: "Click here to download the base Skybian image from the official site"
 
-                    onClicked: { skf.downloadSkybian() }
-                }
+                RowLayout {
+                    id: phDownloadButtons
+                    
+                    // Download button
+                    Button {
+                        id: btDown
+                        Layout.preferredHeight: 30
+                        Layout.preferredWidth: 80
+                        text: "Download"
+                        tooltip: "Click here to download the base Skybian image from the official site"
 
-                // Browse button
-                Button {
-                    id: btBrowse
-                    Layout.preferredHeight: 30
-                    Layout.preferredWidth: 80
-                    text: "Browse"
-                    tooltip: "Click here to browse a already downloaded Skybian image"
+                        onClicked: {
+                            skf.downloadSkybian()
+                            btDown.text = "Cancel"
+                            btDown.tooltip = "Click here to cancel the download"
+                        }
+                    }
 
-                    onClicked: { fileDialog.open() }
+                    // Browse button
+                    Button {
+                        id: btBrowse
+                        Layout.preferredHeight: 30
+                        Layout.preferredWidth: 80
+                        text: "Browse"
+                        tooltip: "Click here to browse a already downloaded Skybian image"
+
+                        onClicked: { fileDialog.open() }
+                    }
                 }
 
                 // label
@@ -133,7 +142,7 @@ ApplicationWindow {
                 visible: true
                 maximumValue: 100
                 minimumValue: 0
-                value: 0.5
+                value: 0.1
             }
         }
 
@@ -317,18 +326,28 @@ ApplicationWindow {
         // receiving the percent of the download
         onDProg: {
             pbDownload.value = percent
-            sbText.text = "Downloaded " + Number(percent).toLocaleString(Qt.locale("en_US")) + "% so far"
         }
 
         // download / local done
         onDDone: {
-            // inmediate actions
-            lbImageComment.text = result
+            // hide the buttons and progress bar.
+            pbDownload.visible = false
+            phDownloadButtons.visible = false
+            // just the label shows with the name/path to the file
+            // triggered by signal dResult
+        }
 
+        // download canceled or in error, set back Download button
+        onDDown: {
+            btDown.text = "Download"
+            btDown.tooltip = "Click here to download the base Skybian image from the official site"
+        }
+
+        // start network config
+        onNetConfig: {
             // set next step visible
             boxNetwork.visible = true
             windows.height = 300
-
         }
 
         // status bar messages
