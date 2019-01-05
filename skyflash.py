@@ -5,8 +5,10 @@ import os
 import sys
 import subprocess
 import webbrowser
-from urllib.request import Request, urlopen
 import time
+import traceback
+import ssl
+from urllib.request import Request, urlopen
 
 # GUI imports
 from PyQt5.QtGui import QGuiApplication
@@ -16,6 +18,7 @@ from PyQt5.QtCore import *
 # environment vars
 # TODO, set final real URLS
 skybianUrl = "http://192.168.200.1:8080/d.big"
+# skybianUrl = "https://github.com/simelo/skyflash/issues/1"
 manualUrl = "http://github.com/simelo/skyflash"
 
 # utils class
@@ -95,6 +98,7 @@ class Utils(object):
             out = "{} b/s".format(int(speed))
 
         return out
+
 
 # signals class, to be used on threads; for all major tasks
 class WorkerSignals(QObject):
@@ -182,7 +186,13 @@ class skyFlash(QObject):
         self.setStatus.emit(data)
 
     def downloadSkybianError(self, error):
-        print("Error: " + error)
+        # stop the download
+        self.downloadActive = False
+        self.dDown.emit()
+        self.dData.emit("Download error...")
+        self.setStatus.emit("An error ocurred, please check the network.")
+        etype, eval, etrace = error
+        print("An error ocurred:\n{}".format(eval))
 
     # result is the path to the local file
     def downloadSkybianFile(self, file):
@@ -192,7 +202,7 @@ class skyFlash(QObject):
             self.dData.emit("Skybian image is: " + utils.shortenPath(file, 32))
             self.setStatus.emit("Choose your network configuration")
         else:
-            self.dData.emit("")
+            self.dData.emit("Download canceled or error")
             self.setStatus.emit("Download canceled or error happened")
             self.dDown.emit()
 
@@ -212,11 +222,15 @@ class skyFlash(QObject):
             # rise flag
             self.downloadActive = True
 
+            # set label to starting
+            self.dData.emit("Download starting...")
+
             # init download process
             self.down = Worker(self.skyDown)
             self.down.signals.data.connect(self.downloadSkybianData)
             self.down.signals.progress.connect(self.downloadSkybianProg)
             self.down.signals.result.connect(self.downloadSkybianFile)
+            self.down.signals.error.connect(self.downloadSkybianError)
             self.down.signals.finished.connect(self.downloadSkybianDone)
 
             # init worker
@@ -227,14 +241,28 @@ class skyFlash(QObject):
             self.downloadActive = False
             self.downloadOk = False
 
+            # set label to stopping
+            self.dData.emit("Download canceled...")
+
     # download skybian, will be instantiated in a thread
     def skyDown(self, data_callback, progress_callback):
         # take url for skybian from upper
         url = skybianUrl
 
+        # DEBUG
         print("Downloading from: {}".format(url))
-        r = Request(url)
-        req = urlopen(r)
+
+        headers = {}
+        headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
+        r = Request(url, headers=headers)
+
+        if url.startswith("https"):
+            # prepare the https context
+            scontext = ssl.SSLContext(ssl.PROTOCOL_TLS)
+            req = urlopen(r, context=scontext)
+        else:
+            req = urlopen(r)
+
         self.size = int(req.info()['Content-Length'])
         fileName = url.split("/")[-1]
 
