@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 # main imports
 import os
@@ -23,10 +23,16 @@ manualUrl = "http://github.com/simelo/skyflash"
 
 # utils class
 class Utils(object):
+    """This is a basic class to hold procedures & functions that does not belongs
+    to any other part or class in the project, such as validation, conversion, 
+    formatting, etc. As the name implies a utils tool box"""
+
     def __init__(self):
         return super(Utils, self).__init__()
 
     def shortenPath(self, fullpath, ccount):
+        """Shorten a passed FS path to a char count size"""
+
         # TODO OS dependent FS char
         fpath = fullpath.split("/")
         fpath.reverse()
@@ -52,14 +58,16 @@ class Utils(object):
         return spath
 
     def eta(self, secs):
-        # takes int seconds to complete a task
-        # return str like this
-        #  < 10 seconds:  a few seconds
-        #  > 10 seconds & < 1 minute: 45 seconds
-        #  > 1 minute & < 59 minutes: 45 minutes
-        #  > 1 hour: 1 hour 23 minutes
+        """Format a second time span in a text human readable representation
+        returned as a string, for example:
 
-        # minutes to decide
+        secs < 10 seconds:  "a few seconds"
+        secs > 10 seconds & < 1 minute: "{secs} seconds"
+        secs > 1 minute & < 59 minutes: "{min} minutes"
+        secs > 1 hour: "{} hour {} minutes"
+        """
+
+        # vars
         mins = int(secs / 60)
         hours = int(mins / 60)
         out = ""
@@ -80,12 +88,15 @@ class Utils(object):
         return out
 
     def speed(self, speed):
-        # takes speeds in bytes per second
-        # return str like this
-        #  < 1 KB/s: 256 b/s
-        #  > 1 KB/s & < 1 MB/s: 23 KB/s
-        #  > 1 MB/s: 2.1 MB/s
+        """Takes a bytes per second speeds and returns a string with a human readable
+        representation of that speed, such as:
 
+        speed < 1 KB/s: "{} b/s"
+        speed > 1 KB/s & < 1 MB/s: "{} KB/s"
+        speed > 1 MB/s: {} MB/s
+        """
+
+        # vars
         k = speed / 1000
         M = k / 1000
         out = ""
@@ -100,12 +111,15 @@ class Utils(object):
         return out
 
     def size(self, size):
-        # takes size in bytes
-        # return str like this
-        #  < 1 KB: 256 bytes
-        #  > 1 KB & < 1 MB:  235.3 KB
-        #  > 1 MB: 2.1 MB
+        """Takes a byte size and return it as a human readable string,
+        such as this:
+        
+        size < 1 KB: "{} bytes"
+        size > 1 KB & < 1 MB:  "{0.3f} KB"
+        size > 1 MB: "{0.3f} MB"
+        """
 
+        # vars
         k = size / 1000
         M = k / 1000
         out = ""
@@ -119,8 +133,12 @@ class Utils(object):
 
         return out
 
+
 # signals class, to be used on threads; for all major tasks
 class WorkerSignals(QObject):
+    """This class defines the signals to be emmited by the different threaded
+    proseses that will be run on this soft"""
+
     data = pyqtSignal(str)
     error = pyqtSignal(tuple)
     progress = pyqtSignal(float, str)
@@ -133,7 +151,11 @@ class WorkerSignals(QObject):
 
 # Generic worker to use in threads
 class Worker(QRunnable):
-    
+    """This is the way we manage threads, not by QThread, but a QRunner
+     inside a thread pool, in this way we use a generic runable procedure
+     of the main object and not a object itself, easy to manage & stable
+     """
+
     def __init__(self, fn, *args, **kwargs):
         super(Worker, self).__init__()
         # Store constructor arguments (re-used for processing)
@@ -149,6 +171,8 @@ class Worker(QRunnable):
 
     @pyqtSlot()
     def run(self):
+        """This is the main procedure that runs in the thread pool"""
+
         try:
             # the thing to do
             result = self.fn(*self.args, **self.kwargs)
@@ -167,6 +191,10 @@ class Worker(QRunnable):
 
 # main object definition
 class skyFlash(QObject):
+    """Main/Base object for all procedures and properties, this is the core
+    of our App
+    """
+
     #### registering Signals to emit to QML GUI
 
     # status bar
@@ -201,13 +229,19 @@ class skyFlash(QObject):
 
     # download callbacks to emit signals to QML nd others
     def downloadSkybianData(self, data):
+        """Update the label beside the buttons in the download box on the UI"""
+
         self.dData.emit(data)
 
     def downloadSkybianProg(self, percent, data):
+        """Update the progress bar and status bar about the task progress"""
+
         self.dProg.emit(percent)
         self.setStatus.emit(data)
 
     def downloadSkybianError(self, error):
+        """Stop the threaded task and produce feedbak to the user"""
+
         # stop the download
         self.downloadActive = False
         self.dDown.emit()
@@ -218,6 +252,8 @@ class skyFlash(QObject):
 
     # result is the path to the local file
     def downloadSkybianFile(self, file):
+        """Receives the result of the download: the path to the downloaded file """
+
         if self.downloadOk:
             self.skybianFile = file
             # TODO adjust the size of the path
@@ -230,6 +266,8 @@ class skyFlash(QObject):
 
     # download finished, good or bad?
     def downloadSkybianDone(self, result):
+        """End of the download task"""
+
         # check status of download
         if self.downloadOk:
             self.dDone.emit()
@@ -238,6 +276,8 @@ class skyFlash(QObject):
     # Download main trigger
     @pyqtSlot()
     def downloadSkybian(self):
+        """Slot that receives the stat download signal from the UI"""
+
         # check if there is a thread already working there
         downCount = self.threadpool.activeThreadCount()
         if downCount < 1:
@@ -268,6 +308,8 @@ class skyFlash(QObject):
 
     # download skybian, will be instantiated in a thread
     def skyDown(self, data_callback, progress_callback):
+        """Download task, this will runs in a threadpool"""
+
         # take url for skybian from upper
         url = skybianUrl
 
@@ -367,6 +409,13 @@ class skyFlash(QObject):
     # load skybian from a local file
     @pyqtSlot(str)
     def localFile(self, file):
+        """Slot that receives the local folder picked up to process
+
+        Must check if it's a final image or a compressed one.
+        If a final image, check for the fingerprint else extract it
+        and then check integrity via hash
+        """
+
         if file is "":
             self.setStatus.emit("You selected nothing, please try again")
             return
@@ -396,6 +445,8 @@ class skyFlash(QObject):
     # open the manual in the browser
     @pyqtSlot()
     def openManual(self):
+        """Opens the manual in a users's default browser"""
+
         if sys.platform == "win32":
             try:
                 os.startfile(manualUrl)
@@ -413,6 +464,8 @@ class skyFlash(QObject):
 
 
 if __name__ == "__main__":
+    """Run the script"""
+
     try:
         # instance of utils
         utils = Utils()
