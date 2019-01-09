@@ -17,8 +17,8 @@ from PyQt5.QtCore import *
 
 # environment vars
 # TODO, set final real URLS
-# skybianUrl = "http://192.168.200.1:8080/d.big"
-skybianUrl = "https://github.com/skycoin/skycoin/archive/develop.zip"
+skybianUrl = "http://localhost:8080/skybian.tar.gz"
+# skybianUrl = "https://github.com/skycoin/skycoin/archive/develop.zip"
 manualUrl = "http://github.com/simelo/skyflash"
 
 # utils class
@@ -452,6 +452,8 @@ class skyFlash(QObject):
         
         If error produce feedback, if ok, continue.
         """
+        
+        print("must process the downloade file, I know...")
 
         pass
 
