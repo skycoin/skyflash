@@ -220,26 +220,28 @@ class skyFlash(QObject):
     # thread pool
     threadpool = QThreadPool()
 
-    # size of the downloaded file
-    size = 0
+    # files handling vars
+    downloadFileSize = 0
+    donwloadedFile = ""
+    skybianFile = ""
 
     ### init procedure
     def __init__(self, parent=None):
         return super(skyFlash, self).__init__(parent=parent)
 
     # download callbacks to emit signals to QML nd others
-    def downloadSkybianData(self, data):
+    def downloadFileData(self, data):
         """Update the label beside the buttons in the download box on the UI"""
 
         self.dData.emit(data)
 
-    def downloadSkybianProg(self, percent, data):
+    def downloadFileProg(self, percent, data):
         """Update the progress bar and status bar about the task progress"""
 
         self.dProg.emit(percent)
         self.setStatus.emit(data)
 
-    def downloadSkybianError(self, error):
+    def downloadFileError(self, error):
         """Stop the threaded task and produce feedbak to the user"""
 
         # stop the download
@@ -251,11 +253,11 @@ class skyFlash(QObject):
         print("An error ocurred:\n{}".format(eval))
 
     # result is the path to the local file
-    def downloadSkybianFile(self, file):
+    def downloadFileResult(self, file):
         """Receives the result of the download: the path to the downloaded file """
 
         if self.downloadOk:
-            self.skybianFile = file
+            self.do = file
             # TODO adjust the size of the path
             self.dData.emit("Skybian image is: " + utils.shortenPath(file, 32))
             self.setStatus.emit("Choose your network configuration")
@@ -265,7 +267,7 @@ class skyFlash(QObject):
             self.dDown.emit()
 
     # download finished, good or bad?
-    def downloadSkybianDone(self, result):
+    def downloadFileDone(self, result):
         """End of the download task"""
 
         # check status of download
@@ -289,11 +291,11 @@ class skyFlash(QObject):
 
             # init download process
             self.down = Worker(self.skyDown)
-            self.down.signals.data.connect(self.downloadSkybianData)
-            self.down.signals.progress.connect(self.downloadSkybianProg)
-            self.down.signals.result.connect(self.downloadSkybianFile)
-            self.down.signals.error.connect(self.downloadSkybianError)
-            self.down.signals.finished.connect(self.downloadSkybianDone)
+            self.down.signals.data.connect(self.downloadFileData)
+            self.down.signals.progress.connect(self.downloadFileProg)
+            self.down.signals.result.connect(self.downloadFileResult)
+            self.down.signals.error.connect(self.downloadFileError)
+            self.down.signals.finished.connect(self.downloadFileDone)
 
             # init worker
             self.threadpool.start(self.down)
@@ -439,8 +441,8 @@ class skyFlash(QObject):
 
         # all seems good, emit ans go on
         self.downloadOk = True
-        self.downloadSkybianFile(file)
-        self.downloadSkybianDone("Ok")
+        self.downloadFileResult(file)
+        self.downloadFileDone("Ok")
 
     # open the manual in the browser
     @pyqtSlot()
