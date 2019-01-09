@@ -2,11 +2,13 @@
 
 # main imports
 import os
+import io
 import sys
 import subprocess
 import webbrowser
 import time
 import traceback
+import tarfile
 import ssl
 from urllib.request import Request, urlopen
 
@@ -23,15 +25,15 @@ manualUrl = "http://github.com/simelo/skyflash"
 
 # utils class
 class Utils(object):
-    """This is a basic class to hold procedures & functions that does not belongs
+    '''This is a basic class to hold procedures & functions that does not belongs
     to any other part or class in the project, such as validation, conversion, 
-    formatting, etc. As the name implies a utils tool box"""
+    formatting, etc. As the name implies a utils tool box'''
 
     def __init__(self):
         return super(Utils, self).__init__()
 
     def shortenPath(self, fullpath, ccount):
-        """Shorten a passed FS path to a char count size"""
+        '''Shorten a passed FS path to a char count size'''
 
         # TODO OS dependent FS char
         fpath = fullpath.split("/")
@@ -58,14 +60,14 @@ class Utils(object):
         return spath
 
     def eta(self, secs):
-        """Format a second time span in a text human readable representation
+        '''Format a second time span in a text human readable representation
         returned as a string, for example:
 
         secs < 10 seconds:  "a few seconds"
         secs > 10 seconds & < 1 minute: "{secs} seconds"
         secs > 1 minute & < 59 minutes: "{min} minutes"
         secs > 1 hour: "{} hour {} minutes"
-        """
+        '''
 
         # vars
         mins = int(secs / 60)
@@ -88,13 +90,13 @@ class Utils(object):
         return out
 
     def speed(self, speed):
-        """Takes a bytes per second speeds and returns a string with a human readable
+        '''Takes a bytes per second speeds and returns a string with a human readable
         representation of that speed, such as:
 
         speed < 1 KB/s: "{} b/s"
         speed > 1 KB/s & < 1 MB/s: "{} KB/s"
         speed > 1 MB/s: {} MB/s
-        """
+        '''
 
         # vars
         k = speed / 1000
@@ -111,13 +113,13 @@ class Utils(object):
         return out
 
     def size(self, size):
-        """Takes a byte size and return it as a human readable string,
+        '''Takes a byte size and return it as a human readable string,
         such as this:
         
         size < 1 KB: "{} bytes"
         size > 1 KB & < 1 MB:  "{0.3f} KB"
         size > 1 MB: "{0.3f} MB"
-        """
+        '''
 
         # vars
         k = size / 1000
@@ -134,10 +136,35 @@ class Utils(object):
         return out
 
 
+# fileio overide class to get progress on tarfile extraction
+class ProgressFileObject(io.FileIO):
+    '''Overide the fileio object to have a callback on progress'''
+
+    def __init__(self, path, *args, **kwargs):
+        self._total_size = os.path.getsize(path)
+
+        # callback will be a function passed on progressfn
+        if kwargs["progressfn"]:
+            self.progfn = kwargs["progressfn"]           
+            # must remove the progressfn if present from the kwargs to make fileio happy 
+            kwargs.pop("progressfn")
+
+        io.FileIO.__init__(self, path, *args, **kwargs)
+
+    def read(self, size):
+        '''Each time a chunk in read call the progress function if there'''
+        if self.progfn:    
+            # must calc and call the progress callback function
+            progress = self.tell() / self._total_size
+            self.progfn(progress)
+
+        return io.FileIO.read(self, size)
+
+
 # signals class, to be used on threads; for all major tasks
 class WorkerSignals(QObject):
-    """This class defines the signals to be emmited by the different threaded
-    proseses that will be run on this soft"""
+    '''This class defines the signals to be emmited by the different threaded
+    proseses that will be run on this soft'''
 
     data = pyqtSignal(str)
     error = pyqtSignal(tuple)
@@ -151,10 +178,10 @@ class WorkerSignals(QObject):
 
 # Generic worker to use in threads
 class Worker(QRunnable):
-    """This is the way we manage threads, not by QThread, but a QRunner
+    '''This is the way we manage threads, not by QThread, but a QRunner
      inside a thread pool, in this way we use a generic runable procedure
      of the main object and not a object itself, easy to manage & stable
-     """
+     '''
 
     def __init__(self, fn, *args, **kwargs):
         super(Worker, self).__init__()
@@ -171,7 +198,7 @@ class Worker(QRunnable):
 
     @pyqtSlot()
     def run(self):
-        """This is the main procedure that runs in the thread pool"""
+        '''This is the main procedure that runs in the thread pool'''
 
         try:
             # the thing to do
@@ -191,9 +218,12 @@ class Worker(QRunnable):
 
 # main object definition
 class skyFlash(QObject):
-    """Main/Base object for all procedures and properties, this is the core
+    '''Main/Base object for all procedures and properties, this is the core
     of our App
-    """
+    '''
+
+    # some variables
+    localPath = ""
 
     #### registering Signals to emit to QML GUI
 
@@ -230,19 +260,20 @@ class skyFlash(QObject):
         return super(skyFlash, self).__init__(parent=parent)
 
     # download callbacks to emit signals to QML nd others
+
     def downloadFileData(self, data):
-        """Update the label beside the buttons in the download box on the UI"""
+        '''Update the label beside the buttons in the download box on the UI'''
 
         self.dData.emit(data)
 
     def downloadFileProg(self, percent, data):
-        """Update the progress bar and status bar about the task progress"""
+        '''Update the progress bar and status bar about the task progress'''
 
         self.dProg.emit(percent)
         self.setStatus.emit(data)
 
     def downloadFileError(self, error):
-        """Stop the threaded task and produce feedbak to the user"""
+        '''Stop the threaded task and produce feedbak to the user'''
 
         # stop the download
         self.downloadActive = False
@@ -252,9 +283,8 @@ class skyFlash(QObject):
         etype, eval, etrace = error
         print("An error ocurred:\n{}".format(eval))
 
-    # result is the path to the local file
     def downloadFileResult(self, file):
-        """Receives the result of the download: the path to the downloaded file """
+        '''Receives the result of the download: the path to the downloaded file '''
 
         if self.downloadOk:
             self.donwloadedFile = file
@@ -265,9 +295,8 @@ class skyFlash(QObject):
             self.setStatus.emit("Download canceled or error happened")
             self.dDown.emit()
 
-    # download finished, good or bad?
     def downloadFileDone(self, result):
-        """End of the download task"""
+        '''End of the download task'''
 
         # check status of download
         if self.downloadOk and self.donwloadedFile != "":
@@ -276,10 +305,9 @@ class skyFlash(QObject):
             # call to handle the download (a img or a compressed one)
             self.downloadProcess()
 
-    # Download main trigger
     @pyqtSlot()
     def downloadSkybian(self):
-        """Slot that receives the stat download signal from the UI"""
+        '''Slot that receives the stat download signal from the UI'''
 
         # check if there is a thread already working there
         downCount = self.threadpool.activeThreadCount()
@@ -311,7 +339,7 @@ class skyFlash(QObject):
 
     # download skybian, will be instantiated in a thread
     def skyDown(self, data_callback, progress_callback):
-        """Download task, this will runs in a threadpool"""
+        '''Download task, this will runs in a threadpool'''
 
         # take url for skybian from upper
         url = skybianUrl
@@ -352,7 +380,7 @@ class skyFlash(QObject):
         # chuck size @ 100KB
         blockSize = 102400
         # TODO folder separator can be os dependent, review
-        filePath = os.getcwd() + "/" + fileName
+        filePath = self.localPath + "/" + fileName
         startTime = 0
         elapsedTime = 0
 
@@ -414,7 +442,7 @@ class skyFlash(QObject):
     # load skybian from a local file
     @pyqtSlot(str)
     def localFile(self, file):
-        """Slot that receives the local folder picked up to process"""
+        '''Slot that receives the local folder picked up to process'''
 
         if file is "":
             self.setStatus.emit("You selected nothing, please try again")
@@ -444,24 +472,68 @@ class skyFlash(QObject):
 
     # process a local picked file or a downloaded one
     def downloadProcess(self):
-        """Process a downloaded/locally picked up file, it can be a .img or a
+        '''Process a downloaded/locally picked up file, it can be a .img or a
         .tar.[gz|xz] one.
         
         If a compressed must decompress and check sums to validate and/or
         if a image must check for a fingerprint to validate
         
         If error produce feedback, if ok, continue.
-        """
+        '''
         
-        print("must process the downloade file, I know...")
+        # determine the type of file and the curse of actions
+        segPath = self.donwloadedFile.split(".")
+        if segPath[-1] in ["gz", "xz"]:
+            # compressed file
+            # TODO thread to decompress
+            self.extract = Worker(self.extractFile)
+            self.extract.signals.data.connect(self.downloadFileData)
+            self.extract.signals.progress.connect(self.downloadFileProg)
+            # self.extract.signals.result.connect(self.downloadFileResult)
+            # self.extract.signals.error.connect(self.downloadFileError)
+            # self.extract.signals.finished.connect(self.downloadFileDone)
 
-        pass
+            # init worker
+            self.threadpool.start(self.extract)
 
+        elif segPath[-1] in "img":
+            # plain image
+            self.skybianFile = self.donwloadedFile
+            return
+
+        else:
+            # other unknown case
+            # TODO Warn the user, what to do next?
+            pass
+
+    def extractFile(self, data_callback, progress_callback):
+        '''Extract a file compressed with tar and xz|gz of the skybian base file'''
+
+        # tar extraction progress
+        def tarExtractionProgress(percent):
+            '''Callback used to update the progress on file extraction, it reuse the
+            self.downloadFileProg(percent, data) function'''
+
+            data = "Extracting downloaded file {:.1%}".format(percent)
+            progress_callback.emit(percent * 100, data)
+
+        # update status
+        try:
+            data_callback.emit("Please wait, extracting the file")
+            tar = tarfile.open(fileobj=ProgressFileObject(self.donwloadedFile, progressfn=tarExtractionProgress))
+            tar.extractall()
+            tar.close()
+
+            # detect the filename of the img file
+            return True
+        except:
+            # something gone wrong.
+            return False
 
     # open the manual in the browser
     @pyqtSlot()
     def openManual(self):
-        """Opens the manual in a users's default browser"""
+        '''Opens the manual in a users's default browser'''
 
         if sys.platform == "win32":
             try:
@@ -480,15 +552,22 @@ class skyFlash(QObject):
 
 
 if __name__ == "__main__":
-    """Run the script"""
+    '''Run the script'''
 
     try:
         # instance of utils
         utils = Utils()
 
+        # GUI app
         app = QGuiApplication(sys.argv)
-        # app = QApplication(sys.argv)
+
+        # main workspace, skyflash object
         skyflash = skyFlash()
+
+        # capturing the local path
+        skyflash.localPath = os.getcwd()
+
+        # startting the UI engine
         engine = QQmlApplicationEngine()
         engine.rootContext().setContextProperty("skf", skyflash)
         engine.load("skyflash.qml")

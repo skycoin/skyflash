@@ -336,7 +336,7 @@ ApplicationWindow {
         // download / local done
         onDDone: {
             // hide the buttons
-            pbDownload.visible = false
+            // pbDownload.visible = false
             phDownloadButtons.visible = false
             // just the label shows with the name/path to the file
             // now is turn to decompress and check integrity
