@@ -257,10 +257,9 @@ class skyFlash(QObject):
         """Receives the result of the download: the path to the downloaded file """
 
         if self.downloadOk:
-            self.do = file
+            self.donwloadedFile = file
             # TODO adjust the size of the path
-            self.dData.emit("Skybian image is: " + utils.shortenPath(file, 32))
-            self.setStatus.emit("Choose your network configuration")
+            self.dData.emit("Skybian compressed file is: " + utils.shortenPath(file, 32))
         else:
             self.dData.emit("Download canceled or error")
             self.setStatus.emit("Download canceled or error happened")
@@ -271,9 +270,11 @@ class skyFlash(QObject):
         """End of the download task"""
 
         # check status of download
-        if self.downloadOk:
+        if self.downloadOk and self.donwloadedFile != "":
             self.dDone.emit()
-            self.netConfig.emit()
+            
+            # call to handle the download (a img or a compressed one)
+            self.downloadProcess()
 
     # Download main trigger
     @pyqtSlot()
@@ -329,7 +330,7 @@ class skyFlash(QObject):
         else:
             req = urlopen(r)
 
-        # check if we have a size or it's nit known (wtf Github!)
+        # check if we have a size or it's not known (wtf Github!)
         info = req.info()
         if not "Content-Length" in info:
             self.size = -1
@@ -359,15 +360,16 @@ class skyFlash(QObject):
         print("Downloading to: {}".format(filePath))
 
         try:
-            with open(filePath, "wb") as finalImg:
+            with open(filePath, "wb") as downFile:
                 startTime = time.time()
                 while True:
                     chunk = req.read(blockSize)
                     if not chunk:
                         print("\nDownload Complete.")
                         break
+
                     downloadedChunk += len(chunk)
-                    finalImg.write(chunk)
+                    downFile.write(chunk)
                     if self.size > 0:
                         progress = (float(downloadedChunk) / self.size) * 100
                     else:
@@ -390,11 +392,12 @@ class skyFlash(QObject):
 
                     # check if the terminate flag is raised
                     if not self.downloadActive:
-                        finalImg.close()
+                        downFile.close()
+                        os.unlink(downFile)
                         return "canceled"
 
             # close the file handle
-            finalImg.close()
+            downFile.close()
             self.downloadOk = True
 
             # return the local filename
@@ -402,21 +405,16 @@ class skyFlash(QObject):
 
         except:
             self.downloadOk = False
-            if finalImg:
-                finalImg.close()
-                os.unlink(finalImg)
+            if downFile:
+                downFile.close()
+                os.unlink(downFile)
 
             return "Abnormal termination"
 
     # load skybian from a local file
     @pyqtSlot(str)
     def localFile(self, file):
-        """Slot that receives the local folder picked up to process
-
-        Must check if it's a final image or a compressed one.
-        If a final image, check for the fingerprint else extract it
-        and then check integrity via hash
-        """
+        """Slot that receives the local folder picked up to process"""
 
         if file is "":
             self.setStatus.emit("You selected nothing, please try again")
@@ -441,8 +439,22 @@ class skyFlash(QObject):
 
         # all seems good, emit ans go on
         self.downloadOk = True
-        self.downloadFileResult(file)
         self.downloadFileDone("Ok")
+        self.downloadFileResult(file)
+
+    # process a local picked file or a downloaded one
+    def downloadProcess(self):
+        """Process a downloaded/locally picked up file, it can be a .img or a
+        .tar.[gz|xz] one.
+        
+        If a compressed must decompress and check sums to validate and/or
+        if a image must check for a fingerprint to validate
+        
+        If error produce feedback, if ok, continue.
+        """
+
+        pass
+
 
     # open the manual in the browser
     @pyqtSlot()

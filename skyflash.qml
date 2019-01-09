@@ -335,11 +335,11 @@ ApplicationWindow {
 
         // download / local done
         onDDone: {
-            // hide the buttons and progress bar.
+            // hide the buttons
             pbDownload.visible = false
             phDownloadButtons.visible = false
             // just the label shows with the name/path to the file
-            // triggered by signal dResult
+            // now is turn to decompress and check integrity
         }
 
         // download canceled or in error, set back Download button
