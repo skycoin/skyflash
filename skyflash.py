@@ -195,7 +195,6 @@ class Worker(QRunnable):
         kwargs['data_callback'] = self.signals.data
         kwargs['progress_callback'] = self.signals.progress
         
-
     @pyqtSlot()
     def run(self):
         '''This is the main procedure that runs in the thread pool'''
@@ -222,6 +221,11 @@ class skyFlash(QObject):
     of our App
     '''
 
+    ### init procedure
+    def __init__(self, parent=None):
+        self.extractionOK = False
+        return super(skyFlash, self).__init__(parent=parent)
+
     # some variables
     localPath = ""
 
@@ -237,12 +241,20 @@ class skyFlash(QObject):
     dProg = pyqtSignal(float, arguments=["percent"])
     # target is hide download buttons
     dDone = pyqtSignal()
-    # target is download button text: Download
-    dDown = pyqtSignal()
+    # target is show download buttons
+    dStart = pyqtSignal()
 
     # download flags
     downloadActive = False
     downloadOk = False
+
+    # files handling vars
+    downloadFileSize = 0
+    downloadedFile = ""
+    skybianFile = ""
+
+    # extraction flags
+    extractionOk = False
 
     # network signals
     netConfig = pyqtSignal()
@@ -250,16 +262,12 @@ class skyFlash(QObject):
     # thread pool
     threadpool = QThreadPool()
 
-    # files handling vars
-    downloadFileSize = 0
-    donwloadedFile = ""
-    skybianFile = ""
-
-    ### init procedure
-    def __init__(self, parent=None):
-        return super(skyFlash, self).__init__(parent=parent)
+    # set the timeout for threads on done
+    threadpool.setExpiryTimeout(3000)
 
     # download callbacks to emit signals to QML nd others
+
+    #  download ones
 
     def downloadFileData(self, data):
         '''Update the label beside the buttons in the download box on the UI'''
@@ -273,11 +281,12 @@ class skyFlash(QObject):
         self.setStatus.emit(data)
 
     def downloadFileError(self, error):
-        '''Stop the threaded task and produce feedbak to the user'''
+        '''Stop the threaded task and produce feedback to the user'''
 
-        # stop the download
-        self.downloadActive = False
-        self.dDown.emit()
+        # stop the download & reset env
+        self.cleanWorkspace()
+
+        # download error feedback
         self.dData.emit("Download error...")
         self.setStatus.emit("An error ocurred, please check the network.")
         etype, eval, etrace = error
@@ -286,24 +295,69 @@ class skyFlash(QObject):
     def downloadFileResult(self, file):
         '''Receives the result of the download: the path to the downloaded file '''
 
+        # debug
+        print("Download result: {}".format(file))
+
         if self.downloadOk:
-            self.donwloadedFile = file
+            self.downloadedFile = file
             # TODO adjust the size of the path
             self.dData.emit("Skybian compressed file is: " + utils.shortenPath(file, 32))
         else:
+            # reset the env
+            self.cleanWorkspace()
+
+            # specific feedback 
             self.dData.emit("Download canceled or error")
             self.setStatus.emit("Download canceled or error happened")
-            self.dDown.emit()
 
     def downloadFileDone(self, result):
         '''End of the download task'''
 
+        # debug
+        print("Download Done!")
+
         # check status of download
-        if self.downloadOk and self.donwloadedFile != "":
+        if self.downloadOk and self.downloadedFile != "":
             self.dDone.emit()
             
             # call to handle the download (a img or a compressed one)
             self.downloadProcess()
+
+    # extract ones
+
+    def extractFileResult(self, result):
+        '''Callback that receives the signal for a extraction finished, an
+        argument is passes, result, it's true or false to flag success or failure'''
+
+        # debug
+        print("Extraction result: {}".format(result))
+
+        if result:
+            self.extractionOk = True
+            self.dData.emit("Extraction finished")
+
+    def extractFileDone(self):
+        '''Callback that is flagged once the extraction was ended.'''
+
+        # debug
+        print("Extraction Done!")
+
+        if self.extractionOK:
+            # success must call for a sha1sum check
+            print("Success extraction")
+            pass
+
+    def extractFileError(self, error):
+        '''Process the error of the extraction'''
+
+        # stop the extraction & reset env
+        self.cleanWorkspace()
+
+        # specific feedback
+        self.dData.emit("Extraction error...")
+        self.setStatus.emit("An error ocurred, corrupt file?")
+        etype, eval, etrace = error
+        print("An error ocurred:\n{}".format(eval))
 
     @pyqtSlot()
     def downloadSkybian(self):
@@ -339,7 +393,14 @@ class skyFlash(QObject):
 
     # download skybian, will be instantiated in a thread
     def skyDown(self, data_callback, progress_callback):
-        '''Download task, this will runs in a threadpool'''
+        '''Download task, this will runs in a threadpool
+
+        Result returned must be string and in this case will be the
+        path for the downloaded file or an empty string on error/cancel
+
+        This method is wrapped by the thread and will catch any errors
+        upstream so no need to handle it here
+        '''
 
         # take url for skybian from upper
         url = skybianUrl
@@ -387,57 +448,50 @@ class skyFlash(QObject):
         # DEBUG
         print("Downloading to: {}".format(filePath))
 
-        try:
-            with open(filePath, "wb") as downFile:
-                startTime = time.time()
-                while True:
-                    chunk = req.read(blockSize)
-                    if not chunk:
-                        print("\nDownload Complete.")
-                        break
+        with open(filePath, "wb") as downFile:
+            startTime = time.time()
+            while True:
+                chunk = req.read(blockSize)
+                if not chunk:
+                    print("\nDownload Complete.")
+                    break
 
-                    downloadedChunk += len(chunk)
-                    downFile.write(chunk)
-                    if self.size > 0:
-                        progress = (float(downloadedChunk) / self.size) * 100
-                    else:
-                        progress = -1
+                downloadedChunk += len(chunk)
+                downFile.write(chunk)
+                if self.size > 0:
+                    progress = (float(downloadedChunk) / self.size) * 100
+                else:
+                    progress = -1
 
-                    # calc speed and ETA
-                    elapsedTime = time.time() - startTime
-                    bps = int(downloadedChunk/elapsedTime) # b/s
-                    if self.size > 0:
-                        etas = int((self.size - downloadedChunk)/bps) # seconds
+                # calc speed and ETA
+                elapsedTime = time.time() - startTime
+                bps = int(downloadedChunk/elapsedTime) # b/s
+                if self.size > 0:
+                    etas = int((self.size - downloadedChunk)/bps) # seconds
 
-                    # emit progress
-                    if self.size > 0:
-                        prog = "{:.1%}, {}, {} to go".format(progress/100,  utils.speed(bps), utils.eta(etas))
-                    else:
-                        prog = "{} so far at {}, unknown ETA".format(utils.size(downloadedChunk),  utils.speed(bps))
+                # emit progress
+                if self.size > 0:
+                    prog = "{:.1%}, {}, {} to go".format(progress/100,  utils.speed(bps), utils.eta(etas))
+                else:
+                    prog = "{} so far at {}, unknown ETA".format(utils.size(downloadedChunk),  utils.speed(bps))
 
-                    # emit progress
-                    progress_callback.emit(progress, prog)
+                # emit progress
+                progress_callback.emit(progress, prog)
 
-                    # check if the terminate flag is raised
-                    if not self.downloadActive:
-                        downFile.close()
-                        os.unlink(downFile)
-                        return "canceled"
+                # check if the terminate flag is raised
+                if not self.downloadActive:
+                    downFile.close()
+                    os.unlink(downFile)
+                    return ""
 
-            # close the file handle
+        # close the file handle
+        if downFile:
             downFile.close()
-            self.downloadOk = True
 
-            # return the local filename
-            return filePath
+        self.downloadOk = True
 
-        except:
-            self.downloadOk = False
-            if downFile:
-                downFile.close()
-                os.unlink(downFile)
-
-            return "Abnormal termination"
+        # return the local filename
+        return filePath
 
     # load skybian from a local file
     @pyqtSlot(str)
@@ -465,12 +519,12 @@ class skyFlash(QObject):
             self.setStatus.emit("Selected file is not readable.")
             return
 
-        # all seems good, emit ans go on
+        # all seems good, emit and go on
         self.downloadOk = True
-        self.downloadFileDone("Ok")
         self.downloadFileResult(file)
+        time.sleep(3)
+        self.downloadFileDone("OK")
 
-    # process a local picked file or a downloaded one
     def downloadProcess(self):
         '''Process a downloaded/locally picked up file, it can be a .img or a
         .tar.[gz|xz] one.
@@ -482,23 +536,23 @@ class skyFlash(QObject):
         '''
         
         # determine the type of file and the curse of actions
-        segPath = self.donwloadedFile.split(".")
+        segPath = self.downloadedFile.split(".")
         if segPath[-1] in ["gz", "xz"]:
             # compressed file
             # TODO thread to decompress
             self.extract = Worker(self.extractFile)
             self.extract.signals.data.connect(self.downloadFileData)
             self.extract.signals.progress.connect(self.downloadFileProg)
-            # self.extract.signals.result.connect(self.downloadFileResult)
-            # self.extract.signals.error.connect(self.downloadFileError)
-            # self.extract.signals.finished.connect(self.downloadFileDone)
+            self.extract.signals.result.connect(self.extractFileResult)
+            self.extract.signals.error.connect(self.extractFileError)
+            self.extract.signals.finished.connect(self.extractFileDone)
 
             # init worker
             self.threadpool.start(self.extract)
 
         elif segPath[-1] in "img":
             # plain image
-            self.skybianFile = self.donwloadedFile
+            self.skybianFile = self.downloadedFile
             return
 
         else:
@@ -507,7 +561,14 @@ class skyFlash(QObject):
             pass
 
     def extractFile(self, data_callback, progress_callback):
-        '''Extract a file compressed with tar and xz|gz of the skybian base file'''
+        '''Extract a file compressed with tar and xz|gz of the skybian base file.
+
+        Result returned must be string that will be converted to boolean so we stick
+        to strings 1|0
+
+        This method is wrapped by the thread and will catch any errors upstream
+        so no need to handle it here
+        '''
 
         # tar extraction progress
         def tarExtractionProgress(percent):
@@ -518,17 +579,13 @@ class skyFlash(QObject):
             progress_callback.emit(percent * 100, data)
 
         # update status
-        try:
-            data_callback.emit("Please wait, extracting the file")
-            tar = tarfile.open(fileobj=ProgressFileObject(self.donwloadedFile, progressfn=tarExtractionProgress))
-            tar.extractall()
-            tar.close()
-
-            # detect the filename of the img file
-            return True
-        except:
-            # something gone wrong.
-            return False
+        data_callback.emit("Extracting the file, please wait...")
+        tar = tarfile.open(fileobj=ProgressFileObject(self.downloadedFile, progressfn=tarExtractionProgress))
+        tar.extractall()
+        tar.close()
+        self.extractionOk = True
+        # all ok
+        return "1"
 
     # open the manual in the browser
     @pyqtSlot()
@@ -550,6 +607,29 @@ class skyFlash(QObject):
             except OSError:
                 print("Please open a browser on: " + manualUrl)
 
+    def cleanWorkspace(self):
+        '''Cleans the workspace, erase any temp/work file and resets the
+        interface to start all over again like a fresh start, erasing
+        vars from the previous run'''
+
+        # erase any working file
+        filePatterns = ["img", "gz", "xz", "sha1", "md5"]
+        for item in os.listdir(self.localPath):
+            itemExtension = item.split(".")[-1]
+            if itemExtension in filePatterns:
+                print("Erasing file {}".format(item))
+                os.unlink(self.localPath + "/" + item)
+
+        # vars reset
+        self.downloadedFile = ""
+        self.downloadOk = False
+        self.downloadActive = False
+        self.downloadFileSize = 0
+        self.skybianFile = ""
+        self.extractionOk = False
+
+        # GUI reset
+        self.sStart.emit()
 
 if __name__ == "__main__":
     '''Run the script'''

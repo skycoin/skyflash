@@ -24,7 +24,7 @@ ApplicationWindow {
         id: fileDialog
         title: "Please choose a file"
         folder: shortcuts.home
-        nameFilters: ["System image files (*.img)"]
+        nameFilters: ["Supported Files (*.tar.gz *.tar.xz *.img)"]
         selectMultiple: false
 
         onAccepted: {
@@ -336,16 +336,18 @@ ApplicationWindow {
         // download / local done
         onDDone: {
             // hide the buttons
-            // pbDownload.visible = false
             phDownloadButtons.visible = false
-            // just the label shows with the name/path to the file
-            // now is turn to decompress and check integrity
         }
 
-        // download canceled or in error, set back Download button
-        onDDown: {
+        // show all buttons in the download and resize the windowds to it's original size
+        onDStart: {
+            pbDownload.visible = true
+            phDownloadButtons.visible = true
+            btBrowse.visible = true
+            btDown.visible = true
             btDown.text = "Download"
             btDown.tooltip = "Click here to download the base Skybian image from the official site"
+            // TODO resize windows
         }
 
         // start network config
