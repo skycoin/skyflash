@@ -222,6 +222,11 @@ class skyFlash(QObject):
     ### init procedure
     def __init__(self, parent=None):
         self.extractionOK = False
+
+        # set the working dir for the downloads and extraction to a folder
+        # named skyflash on the users home, create it if not there
+        self.localPath = self.setPath("Skyflash")
+
         return super(skyFlash, self).__init__(parent=parent)
 
     # some variables
@@ -566,6 +571,10 @@ class skyFlash(QObject):
         so no need to handle it here
         '''
 
+        # change cwd temporarily to extract the files
+        cwd = os.getcwd()
+        os.chdir(self.localPath)
+
         # tar extraction progress
         def tarExtractionProgress(percent):
             '''Callback used to update the progress on file extraction, it reuse the
@@ -580,7 +589,9 @@ class skyFlash(QObject):
         tar.extractall()
         tar.close()
         self.extractionOk = True
-        # all ok
+
+        # all ok return to cwd and close the thread
+        os.chdir(cwd)
         return "1"
 
     # open the manual in the browser
@@ -588,7 +599,7 @@ class skyFlash(QObject):
     def openManual(self):
         '''Opens the manual in a users's default browser'''
 
-        if sys.platform == "win32":
+        if sys.platform in ["win32", "cygwin"]:
             try:
                 os.startfile(manualUrl)
             except:
@@ -627,6 +638,30 @@ class skyFlash(QObject):
         # GUI reset
         self.sStart.emit()
 
+    def setPath(self, dir):
+        ''''''
+
+        if sys.platform in ["win32", "cygwin"]:
+            # windows
+            # TODO reliable way to ident the users Documents folder
+            pass
+
+        elif sys.platform == "darwin":
+            # mac
+            # TODO reliable way to ident the users Documents folder
+            pass
+
+        else:
+            # linux
+            path = os.path.join(os.path.expanduser('~'), dir)
+
+        # test if the folder is already there
+        if not os.path.isdir(path):
+            os.makedirs(path, exist_ok=True)
+
+        # return it
+        return path
+
 if __name__ == "__main__":
     '''Run the script'''
 
@@ -640,9 +675,6 @@ if __name__ == "__main__":
         # main workspace, skyflash object
         skyflash = skyFlash()
 
-        # capturing the local path
-        skyflash.localPath = os.getcwd()
-
         # startting the UI engine
         engine = QQmlApplicationEngine()
         engine.rootContext().setContextProperty("skf", skyflash)
@@ -651,6 +683,11 @@ if __name__ == "__main__":
 
         # main GUI call
         sys.exit(app.exec_())
+    except SystemExit:
+        sys.exit("By, see you soon.")
     except:
-        sys.exit("Ooops!")
+        print("Unexpected error:", sys.exc_info()[0])
+        raise
+        sys.exit(-1)
+
 
