@@ -35,8 +35,7 @@ class Utils(object):
     def shortenPath(self, fullpath, ccount):
         '''Shorten a passed FS path to a char count size'''
 
-        # TODO OS dependent FS char
-        fpath = fullpath.split("/")
+        fpath = fullpath.split(os.sep)
         fpath.reverse()
         spath = fpath[0]
         count = len(spath)
@@ -48,10 +47,9 @@ class Utils(object):
                 spath = item
             else:
                 # folders
-                # TODO OS dependant FS char
-                tspath = item + "/" + spath
+                tspath = item + os.sep + spath
                 if len(tspath) > ccount:
-                    spath = ".../" + spath
+                    spath = "..." + os.sep + spath
                     break
                 else:
                     spath = tspath
@@ -440,8 +438,7 @@ class skyFlash(QObject):
 
         # chuck size @ 100KB
         blockSize = 102400
-        # TODO folder separator can be os dependent, review
-        filePath = self.localPath + "/" + fileName
+        filePath = os.path.join(self.localPath, fileName)
         startTime = 0
         elapsedTime = 0
 
@@ -538,8 +535,7 @@ class skyFlash(QObject):
         # determine the type of file and the curse of actions
         segPath = self.downloadedFile.split(".")
         if segPath[-1] in ["gz", "xz"]:
-            # compressed file
-            # TODO thread to decompress
+            # compressed file, handle it on a thread
             self.extract = Worker(self.extractFile)
             self.extract.signals.data.connect(self.downloadFileData)
             self.extract.signals.progress.connect(self.downloadFileProg)
