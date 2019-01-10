@@ -639,7 +639,9 @@ class skyFlash(QObject):
         self.sStart.emit()
 
     def setPath(self, dir):
-        ''''''
+        '''Pick the correct path for the current OS and create it if not there
+        This is the path in with we will download, extract, create, etc.
+        '''
 
         if sys.platform in ["win32", "cygwin"]:
             # windows
