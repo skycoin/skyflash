@@ -348,7 +348,9 @@ class skyFlash(QObject):
         if self.extractionOK:
             # success must call for a sha1sum check
             print("Success extraction")
-            pass
+
+            # must check for checksums to validate downloads
+            self.sumscheck()
 
     def extractFileError(self, error):
         '''Process the error of the extraction'''
@@ -663,6 +665,38 @@ class skyFlash(QObject):
 
         # return it
         return path
+
+    def sumsCheck(self):
+        '''Detects and load the digest sums to check integrity of the
+        image file, it will try to detect this ones:
+
+        sha256, sha1 & md5
+
+        The first found will be used to check the
+        image in a thread
+        '''
+
+        # list of supported ext/sums digest
+        digestAlgorithms = ["sha256", "sha1", "md5"]
+        digestFile = ""
+        digestType = ""
+
+        # detect the sums files
+        for file in [x for x in os.listdir(".") if os.path.isfile(x)]:
+            ext = file.split(os.sep)[-1]
+            if ext in digestAlgorithms:
+                digestFile = os.path.join(self.localPath, file)
+                digestType = ext
+                break
+        
+        # can't find a valid digest file
+        if not digestType:
+            # TODO WARNING no DIGEST to check against
+            return "error"
+
+        # prepare to check the digest against the image in a thread
+
+
 
 if __name__ == "__main__":
     '''Run the script'''
