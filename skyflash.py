@@ -224,6 +224,7 @@ class skyFlash(QObject):
     def __init__(self, parent=None):
         self.downloadActive = False
         self.downloadOk = False
+        self.downloadSize = 0
         self.downloadedFile = ""
         self.skybianFile = ""
         self.extractionOK = False
@@ -248,7 +249,7 @@ class skyFlash(QObject):
     # status bar
     setStatus = pyqtSignal(str, arguments=["msg"])
 
-    # download signals
+    # QT QML signals
     # target is download label
     dData = pyqtSignal(str, arguments=["data"])
     # target is proogress bar
@@ -256,13 +257,18 @@ class skyFlash(QObject):
     # target is hide download buttons
     dDone = pyqtSignal()
     # target is show download buttons
-    dStart = pyqtSignal()
+    sStart = pyqtSignal()
+    # target is warnDialog Box rise
+    uiWarning = pyqtSignal(str, str, arguments=["title", "text"])
+    # target is errorwarnDialog Box rise
+    uiError = pyqtSignal(str, str, str, arguments=["title", "text", "details"])
 
     # download flags
     downloadActive = False
     downloadOk = False
 
     # files handling vars
+    downloadSize = 0
     downloadedFile = ""
     skybianFile = ""
 
@@ -303,28 +309,29 @@ class skyFlash(QObject):
         self.cleanWorkspace()
 
         # download error feedback
-        self.dData.emit("Download error...")
-        self.setStatus.emit("An error ocurred, please check the network.")
+        self.setStatus.emit("Please try again")
         etype, eval, etrace = error
         print("An error ocurred:\n{}".format(eval))
+        self.uiError.emit("Network Error?", "Please check your network connection, the download of the Skybian base file failed, it's mostly related to network problems.", str(eval))
 
     def downloadFileResult(self, file):
         '''Receives the result of the download: the path to the downloaded file '''
 
         # debug
         print("Download result: {}".format(file))
+        print("Download ok : {}".format(str(self.downloadOk)))
 
-        if self.downloadOk:
+        # validation
+        if file != "" and self.downloadOk:
+            # all good
             self.downloadedFile = file
-            # TODO adjust the size of the path
-            self.dData.emit("Skybian compressed file is: " + utils.shortenPath(file, 32))
         else:
             # reset the env
             self.cleanWorkspace()
 
             # specific feedback 
-            self.dData.emit("Download canceled or error")
             self.setStatus.emit("Download canceled or error happened")
+            self.uiError.emit("Download failed!", "Download process failed silently, mostly due to connection issues, please try again", "")
 
     def downloadFileDone(self, result):
         '''End of the download task'''
@@ -351,6 +358,9 @@ class skyFlash(QObject):
         if result:
             self.extractionOk = True
             self.dData.emit("Extraction finished")
+        else:
+            # extraction finished with no errors, but failed...
+            self.uiWarning.emit("Extraction failed", "Extraction finished with no error, but was no success, please report this warning to the developers")
 
     def extractFileDone(self):
         '''Callback that is flagged once the extraction was ended.'''
@@ -373,10 +383,10 @@ class skyFlash(QObject):
         self.cleanWorkspace()
 
         # specific feedback
-        self.dData.emit("Extraction error...")
-        self.setStatus.emit("An error ocurred, corrupt file?")
+        self.setStatus.emit("Please try again")
         etype, eval, etrace = error
         print("An error ocurred:\n{}".format(eval))
+        self.uiError.emit("Extraction error", "There was an error extracting the downloaded file, this is mainly due to a corruped download, please try again.", str(eval))
 
     # cksum ones
 
@@ -392,8 +402,8 @@ class skyFlash(QObject):
             self.dData.emit("Skybian image verified!")
         else:
             self.cksumOk = False
-            self.dData.emit("Skybian image compromised!")
-            # TODO Raise modal box warning the user that the download is corrupted
+            self.dData.emit("Skybian image can't be verified!")
+            self.uiError.emit("Skybian image can't be verified!", "The Skybian image integrity check ended with a different fingerprint or a soft error, this image is corrupted or a soft error happened, please start again.", "Downloaded & computed Hash differs")
 
     def cksumDone(self):
         '''Callback that is flagged once the checkum was ended.'''
@@ -422,7 +432,7 @@ class skyFlash(QObject):
         self.setStatus.emit("An error ocurred, can't do the image verification")
         etype, eval, etrace = error
         print("An error ocurred:\n{}".format(eval))
-
+        self.uiError.emit("Integrity check failed!", "The Skybian image integrity check failed with an error, please report this to the developers", str(eval))
 
     @pyqtSlot()
     def downloadSkybian(self):
@@ -435,7 +445,7 @@ class skyFlash(QObject):
             self.downloadActive = True
 
             # set label to starting
-            self.dData.emit("Download starting...")
+            self.dData.emit("Downloading...")
 
             # init download process
             self.down = Worker(self.skyDown)
@@ -487,16 +497,16 @@ class skyFlash(QObject):
         # check if we have a size or it's not known (wtf Github!)
         info = req.info()
         if not "Content-Length" in info:
-            self.size = -1
+            self.downloadSize = -1
         else:
-            self.size = int(req.info()['Content-Length'])
+            self.downloadSize = int(req.info()['Content-Length'])
 
         # extract filename
         fileName = url.split("/")[-1]
 
         # emit data of the download
-        if self.size > 0:
-            data_callback.emit("Downloading {:04.1f} MB".format(self.size/1000/1000))
+        if self.downloadSize > 0:
+            data_callback.emit("Downloading {:04.1f} MB".format(self.downloadSize/1000/1000))
         else:
             data_callback.emit("Downloading size is unknown")
 
@@ -522,19 +532,19 @@ class skyFlash(QObject):
 
                 downloadedChunk += len(chunk)
                 downFile.write(chunk)
-                if self.size > 0:
-                    progress = (float(downloadedChunk) / self.size) * 100
+                if self.downloadSize > 0:
+                    progress = (float(downloadedChunk) / self.downloadSize) * 100
                 else:
                     progress = -1
 
                 # calc speed and ETA
                 elapsedTime = time.time() - startTime
                 bps = int(downloadedChunk/elapsedTime) # b/s
-                if self.size > 0:
-                    etas = int((self.size - downloadedChunk)/bps) # seconds
+                if self.downloadSize > 0:
+                    etas = int((self.downloadSize - downloadedChunk)/bps) # seconds
 
                 # emit progress
-                if self.size > 0:
+                if self.downloadSize > 0:
                     prog = "{:.1%}, {}, {} to go".format(progress/100,  utils.speed(bps), utils.eta(etas))
                 else:
                     prog = "{} so far at {}, unknown ETA".format(utils.size(downloadedChunk),  utils.speed(bps))
@@ -546,12 +556,28 @@ class skyFlash(QObject):
                 if not self.downloadActive:
                     downFile.close()
                     os.unlink(downFile)
+                    print("active was forced to false")
                     return ""
 
         # close the file handle
         if downFile:
             downFile.close()
 
+        # if download size is known and is not meet rise error
+        if self.downloadSize != -1:
+            # check if downloaded file is that size
+            realSize = os.path.getsize(filePath)
+
+            # debug
+            print("Remote size: {}\nLocal size: {}".format(self.downloadSize, realSize))
+
+            if int(realSize) != int(self.downloadSize):
+                # ops! download truncated
+                self.downloadOk = False
+                print("size diffs")
+                return ""
+
+        # unknown length or correct length and downloaded fully
         self.downloadOk = True
 
         # return the local filename
@@ -771,6 +797,7 @@ class skyFlash(QObject):
             digest, imgFile = sf.readline().split(" ")
         except:
             print("Error, checksum file {} is empty?".format(imgFile))
+            raise
 
         # cleaning the filename (it has a starting * and ends with a newline)
         imgFile = os.path.join(self.localPath, imgFile.strip("*"))

@@ -13,12 +13,33 @@ ApplicationWindow {
 
     // about dialog
     MessageDialog {
-        id: aboutDialog
+        id: aboutDiag
         title: "About Skyflash"
         text: "Skyflash is the official tool to create the\nSkyminers images from Skybian."
         onAccepted: visible = false
     }
 
+    // generic warning dialog
+    MessageDialog {
+        id: warnDiag
+        icon: StandardIcon.Warning
+        title: ""
+        text: ""
+        onAccepted: {
+            warnD.visible = false
+        }
+    }
+
+    // generic warning dialog
+    MessageDialog {
+        id: errorDiag
+        icon: StandardIcon.Critical
+        title: ""
+        text: ""
+        onAccepted: {
+            errorDiag.visible = false
+        }
+    }
 
     FileDialog {
         id: fileDialog
@@ -57,7 +78,7 @@ ApplicationWindow {
 
             MenuItem {
                 text: "About..."
-                onTriggered: aboutDialog.open()
+                onTriggered: aboutDiag.open()
             }
         }
     }
@@ -340,10 +361,13 @@ ApplicationWindow {
         }
 
         // show all buttons in the download and resize the windowds to it's original size
-        onDStart: {
+        onSStart: {
             pbDownload.visible = true
+            pbDownload.value = 0
             phDownloadButtons.visible = true
             btBrowse.visible = true
+            lbImageComment.text = ""
+            sbText.text = ""
             btDown.visible = true
             btDown.text = "Download"
             btDown.tooltip = "Click here to download the base Skybian image from the official site"
@@ -360,6 +384,25 @@ ApplicationWindow {
         // status bar messages
         onSetStatus: {
             sbText.text = msg
+        }
+
+        // on warn dialog
+        onUiWarning: {
+            warnDiag.title = title
+            warnDiag.text = text
+            warnDiag.open()
+        }
+
+        // on error dialog
+        onUiError: {
+            errorDiag.title = title
+            errorDiag.text = text
+            if (details != "") {
+                errorDiag.detailedText = details
+            } else {
+                errorDiag.detailedText.visible = false
+            }
+            errorDiag.open()
         }
     }
 }
