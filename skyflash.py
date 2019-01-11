@@ -230,6 +230,7 @@ class skyFlash(QObject):
         self.digestAlgorithm = ""
         self.digest = ""
         self.skybianFile = ""
+        self.cksumOk = False
 
         # set the working dir for the downloads and extraction to a folder
         # named skyflash on the users home, create it if not there
@@ -267,6 +268,9 @@ class skyFlash(QObject):
 
     # extraction flags
     extractionOk = False
+
+    # checksum vars
+    cksumOk = False
 
     # network signals
     netConfig = pyqtSignal()
@@ -373,6 +377,52 @@ class skyFlash(QObject):
         self.setStatus.emit("An error ocurred, corrupt file?")
         etype, eval, etrace = error
         print("An error ocurred:\n{}".format(eval))
+
+    # cksum ones
+
+    def cksumResult(self, result):
+        '''Callback that receives the signal for a cksum finished, an
+        argument is passed, result, it's true or false to flag success or failure'''
+
+        # debug
+        print("Extraction result: {}".format(result))
+
+        if result:
+            self.cksumOk = True
+            self.dData.emit("Skybian image verified!")
+        else:
+            self.cksumOk = False
+            self.dData.emit("Skybian image compromised!")
+            # TODO Raise modal box warning the user that the download is corrupted
+
+    def cksumDone(self):
+        '''Callback that is flagged once the checkum was ended.'''
+
+        # debug
+        print("Image integrity check done!")
+
+        if self.cksumOk:
+            # success must call for a sha1sum check
+            print("Success extraction")
+            # next step
+            self.netConfig.emit()
+            # self.buildImages.emit()
+
+    def cksumError(self, error):
+        '''Process the error of the checksum, this only process error in the
+        process, a completed checksum but not matching is handled by result
+        not in this.
+        '''
+
+        # stop the extraction & reset env
+        self.cleanWorkspace()
+
+        # specific feedback
+        self.dData.emit("Checksum process error...")
+        self.setStatus.emit("An error ocurred, can't do the image verification")
+        etype, eval, etrace = error
+        print("An error ocurred:\n{}".format(eval))
+
 
     @pyqtSlot()
     def downloadSkybian(self):
@@ -737,9 +787,9 @@ class skyFlash(QObject):
         self.cksum = Worker(self.cksumCheck)
         self.cksum.signals.data.connect(self.downloadFileData)
         self.cksum.signals.progress.connect(self.downloadFileProg)
-        # self.cksum.signals.result.connect(self.extractFileResult)
-        # self.cksum.signals.error.connect(self.extractFileError)
-        # self.cksum.signals.finished.connect(self.extractFileDone)
+        self.cksum.signals.result.connect(self.cksumResult)
+        self.cksum.signals.error.connect(self.cksumError)
+        self.cksum.signals.finished.connect(self.cksumDone)
 
         # init worker
         self.threadpool.start(self.cksum)
@@ -792,6 +842,13 @@ class skyFlash(QObject):
         calculatedDigest = cksum.hexdigest()
         print("Official Sum: {}".format(self.digest))
         print("Calculated:   {}".format(calculatedDigest))
+
+        if self.digest == calculatedDigest:
+            # success, image integrity preserved
+            return "1"
+        else:
+            # failure
+            return ""
 
 
 if __name__ == "__main__":
