@@ -241,6 +241,7 @@ class skyFlash(QObject):
         # log
         logfile = os.path.join(self.localPath, "skyflash.log")
         logging.basicConfig(filename=logfile, level=logging.DEBUG)
+        self.logStart()
 
         return super(skyFlash, self).__init__(parent=parent)
 
@@ -884,6 +885,14 @@ class skyFlash(QObject):
             # failure
             return ""
 
+    def logStart(self):
+        '''Initializate the logging, send some start of log info to the file'''
+
+        logging.info("")
+        logging.info("====================================================")
+        logging.info("Logging started at {}".format(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime())))
+        logging.info("====================================================")
+        logging.info("")
 
 if __name__ == "__main__":
     '''Run the script'''
