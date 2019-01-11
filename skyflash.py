@@ -11,6 +11,7 @@ import traceback
 import tarfile
 import ssl
 import hashlib
+import logging
 from urllib.request import Request, urlopen
 
 # GUI imports
@@ -237,6 +238,10 @@ class skyFlash(QObject):
         # named skyflash on the users home, create it if not there
         self.localPath = self.setPath("Skyflash")
 
+        # log
+        logfile = os.path.join(self.localPath, "skyflash.log")
+        logging.basicConfig(filename=logfile, level=logging.DEBUG)
+
         return super(skyFlash, self).__init__(parent=parent)
 
     # some variables
@@ -311,15 +316,15 @@ class skyFlash(QObject):
         # download error feedback
         self.setStatus.emit("Please try again")
         etype, eval, etrace = error
-        print("An error ocurred:\n{}".format(eval))
+        logging.debug("An error ocurred:\n{}".format(eval))
         self.uiError.emit("Network Error?", "Please check your network connection, the download of the Skybian base file failed, it's mostly related to network problems.", str(eval))
 
     def downloadFileResult(self, file):
         '''Receives the result of the download: the path to the downloaded file '''
 
         # debug
-        print("Download result: {}".format(file))
-        print("Download ok : {}".format(str(self.downloadOk)))
+        logging.debug("Download result: {}".format(file))
+        logging.debug("Download ok : {}".format(str(self.downloadOk)))
 
         # validation
         if file != "" and self.downloadOk:
@@ -337,7 +342,7 @@ class skyFlash(QObject):
         '''End of the download task'''
 
         # debug
-        print("Download Done!")
+        logging.debug("Download Done:")
 
         # check status of download
         if self.downloadOk and self.downloadedFile != "":
@@ -353,7 +358,7 @@ class skyFlash(QObject):
         argument is passes, result, it's true or false to flag success or failure'''
 
         # debug
-        print("Extraction result: {}".format(result))
+        logging.debug("Extraction result: {}".format(result))
 
         if result:
             self.extractionOk = True
@@ -366,7 +371,7 @@ class skyFlash(QObject):
         '''Callback that is flagged once the extraction was ended.'''
 
         # debug
-        print("Extraction Done!")
+        logging.debug("Extraction Done:")
 
         # must check for checksums to validate downloads
         self.sumsCheck()
@@ -374,7 +379,7 @@ class skyFlash(QObject):
         # TODO, this is not working
         # if self.extractionOK:
         #     # success must call for a sha1sum check
-        #     print("Success extraction")
+        #     logging.debug("Success extraction")
 
     def extractFileError(self, error):
         '''Process the error of the extraction'''
@@ -385,7 +390,7 @@ class skyFlash(QObject):
         # specific feedback
         self.setStatus.emit("Please try again")
         etype, eval, etrace = error
-        print("An error ocurred:\n{}".format(eval))
+        logging.debug("An error ocurred:\n{}".format(eval))
         self.uiError.emit("Extraction error", "There was an error extracting the downloaded file, this is mainly due to a corruped download, please try again.", str(eval))
 
     # cksum ones
@@ -395,25 +400,27 @@ class skyFlash(QObject):
         argument is passed, result, it's true or false to flag success or failure'''
 
         # debug
-        print("Extraction result: {}".format(result))
+        logging.debug("Checksum verification result: {}".format(result))
 
         if result:
             self.cksumOk = True
             self.dData.emit("Skybian image verified!")
+            logging.debug("Checksum verification result is ok")
         else:
             self.cksumOk = False
             self.dData.emit("Skybian image can't be verified!")
+            logging.debug("Checksum verification failed: hash differs!")
             self.uiError.emit("Skybian image can't be verified!", "The Skybian image integrity check ended with a different fingerprint or a soft error, this image is corrupted or a soft error happened, please start again.", "Downloaded & computed Hash differs")
 
     def cksumDone(self):
         '''Callback that is flagged once the checkum was ended.'''
 
         # debug
-        print("Image integrity check done!")
+        logging.debug("Checksum verification done")
 
         if self.cksumOk:
             # success must call for a sha1sum check
-            print("Success extraction")
+            logging.debug("Checksum verification is a success!")
             # next step
             self.netConfig.emit()
             # self.buildImages.emit()
@@ -431,7 +438,7 @@ class skyFlash(QObject):
         self.dData.emit("Checksum process error...")
         self.setStatus.emit("An error ocurred, can't do the image verification")
         etype, eval, etrace = error
-        print("An error ocurred:\n{}".format(eval))
+        logging.debug("An error ocurred while verifying the checksum:\n{}".format(eval))
         self.uiError.emit("Integrity check failed!", "The Skybian image integrity check failed with an error, please report this to the developers", str(eval))
 
     @pyqtSlot()
@@ -481,7 +488,7 @@ class skyFlash(QObject):
         url = skybianUrl
 
         # DEBUG
-        print("Downloading from: {}".format(url))
+        logging.debug("Downloading from: {}".format(url))
 
         headers = {}
         headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
@@ -498,8 +505,10 @@ class skyFlash(QObject):
         info = req.info()
         if not "Content-Length" in info:
             self.downloadSize = -1
+            logging.debug("Download file size is unknown...")
         else:
             self.downloadSize = int(req.info()['Content-Length'])
+            logging.debug("Download file size is {:0.1f}MB".format(self.downloadSize/1000/1000))
 
         # extract filename
         fileName = url.split("/")[-1]
@@ -520,14 +529,14 @@ class skyFlash(QObject):
         elapsedTime = 0
 
         # DEBUG
-        print("Downloading to: {}".format(filePath))
+        logging.debug("Downloading to: {}".format(filePath))
 
         with open(filePath, "wb") as downFile:
             startTime = time.time()
             while True:
                 chunk = req.read(blockSize)
                 if not chunk:
-                    print("\nDownload Complete.")
+                    logging.debug("Download Complete.")
                     break
 
                 downloadedChunk += len(chunk)
@@ -556,7 +565,6 @@ class skyFlash(QObject):
                 if not self.downloadActive:
                     downFile.close()
                     os.unlink(downFile)
-                    print("active was forced to false")
                     return ""
 
         # close the file handle
@@ -569,12 +577,12 @@ class skyFlash(QObject):
             realSize = os.path.getsize(filePath)
 
             # debug
-            print("Remote size: {}\nLocal size: {}".format(self.downloadSize, realSize))
+            logging.debug("Download size check:\nRemote size: {}\nLocal size: {}".format(self.downloadSize, realSize))
 
             if int(realSize) != int(self.downloadSize):
                 # ops! download truncated
                 self.downloadOk = False
-                print("size diffs")
+                logging.debug("Error! file size differs")
                 return ""
 
         # unknown length or correct length and downloaded fully
@@ -596,7 +604,7 @@ class skyFlash(QObject):
         if file.startswith("file:///"):
             file = file.replace("file://", "")
 
-        print("Selected file is " + file)
+        logging.debug("Selected file is " + file)
 
         # try to read a chunk of it
         try:
@@ -642,12 +650,9 @@ class skyFlash(QObject):
         elif segPath[-1] in "img":
             # plain image
             self.skybianFile = self.downloadedFile
-            return
 
-        else:
-            # other unknown case
-            # TODO Warn the user, what to do next?
-            pass
+            # TODO user selected a image file, disable this option? skip verification?
+            return
 
     def extractFile(self, data_callback, progress_callback):
         '''Extract a file compressed with tar and xz|gz of the skybian base file.
@@ -689,6 +694,8 @@ class skyFlash(QObject):
     def openManual(self):
         '''Opens the manual in a users's default browser'''
 
+        logging.debug("Trying to open the manual page on the browser, wait for it...")
+
         if sys.platform in ["win32", "cygwin"]:
             try:
                 os.startfile(manualUrl)
@@ -702,19 +709,21 @@ class skyFlash(QObject):
             try:
                 subprocess.Popen(["xdg-open", manualUrl])
             except OSError:
-                print("Please open a browser on: " + manualUrl)
+                logging.debug("Please open a browser on: " + manualUrl)
 
     def cleanWorkspace(self):
         '''Cleans the workspace, erase any temp/work file and resets the
         interface to start all over again like a fresh start, erasing
         vars from the previous run'''
 
+        logging.debug("Clean workspace called, cleaning the house")
+
         # erase any working file
         filePatterns = ["img", "gz", "xz", "sha1", "md5"]
         for item in os.listdir(self.localPath):
             itemExtension = item.split(".")[-1]
             if itemExtension in filePatterns:
-                print("Erasing file {}".format(item))
+                logging.debug("Erasing file {}".format(item))
                 os.unlink(self.localPath + "/" + item)
 
         # vars reset
@@ -769,15 +778,13 @@ class skyFlash(QObject):
         digestType = ""
 
         # detect the sums files
-        # files = [x for x in os.listdir(self.localPath) if os.path.isfile(x)]
         files = os.listdir(self.localPath)
         for file in files:
-            print("Found file: {}".format(file))
             ext = file.split(".")[-1]
             if ext in digestAlgorithms:
+                logging.debug("Found checksum file: {}".format(file))
                 digestFile = os.path.join(self.localPath, file)
                 digestType = ext
-                print(">>> file is a checksum one")
                 break
 
         # can't find a valid digest file
@@ -789,14 +796,14 @@ class skyFlash(QObject):
         try:
             sf = open(digestFile, 'r')
         except OSError:
-            print("An error opening the file happened...")
+            logging.debug("An error opening the checksum file happened...")
             raise
 
         # loading values
         try:
             digest, imgFile = sf.readline().split(" ")
         except:
-            print("Error, checksum file {} is empty?".format(imgFile))
+            logging.debug("Error, checksum file {} is empty?".format(imgFile))
             raise
 
         # cleaning the filename (it has a starting * and ends with a newline)
@@ -804,7 +811,7 @@ class skyFlash(QObject):
         imgFile = imgFile.strip("\n")
 
         # DEBUG
-        print("File: {}\nDigest: {}\nDigest Algorithm is: {}".format(imgFile, digest, digestType))
+        logging.debug("checksum details:\nFile: {}\nDigest: {}\nDigest Algorithm is: {}".format(imgFile, digest, digestType))
 
         self.digestAlgorithm = digestType
         self.digest = digest
@@ -840,7 +847,7 @@ class skyFlash(QObject):
         elif self.digestAlgorithm == "sha1":
             cksum = hashlib.sha1()
         else:
-            print("Digest algorithm {} is not supported yet".format(self.digestAlgorithm))
+            logging.debug("Digest algorithm {} is not supported yet".format(self.digestAlgorithm))
             return
 
         # get the file and it's size, etc
@@ -867,8 +874,8 @@ class skyFlash(QObject):
 
         # check the calculated digest
         calculatedDigest = cksum.hexdigest()
-        print("Official Sum: {}".format(self.digest))
-        print("Calculated:   {}".format(calculatedDigest))
+        logging.debug("Official Sum: {}".format(self.digest))
+        logging.debug("Calculated:   {}".format(calculatedDigest))
 
         if self.digest == calculatedDigest:
             # success, image integrity preserved
@@ -902,7 +909,7 @@ if __name__ == "__main__":
     except SystemExit:
         sys.exit("By, see you soon.")
     except:
-        print("Unexpected error:", sys.exc_info()[0])
+        logging.debug("Unexpected error:", sys.exc_info()[0])
         raise
         sys.exit(-1)
 
