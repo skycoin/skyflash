@@ -24,7 +24,7 @@ ApplicationWindow {
         id: fileDialog
         title: "Please choose a file"
         folder: shortcuts.home
-        nameFilters: ["Supported Files (*.tar.gz *.tar.xz *.img)"]
+        nameFilters: ["Supported Files (*.tar *.tar.gz *.tar.xz *.img)"]
         selectMultiple: false
 
         onAccepted: {

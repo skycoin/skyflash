@@ -10,6 +10,7 @@ import time
 import traceback
 import tarfile
 import ssl
+import hashlib
 from urllib.request import Request, urlopen
 
 # GUI imports
@@ -221,7 +222,14 @@ class skyFlash(QObject):
 
     ### init procedure
     def __init__(self, parent=None):
+        self.downloadActive = False
+        self.downloadOk = False
+        self.downloadedFile = ""
+        self.skybianFile = ""
         self.extractionOK = False
+        self.digestAlgorithm = ""
+        self.digest = ""
+        self.skybianFile = ""
 
         # set the working dir for the downloads and extraction to a folder
         # named skyflash on the users home, create it if not there
@@ -231,6 +239,8 @@ class skyFlash(QObject):
 
     # some variables
     localPath = ""
+    digestAlgorithm = ""
+    digest = ""
 
     #### registering Signals to emit to QML GUI
 
@@ -252,7 +262,6 @@ class skyFlash(QObject):
     downloadOk = False
 
     # files handling vars
-    downloadFileSize = 0
     downloadedFile = ""
     skybianFile = ""
 
@@ -345,12 +354,13 @@ class skyFlash(QObject):
         # debug
         print("Extraction Done!")
 
-        if self.extractionOK:
-            # success must call for a sha1sum check
-            print("Success extraction")
+        # must check for checksums to validate downloads
+        self.sumsCheck()
 
-            # must check for checksums to validate downloads
-            self.sumscheck()
+        # TODO, this is not working
+        # if self.extractionOK:
+        #     # success must call for a sha1sum check
+        #     print("Success extraction")
 
     def extractFileError(self, error):
         '''Process the error of the extraction'''
@@ -541,7 +551,7 @@ class skyFlash(QObject):
         
         # determine the type of file and the curse of actions
         segPath = self.downloadedFile.split(".")
-        if segPath[-1] in ["gz", "xz"]:
+        if segPath[-1] in ["tar", "gz", "xz"]:
             # compressed file, handle it on a thread
             self.extract = Worker(self.extractFile)
             self.extract.signals.data.connect(self.downloadFileData)
@@ -594,6 +604,8 @@ class skyFlash(QObject):
 
         # all ok return to cwd and close the thread
         os.chdir(cwd)
+
+        # return
         return "1"
 
     # open the manual in the browser
@@ -633,7 +645,6 @@ class skyFlash(QObject):
         self.downloadedFile = ""
         self.downloadOk = False
         self.downloadActive = False
-        self.downloadFileSize = 0
         self.skybianFile = ""
         self.extractionOk = False
 
@@ -682,20 +693,105 @@ class skyFlash(QObject):
         digestType = ""
 
         # detect the sums files
-        for file in [x for x in os.listdir(".") if os.path.isfile(x)]:
-            ext = file.split(os.sep)[-1]
+        # files = [x for x in os.listdir(self.localPath) if os.path.isfile(x)]
+        files = os.listdir(self.localPath)
+        for file in files:
+            print("Found file: {}".format(file))
+            ext = file.split(".")[-1]
             if ext in digestAlgorithms:
                 digestFile = os.path.join(self.localPath, file)
                 digestType = ext
+                print(">>> file is a checksum one")
                 break
-        
+
         # can't find a valid digest file
         if not digestType:
             # TODO WARNING no DIGEST to check against
             return "error"
 
         # prepare to check the digest against the image in a thread
+        try:
+            sf = open(digestFile, 'r')
+        except OSError:
+            print("An error opening the file happened...")
+            raise
 
+        # loading values
+        try:
+            digest, imgFile = sf.readline().split(" ")
+        except:
+            print("Error, checksum file {} is empty?".format(imgFile))
+
+        # cleaning the filename (it has a starting * and ends with a newline)
+        imgFile = os.path.join(self.localPath, imgFile.strip("*"))
+        imgFile = imgFile.strip("\n")
+
+        # DEBUG
+        print("File: {}\nDigest: {}\nDigest Algorithm is: {}".format(imgFile, digest, digestType))
+
+        self.digestAlgorithm = digestType
+        self.digest = digest
+        self.skybianFile = imgFile
+
+        # start the checksum thread
+        self.cksum = Worker(self.cksumCheck)
+        self.cksum.signals.data.connect(self.downloadFileData)
+        self.cksum.signals.progress.connect(self.downloadFileProg)
+        # self.cksum.signals.result.connect(self.extractFileResult)
+        # self.cksum.signals.error.connect(self.extractFileError)
+        # self.cksum.signals.finished.connect(self.extractFileDone)
+
+        # init worker
+        self.threadpool.start(self.cksum)
+
+        return
+
+    def cksumCheck(self, data_callback, progress_callback):
+        '''Check the checksum detected for the skybian base file
+
+        Result returned must be string that will be converted to boolean so we stick
+        to strings 1|0
+
+        This method is wrapped by the thread and will catch any errors upstream
+        so no need to handle it here
+        '''
+
+        # object checksum creation the fast way, there is a argument passing way (simpler)
+        # but docs discourage it as slow
+        if self.digestAlgorithm == "md5":
+            cksum = hashlib.md5()
+        elif self.digestAlgorithm == "sha1":
+            cksum = hashlib.sha1()
+        else:
+            print("Digest algorithm {} is not supported yet".format(self.digestAlgorithm))
+            return
+
+        # get the file and it's size, etc
+        fileSize = os.path.getsize(self.skybianFile)
+        file = open(self.skybianFile, "rb")
+        actualPosition = 0
+        portionSize = 8192
+
+        # user feedback
+        data_callback.emit("Integrity checking, please wait...")
+
+        # main loop
+        file.seek(0)
+        while actualPosition < fileSize:
+            data = file.read(portionSize)
+            cksum.update(data)
+
+            # progress and cycle update
+            actualPosition += portionSize
+            percent = actualPosition / fileSize
+
+            data = "Integrity checking {:.1%}".format(percent)
+            progress_callback.emit(percent * 100, data)
+
+        # check the calculated digest
+        calculatedDigest = cksum.hexdigest()
+        print("Official Sum: {}".format(self.digest))
+        print("Calculated:   {}".format(calculatedDigest))
 
 
 if __name__ == "__main__":
