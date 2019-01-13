@@ -744,8 +744,10 @@ class skyFlash(QObject):
 
         if sys.platform in ["win32", "cygwin"]:
             # windows
-            # TODO reliable way to ident the users Documents folder
-            pass
+            path = os.path.expanduser('~')
+            # path has the c:\Users\[username] so we need to add the Documents folder
+            # Windows has a trick for other langs beside English
+            path = os.path.join(path, "Documents")
 
         elif sys.platform == "darwin":
             # mac
@@ -756,9 +758,14 @@ class skyFlash(QObject):
             # linux
             path = os.path.join(os.path.expanduser('~'), dir)
 
+        # now adding the app dir
+        path = os.path.join(path, dir)
+        print("App folder is {}".format(path))
+
         # test if the folder is already there
         if not os.path.isdir(path):
             os.makedirs(path, exist_ok=True)
+            print("Creating app folder")
 
         # return it
         return path
