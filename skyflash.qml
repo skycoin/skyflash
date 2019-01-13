@@ -183,11 +183,29 @@ ApplicationWindow {
 
             // defaults CheckBox
             CheckBox {
+                id: ckbDefaultNetwork
                 text: "Use skyminner defaults"
                 checked: true
 
                 onCheckedChanged: {
-                    // TODO
+                    if (ckbDefaultNetwork.checked == true) {
+                        // set default values
+                        txtGateway.text = "192.168.0.1"
+                        txtDNS.text = "1.0.0.1, 1.1.1.1"
+                        txtManager.text = "192.168.0.2"
+                        txtNodes.text = "7"
+                        // disabling the input on the fields
+                        txtGateway.enabled = false
+                        txtDNS.enabled = false
+                        txtManager.enabled = false
+                        txtNodes.enabled = false
+                    } else {
+                        // enable the fields for edit
+                        txtGateway.enabled = true
+                        txtDNS.enabled = true
+                        txtManager.enabled = true
+                        txtNodes.enabled = true
+                    }
                 }
             }
 
@@ -203,8 +221,10 @@ ApplicationWindow {
                     id: txtGateway
                     Layout.preferredWidth: 200
                     placeholderText: "192.168.0.1"
+                    text: "192.168.0.1"
                     maximumLength: 16
-
+                    enabled: false
+                    // ToolTip.text: "This is the network Gateway IP"
                 }
 
                 // dns
@@ -214,7 +234,10 @@ ApplicationWindow {
                     id: txtDNS
                     Layout.preferredWidth: 200
                     placeholderText: "1.0.0.1, 1.1.1.1"
+                    text: "1.0.0.1, 1.1.1.1"
                     maximumLength: 34
+                    enabled: false
+                    // ToolTip.text: "This is DNS your nodes will use to resolve names on the net"
                 }
 
                 // manager IP
@@ -224,8 +247,10 @@ ApplicationWindow {
                     id: txtManager
                     Layout.preferredWidth: 200
                     placeholderText: "192.168.0.2"
+                    text: "192.168.0.2"
                     maximumLength: 16
-
+                    enabled: false
+                    // ToolTip.text: "This is the IP of the manager node"
                 }
 
                 // node count
@@ -235,7 +260,10 @@ ApplicationWindow {
                     id: txtNodes
                     Layout.preferredWidth: 200
                     placeholderText: "7"
+                    text: "7"
                     maximumLength: 5
+                    enabled: false
+                    // ToolTip.text: "How many nodes we must build images for, not counting the manager node"
                 }
             }
         }
@@ -372,13 +400,25 @@ ApplicationWindow {
             btDown.text = "Download"
             btDown.tooltip = "Click here to download the base Skybian image from the official site"
             // TODO resize windows
+            windows.width = 398
+            windows.height = 148
+            // hide other box placeholders
+            boxNetwork.visible = false
+            boxBuild.visible = false
         }
 
-        // start network config
+        // show network config
         onNetConfig: {
             // set next step visible
             boxNetwork.visible = true
             windows.height = 300
+        }
+
+        // show build images config
+        onBuildConfig: {
+            // set next step visible
+            boxBuild.visible = true
+            windows.height = 360
         }
 
         // status bar messages
