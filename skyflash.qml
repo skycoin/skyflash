@@ -224,7 +224,12 @@ ApplicationWindow {
                     text: "192.168.0.1"
                     maximumLength: 16
                     enabled: false
+                    inputMask: "000.000.000.000; "
                     // ToolTip.text: "This is the network Gateway IP"
+
+                    onTextChanged: {
+                        console.log(txtGateway.text)
+                    }
                 }
 
                 // dns
@@ -237,6 +242,7 @@ ApplicationWindow {
                     text: "1.0.0.1, 1.1.1.1"
                     maximumLength: 34
                     enabled: false
+                    inputMask: "000.000.000.000, 000.000.000.000; "
                     // ToolTip.text: "This is DNS your nodes will use to resolve names on the net"
                 }
 
@@ -250,6 +256,7 @@ ApplicationWindow {
                     text: "192.168.0.2"
                     maximumLength: 16
                     enabled: false
+                    inputMask: "000.000.000.000; "
                     // ToolTip.text: "This is the IP of the manager node"
                 }
 
@@ -263,6 +270,7 @@ ApplicationWindow {
                     text: "7"
                     maximumLength: 5
                     enabled: false
+                    inputMask: "000"
                     // ToolTip.text: "How many nodes we must build images for, not counting the manager node"
                 }
             }
@@ -415,7 +423,7 @@ ApplicationWindow {
         }
 
         // show build images config
-        onBuildConfig: {
+        onBuildImages: {
             // set next step visible
             boxBuild.visible = true
             windows.height = 360

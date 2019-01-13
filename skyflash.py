@@ -286,6 +286,7 @@ class skyFlash(QObject):
 
     # network signals
     netConfig = pyqtSignal()
+    buildImages = pyqtSignal()
 
     # thread pool
     threadpool = QThreadPool()
@@ -424,7 +425,7 @@ class skyFlash(QObject):
             logging.debug("Checksum verification is a success!")
             # next step
             self.netConfig.emit()
-            # self.buildImages.emit()
+            self.buildImages.emit()
 
     def cksumError(self, error):
         '''Process the error of the checksum, this only process error in the
