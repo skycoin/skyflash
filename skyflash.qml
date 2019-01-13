@@ -107,17 +107,23 @@ ApplicationWindow {
             Layout.fillWidth: true
 
             // box title
-            Label {
-                text: "1. Get or select the Skybian base Image:"
-                font.pixelSize: 14
-                font.bold: true
-                color: "black"
+            Rectangle {
+                Layout.fillWidth: true
+                width: parent.width
+                height: 22
+                color: "lightblue"
+                radius: 3
+
+                Label {
+                    text: "1. Get or select the Skybian base Image:"
+                    font.pixelSize: 14
+                    font.bold: true
+                    color: "black"
+                }
             }
 
             // buttons
             RowLayout {
-
-
                 RowLayout {
                     id: phDownloadButtons
                     
@@ -174,11 +180,19 @@ ApplicationWindow {
             visible: false
 
             // box title
-            Label {
-                text: "2. Set network settings."
-                font.pixelSize: 14
-                font.bold: true
-                color: "black"
+            Rectangle {
+                Layout.fillWidth: true
+                width: parent.width
+                height: 22
+                color: "lightblue"
+                radius: 3
+
+                Label {
+                    text: "2. Set network settings."
+                    font.pixelSize: 14
+                    font.bold: true
+                    color: "black"
+                }
             }
 
             // defaults CheckBox
@@ -283,11 +297,19 @@ ApplicationWindow {
             visible: false
 
             // box title
-            Label {
-                text: "3. Build the respective images."
-                font.pixelSize: 14
-                font.bold: true
-                color: "black"
+            Rectangle {
+                Layout.fillWidth: true
+                width: parent.width
+                height: 22
+                color: "lightblue"
+                radius: 3
+
+                Label {
+                    text: "3. Build the respective images."
+                    font.pixelSize: 14
+                    font.bold: true
+                    color: "black"
+                }
             }
 
             // build tools
@@ -320,11 +342,19 @@ ApplicationWindow {
             visible: false
 
             // box title
-            Label {
-                text: "4. Flash the images."
-                font.pixelSize: 14
-                font.bold: true
-                color: "black"
+            Rectangle {
+                Layout.fillWidth: true
+                width: parent.width
+                height: 22
+                color: "lightblue"
+                radius: 3
+
+                Label {
+                    text: "4. Flash the images."
+                    font.pixelSize: 14
+                    font.bold: true
+                    color: "black"
+                }
             }
 
             // flash tools
