@@ -601,8 +601,14 @@ class skyFlash(QObject):
             self.setStatus.emit("You selected nothing, please try again")
             return
         
-        # TODO, check on windows
-        if file.startswith("file:///"):
+        # clean the path depending on the OS
+        if sys.platform in ["win32", "cygwin"]:
+            # file is like this file:///C:/Users/Pavel/Downloads/Skybian-0.1.0.tar.xz
+            # need to remove 3 slashes
+            file = file.replace("file:///", "")
+        else:
+            # working on linux, like this: file:///home/pavel/Downloads/Skybian-0.1.0.tar.xz
+            # TODO test os MacOS
             file = file.replace("file://", "")
 
         logging.debug("Selected file is " + file)
@@ -616,6 +622,7 @@ class skyFlash(QObject):
         except:
             # TODO exact error
             self.setStatus.emit("Selected file is not readable.")
+            raise
             return
 
         # all seems good, emit and go on
