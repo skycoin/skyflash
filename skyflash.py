@@ -25,6 +25,10 @@ skybianUrl = "http://localhost:8080/skybian.tar.gz"
 # skybianUrl = "https://github.com/skycoin/skycoin/archive/develop.zip"
 manualUrl = "http://github.com/simelo/skyflash"
 
+# image config file position and size
+imageConfigAddress = 3670016
+imageConfigDataSize = 256
+
 # utils class
 class Utils(object):
     '''This is a basic class to hold procedures & functions that does not belongs
@@ -32,7 +36,7 @@ class Utils(object):
     formatting, etc. As the name implies a utils tool box'''
 
     def __init__(self):
-        return super(Utils, self).__init__()
+        super(Utils, self).__init__()
 
     def shortenPath(self, fullpath, ccount):
         '''Shorten a passed FS path to a char count size'''
@@ -40,7 +44,6 @@ class Utils(object):
         fpath = fullpath.split(os.sep)
         fpath.reverse()
         spath = fpath[0]
-        count = len(spath)
 
         # cycle from back to start to fit on ccount
         for item in fpath:
@@ -131,7 +134,7 @@ class Utils(object):
         elif k > 1:
             out = "{:0.3f} KB".format(k)
         else:
-            out = "{} bytes".format(int(speed))
+            out = "{} bytes".format(int(size))
 
         return out
 
@@ -147,11 +150,13 @@ class Utils(object):
 
         # from 0 to 255
         for d in digits:
+            d = int(d)
             if d > 255 or d < 0:
                 return (False, "One of the digits on the IP is not valid")
 
         # all good
         return (True, "")
+
 
 # fileio overide class to get progress on tarfile extraction
 class ProgressFileObject(io.FileIO):
@@ -190,7 +195,7 @@ class WorkerSignals(QObject):
     finished = pyqtSignal(str)
 
     def __init__(self, parent=None):
-        return super(WorkerSignals, self).__init__(parent=parent)
+        super(WorkerSignals, self).__init__(parent=parent)
 
 
 # Generic worker to use in threads
@@ -266,6 +271,10 @@ class skyFlash(QObject):
     localPath = ""
     digestAlgorithm = ""
     digest = ""
+    netGw = ""
+    netDns = ""
+    netManager = ""
+    netNodes = ""
 
     #### registering Signals to emit to QML GUI
 
@@ -285,6 +294,10 @@ class skyFlash(QObject):
     uiWarning = pyqtSignal(str, str, arguments=["title", "text"])
     # target is errorwarnDialog Box rise
     uiError = pyqtSignal(str, str, str, arguments=["title", "text", "details"])
+    # build single process show single file build progress
+    bsProg = pyqtSignal(float, arguments=["percent"])
+    # build overal progress, show overall progress for the whole image build
+    boProg = pyqtSignal(float, arguments=["percent"])
 
     # download flags
     downloadActive = False
@@ -459,6 +472,39 @@ class skyFlash(QObject):
         etype, eval, etrace = error
         logging.debug("An error ocurred while verifying the checksum:\n{}".format(eval))
         self.uiError.emit("Integrity check failed!", "The Skybian image integrity check failed with an error, please report this to the developers", str(eval))
+
+    # build ones
+
+    def buildData(self, data):
+        ''''''
+        pass
+    
+    def buildProg(self, percent, data):
+        '''Update two progressbar and a status bar in the UI
+        
+        The data cames as a percent of the single image, and the
+        data part carries the comment for the status bar and the
+        overall progress that we must cut out to pass to the 
+        corresponding progress bar
+        '''
+        
+        # split data
+        d = data.split("|")
+        self.bsProg.emit(percent)
+        self.setStatus.emit(d[0])
+        self.boProg.emit(float(d[1]))
+    
+    def buildResult(self, data):
+        ''''''
+        pass
+    
+    def buildError(self, data):
+        ''''''
+        pass
+
+    def buildDone(self, data):
+        ''''''
+        pass
 
     @pyqtSlot()
     def downloadSkybian(self):
@@ -781,8 +827,8 @@ class skyFlash(QObject):
 
         else:
             # linux
-            path = os.path.join(os.path.expanduser('~'), dir)
-
+            path = os.path.expanduser('~')
+            
         # now adding the app dir
         path = os.path.join(path, dir)
         print("App folder is {}".format(path))
@@ -926,7 +972,7 @@ class skyFlash(QObject):
         logging.info("====================================================")
         logging.info("")
 
-    @pyqtSlot()
+    @pyqtSlot(str, str, str, str)
     def imagesBuild(self, gw, dns, manager, nodes):
         '''Receives the Button order to build the images, passed arguments are:
 
@@ -936,56 +982,178 @@ class skyFlash(QObject):
         nodes: number of nodes to build
         '''
 
+        # debug
+        logging.debug("Build received data is:\nGW: '{}'\nDNS: '{}'\nManager: '{}'\nNodes '{}'".format(gw, dns, manager, nodes))
+
         # validation #1, are the manger, dns and gw valid ips?
         gwValid, reason = utils.validIP(gw)
         if not gwValid:
-            self.uiError.emit("The GW IP entered is not valid, please check that", reason)
+            self.uiError.emit("Validation error", "The GW IP entered is not valid, please check that", reason)
+            logging.debug("GW ip not valid: {}".format(gw))
             return
 
         managerValid, reason = utils.validIP(manager)
         if not managerValid:
-            self.uiError.emit("The Manager IP entered is not valid, please check that", reason)
+            self.uiError.emit("Validation error", "The Manager IP entered is not valid, please check that", reason)
+            logging.debug("Manager ip not valid: {}".format(mnager))
             return
 
         # validation #2, dns, two and valid ips
-        dnss = dnss.split(' ')
-        dnse = False
-        dnsem =""
+        dnss = dns.split(' ')
+        dnss[0] = dnss[0].strip(',')
         if len(dnss) != 2:
-            reason = "DNS must be in the format '1.2.3.4, 2.3.4.5'
-            self.uiError.emit("The DNS string entered is not valid, please check that.", reason)
+            reason = "DNS must be in the format '1.2.3.4, 2.3.4.5'"
+            self.uiError.emit("Validation error", "The DNS string entered is not valid, please check that.", reason)
+            logging.debug("DNS string is not valid: '{}'".format(dns))
             return
 
         dns1Valid, reason = utils.validIP(dnss[0])
         if not dns1Valid:
-            self.uiError.emit("The first IP on the DNS is not valid, please check that.", reason)
+            self.uiError.emit("Validation error", "The first IP on the DNS is not valid, please check that.", reason)
+            logging.debug("DNS1 IP is not valid: '{}'".format(dns))
             return
 
         dns2Valid, reason = utils.validIP(dnss[1])
         if not dns2Valid:
-            self.uiError.emit("The second IP on the DNS is not valid, please check that.", reason)
+            self.uiError.emit("Validation error", "The second IP on the DNS is not valid, please check that.", reason)
+            logging.debug("DNS2 IP is not valid: '{}'".format(dns))
             return
 
         # validation #3, gw and manager must be on the same IP range
         if gw[0:gw.rfind('.')] != manager[0:manager.rfind('.')]:
-            self.uiError.emit("The manager and the gw are not in the same sub-net, please check that", "")
+            self.uiError.emit("Validation error", "The manager and the gw are not in the same sub-net, please check that", "")
+            logging.debug("Base address for the net differs in gw/manager: '{1} vs. {2}'".format(gw, manager))
             return
 
         # validation #4, node counts + ip is not bigger than 255
         endip = int(manager[manager.rfind('.') + 1:]) + int(nodes)
         if endip > 255:
-            self.uiError.emit("The node IP distribution is beyond 255, please lower your manager ip",
+            self.uiError.emit("Validation error", "The node IP distribution is beyond 255, please lower your manager ip",
                 "The IP of the nodes are distributed from the manager IP and up, if you set the manager node IP so high the node count may not fit")
+            logging.debug("Manager IP to high, last node will be {} and that's not possible".format(endip))
             return
 
         # validation #5, gw not in manager & nodes range
         if int(gw[gw.rfind('.') + 1:]) in range(int(manager[manager.rfind('.') + 1:]), endip):
-            self.uiError.emit("Please check your GW, Manager & Node selection, the GW is one of the Nodes or Manager IPs",
+            self.uiError.emit("Validation error", "Please check your GW, Manager & Node selection, the GW is one of the Nodes or Manager IPs",
                 "When we distribute the manager & nodes IP we found that the GW is one of that IP and that's wrong")
+            logging.debug("GW ip is on generated nodes range.".format(dns))
             return
 
-        # if you reached this all is good
+        # if you reached this all is good, set the network vars on top of the object
+        self.netGw = gw
+        self.netDns = dns
+        self.netManager = manager
+        self.netNodes = nodes
+
         # Starting to build the nodes.
+        # thead start
+        self.build = Worker(self.buildTheImages)
+        self.build.signals.data.connect(self.buildData)
+        self.build.signals.progress.connect(self.buildProg)
+        self.build.signals.result.connect(self.buildResult)
+        self.build.signals.error.connect(self.buildError)
+        self.build.signals.finished.connect(self.buildDone)
+
+        # init worker
+        self.threadpool.start(self.build)
+
+    def buildTheImages(self, data_callback, progress_callback):
+        '''Build the images from the data entered
+        
+        Will start with the manager and follow with the nodes next to the manager ip
+
+        The task is just to copy the base image and set on the address [TODO] a text file
+        with this data:
+
+            IP={nodeip}
+            GW={gwip}
+            DNS={dns}
+            MODE={manager|node}
+            MIP={managerip}
+        
+        And the rest of the image follows.
+        '''
+        
+        baseIP = self.netGw[0:self.netGw.rfind('.') + 1]
+        start = int(self.netManager[self.netManager.rfind('.') + 1:])
+        end = start + int(self.netNodes) + 1
+        count = end - start
+        overallProgress = 0
+        singleProgress = 0
+        fileSize = os.path.getsize(self.skybianFile)
+        file = open(self.skybianFile, "rb")
+
+        # main iteration cycle
+        for n in range(start, end):
+            # build node 
+            nip = baseIP + str(n)
+
+            # create the config string
+            ntype = 'manager' if nip == self.netManager else 'node'
+            configText = "IP={0}\nGW={1}\nDNS='{2}'\nMODE={3}\nMIP={4}".format(nip, self.netGw, self.netDns, ntype, self.netManager)
+
+            # fill the remaining space with null chars
+            needToFill = imageConfigDataSize - len(configText)
+            for i in range(0, needToFill):
+                configText += "\x00"
+
+            actualPosition = 0
+            portionSize = 8192
+
+            # new file and it's name
+            nodeNick = "manager" 
+            if nip != self.netManager:
+                nodeNick = "node" + str(n - start)
+            
+            nodeName = "Skywire_your_" + nodeNick + ".img"
+
+            nnfp = os.path.join(self.localPath, nodeName)
+            newNode = open(nnfp, 'wb')
+            nodes = int(self.netNodes)
+
+            # user feedback
+            data_callback.emit("Building node {}".format(nodeName))
+            logging.debug("Building node {}, full path is:\n{}".format(nodeName, nnfp))
+
+            # build node loop
+            file.seek(actualPosition)
+            while actualPosition < imageConfigAddress:
+                data = file.read(portionSize)
+                newNode.write(data)
+
+                # progress and cycle update
+                actualPosition += portionSize
+                percent = actualPosition / fileSize
+
+                overAll = percent/count + (n - start)/count
+                data = "Node creation {:.1%}|{:0.3f}".format(percent, overAll)
+                progress_callback.emit(percent * 100, data)
+
+            # write config
+            newNode.write(configText.encode())
+
+            # seek to new position and resume the copy
+            actualPosition += imageConfigDataSize
+            file.seek(actualPosition)
+            while actualPosition < fileSize:
+                data = file.read(portionSize)
+                newNode.write(data)
+
+                # progress and cycle update
+                actualPosition += portionSize
+                percent = actualPosition / fileSize
+
+                overAll = percent/count + (n - start)/count
+                data = "Node creation {:.1%}|{:0.3f}".format(percent, overAll)
+                progress_callback.emit(percent * 100, data)
+
+            # close the newNode
+            newNode.close()
+
+        # close the file
+        file.close()
+
 
 if __name__ == "__main__":
     '''Run the script'''

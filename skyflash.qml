@@ -294,7 +294,7 @@ ApplicationWindow {
         ColumnLayout {
             id: boxBuild
             spacing: 10
-            visible: true
+            visible: false
 
             // box title
             Rectangle {
@@ -320,7 +320,7 @@ ApplicationWindow {
 
                     onClicked: {
                         // call skyflash to build the images
-                        skf.imagesBuild(txtGateway.text, txtDNS.value, txtManager.text,txtNodes.text)
+                        skf.imagesBuild(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text)
                     }
                 }
 
@@ -509,6 +509,20 @@ ApplicationWindow {
                 errorDiag.detailedText.visible = false
             }
             errorDiag.open()
+        }
+
+        // build single image progress
+        onBsProg: {
+            if (percent > 0) {
+                pbBuildSingle.value = percent
+            }
+        }
+
+        // build overall image progress
+        onBoProg: {
+            if (percent > 0) {
+                pbBuildOverall.value = percent
+            }
         }
     }
 }
