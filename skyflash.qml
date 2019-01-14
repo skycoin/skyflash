@@ -294,7 +294,7 @@ ApplicationWindow {
         ColumnLayout {
             id: boxBuild
             spacing: 10
-            visible: false
+            visible: true
 
             // box title
             Rectangle {
@@ -312,9 +312,8 @@ ApplicationWindow {
                 }
             }
 
-            // build tools
             RowLayout {
-                // build button
+            // build button
                 Button {
                     id: btBuild
                     text: "Build the Images "
@@ -325,39 +324,41 @@ ApplicationWindow {
                     }
                 }
 
+                Label {
+                    id: lbBuild
+                    text: ""
+                }
             }
 
-            ColumnLayout {
-                // particular image progress
-                RowLayout{
-                    Label {
-                        text: "Single image progress:"
-                        color: "black"
-                    }
-                    ProgressBar {
-                        id: pbBuildSingle
-                        Layout.fillWidth: true
-                        visible: true
-                        maximumValue: 100
-                        minimumValue: 0
-                        value: 0
-                    }
+            // particular image progress
+            RowLayout{
+                Label {
+                    text: "Single image progress:"
+                    color: "black"
                 }
+                ProgressBar {
+                    id: pbBuildSingle
+                    Layout.fillWidth: true
+                    visible: true
+                    maximumValue: 100
+                    minimumValue: 0
+                    value: 0
+                }
+            }
 
-                // overall progress
-                RowLayout{
-                    Label {
-                        text: "Overall progress:"
-                        color: "black"
-                    }
-                    ProgressBar {
-                        id: pbBuildOverall
-                        Layout.fillWidth: true
-                        visible: true
-                        maximumValue: 100
-                        minimumValue: 0
-                        value: 0
-                    }
+            // overall progress
+            RowLayout{
+                Label {
+                    text: "Overall progress:"
+                    color: "black"
+                }
+                ProgressBar {
+                    id: pbBuildOverall
+                    Layout.fillWidth: true
+                    visible: true
+                    maximumValue: 100
+                    minimumValue: 0
+                    value: 0
                 }
             }
         }
