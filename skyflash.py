@@ -135,6 +135,23 @@ class Utils(object):
 
         return out
 
+    def validIP(self, ip):
+        '''Takes a string of a IP and return a tuple: 
+        true/false and a reason if false
+        '''
+
+        # four digits
+        digits = str(ip).split('.')
+        if len(digits) != 4:
+            return (False, "Not enough digits on the IP")
+
+        # from 0 to 255
+        for d in digits:
+            if d > 255 or d < 0:
+                return (False, "One of the digits on the IP is not valid")
+
+        # all good
+        return (True, "")
 
 # fileio overide class to get progress on tarfile extraction
 class ProgressFileObject(io.FileIO):
@@ -908,6 +925,67 @@ class skyFlash(QObject):
         logging.info("Logging started at {}".format(time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime())))
         logging.info("====================================================")
         logging.info("")
+
+    @pyqtSlot()
+    def imagesBuild(self, gw, dns, manager, nodes):
+        '''Receives the Button order to build the images, passed arguments are:
+
+        gw: the network gateway
+        dns: the DNS to use in the format "1.2.3.4, 4.3.2.1" (must pass it along as is)
+        manager: ip of the manager
+        nodes: number of nodes to build
+        '''
+
+        # validation #1, are the manger, dns and gw valid ips?
+        gwValid, reason = utils.validIP(gw)
+        if not gwValid:
+            self.uiError.emit("The GW IP entered is not valid, please check that", reason)
+            return
+
+        managerValid, reason = utils.validIP(manager)
+        if not managerValid:
+            self.uiError.emit("The Manager IP entered is not valid, please check that", reason)
+            return
+
+        # validation #2, dns, two and valid ips
+        dnss = dnss.split(' ')
+        dnse = False
+        dnsem =""
+        if len(dnss) != 2:
+            reason = "DNS must be in the format '1.2.3.4, 2.3.4.5'
+            self.uiError.emit("The DNS string entered is not valid, please check that.", reason)
+            return
+
+        dns1Valid, reason = utils.validIP(dnss[0])
+        if not dns1Valid:
+            self.uiError.emit("The first IP on the DNS is not valid, please check that.", reason)
+            return
+
+        dns2Valid, reason = utils.validIP(dnss[1])
+        if not dns2Valid:
+            self.uiError.emit("The second IP on the DNS is not valid, please check that.", reason)
+            return
+
+        # validation #3, gw and manager must be on the same IP range
+        if gw[0:gw.rfind('.')] != manager[0:manager.rfind('.')]:
+            self.uiError.emit("The manager and the gw are not in the same sub-net, please check that", "")
+            return
+
+        # validation #4, node counts + ip is not bigger than 255
+        endip = int(manager[manager.rfind('.') + 1:]) + int(nodes)
+        if endip > 255:
+            self.uiError.emit("The node IP distribution is beyond 255, please lower your manager ip",
+                "The IP of the nodes are distributed from the manager IP and up, if you set the manager node IP so high the node count may not fit")
+            return
+
+        # validation #5, gw not in manager & nodes range
+        if int(gw[gw.rfind('.') + 1:]) in range(int(manager[manager.rfind('.') + 1:]), endip):
+            self.uiError.emit("Please check your GW, Manager & Node selection, the GW is one of the Nodes or Manager IPs",
+                "When we distribute the manager & nodes IP we found that the GW is one of that IP and that's wrong")
+            return
+
+        # if you reached this all is good
+        # Starting to build the nodes.
 
 if __name__ == "__main__":
     '''Run the script'''

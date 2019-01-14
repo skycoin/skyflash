@@ -320,7 +320,8 @@ ApplicationWindow {
                     text: "Build the Images "
 
                     onClicked: {
-                        // TODO
+                        // call skyflash to build the images
+                        skf.imagesBuild(txtGateway.text, txtDNS.value, txtManager.text,txtNodes.text)
                     }
                 }
 
