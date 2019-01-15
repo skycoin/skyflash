@@ -322,7 +322,7 @@ class skyFlash(QObject):
     threadpool = QThreadPool()
 
     # set the timeout for threads on done
-    threadpool.setExpiryTimeout(3000)
+    threadpool.setExpiryTimeout(500)
 
     # download callbacks to emit signals to QML nd others
 
