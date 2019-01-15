@@ -32,7 +32,7 @@ imageConfigDataSize = 256
 # utils class
 class Utils(object):
     '''This is a basic class to hold procedures & functions that does not belongs
-    to any other part or class in the project, such as validation, conversion, 
+    to any other part or class in the project, such as validation, conversion,
     formatting, etc. As the name implies a utils tool box'''
 
     def __init__(self):
@@ -118,7 +118,7 @@ class Utils(object):
     def size(self, size):
         '''Takes a byte size and return it as a human readable string,
         such as this:
-        
+
         size < 1 KB: "{} bytes"
         size > 1 KB & < 1 MB:  "{0.3f} KB"
         size > 1 MB: "{0.3f} MB"
@@ -139,7 +139,7 @@ class Utils(object):
         return out
 
     def validIP(self, ip):
-        '''Takes a string of a IP and return a tuple: 
+        '''Takes a string of a IP and return a tuple:
         true/false and a reason if false
         '''
 
@@ -167,15 +167,15 @@ class ProgressFileObject(io.FileIO):
 
         # callback will be a function passed on progressfn
         if kwargs["progressfn"]:
-            self.progfn = kwargs["progressfn"]           
-            # must remove the progressfn if present from the kwargs to make fileio happy 
+            self.progfn = kwargs["progressfn"]
+            # must remove the progressfn if present from the kwargs to make fileio happy
             kwargs.pop("progressfn")
 
         io.FileIO.__init__(self, path, *args, **kwargs)
 
     def read(self, size):
         '''Each time a chunk in read call the progress function if there'''
-        if self.progfn:    
+        if self.progfn:
             # must calc and call the progress callback function
             progress = self.tell() / self._total_size
             self.progfn(progress)
@@ -216,7 +216,7 @@ class Worker(QRunnable):
         # Add the callbacks to our kwargs
         kwargs['data_callback'] = self.signals.data
         kwargs['progress_callback'] = self.signals.progress
-        
+
     @pyqtSlot()
     def run(self):
         '''This is the main procedure that runs in the thread pool'''
@@ -366,7 +366,7 @@ class skyFlash(QObject):
             # reset the env
             self.cleanWorkspace()
 
-            # specific feedback 
+            # specific feedback
             self.setStatus.emit("Download canceled or error happened")
             self.uiError.emit("Download failed!", "Download process failed silently, mostly due to connection issues, please try again", "")
 
@@ -379,7 +379,7 @@ class skyFlash(QObject):
         # check status of download
         if self.downloadOk and self.downloadedFile != "":
             self.dDone.emit()
-            
+
             # call to handle the download (a img or a compressed one)
             self.downloadProcess()
 
@@ -478,26 +478,26 @@ class skyFlash(QObject):
     def buildData(self, data):
         ''''''
         pass
-    
+
     def buildProg(self, percent, data):
         '''Update two progressbar and a status bar in the UI
-        
+
         The data cames as a percent of the single image, and the
         data part carries the comment for the status bar and the
-        overall progress that we must cut out to pass to the 
+        overall progress that we must cut out to pass to the
         corresponding progress bar
         '''
-        
+
         # split data
         d = data.split("|")
         self.bsProg.emit(percent)
         self.setStatus.emit(d[0])
         self.boProg.emit(float(d[1]))
-    
+
     def buildResult(self, data):
         ''''''
         pass
-    
+
     def buildError(self, data):
         ''''''
         pass
@@ -664,7 +664,7 @@ class skyFlash(QObject):
         if file is "":
             self.setStatus.emit("You selected nothing, please try again")
             return
-        
+
         # clean the path depending on the OS
         if sys.platform in ["win32", "cygwin"]:
             # file is like this file:///C:/Users/Pavel/Downloads/Skybian-0.1.0.tar.xz
@@ -682,7 +682,6 @@ class skyFlash(QObject):
             self.bimg = open(file, 'rb')
             dump = self.bimg.read(10)
             self.bimg.close()
-        
         except:
             # TODO exact error
             self.setStatus.emit("Selected file is not readable.")
@@ -698,13 +697,13 @@ class skyFlash(QObject):
     def downloadProcess(self):
         '''Process a downloaded/locally picked up file, it can be a .img or a
         .tar.[gz|xz] one.
-        
+
         If a compressed must decompress and check sums to validate and/or
         if a image must check for a fingerprint to validate
-        
+
         If error produce feedback, if ok, continue.
         '''
-        
+
         # determine the type of file and the curse of actions
         segPath = self.downloadedFile.split(".")
         if segPath[-1] in ["tar", "gz", "xz"]:
@@ -828,7 +827,7 @@ class skyFlash(QObject):
         else:
             # linux
             path = os.path.expanduser('~')
-            
+
         # now adding the app dir
         path = os.path.join(path, dir)
         print("App folder is {}".format(path))
@@ -1060,7 +1059,7 @@ class skyFlash(QObject):
 
     def buildTheImages(self, data_callback, progress_callback):
         '''Build the images from the data entered
-        
+
         Will start with the manager and follow with the nodes next to the manager ip
 
         The task is just to copy the base image and set on the address [TODO] a text file
@@ -1071,10 +1070,10 @@ class skyFlash(QObject):
             DNS={dns}
             MODE={manager|node}
             MIP={managerip}
-        
+
         And the rest of the image follows.
         '''
-        
+
         baseIP = self.netGw[0:self.netGw.rfind('.') + 1]
         start = int(self.netManager[self.netManager.rfind('.') + 1:])
         end = start + int(self.netNodes) + 1
@@ -1086,7 +1085,7 @@ class skyFlash(QObject):
 
         # main iteration cycle
         for n in range(start, end):
-            # build node 
+            # build node
             nip = baseIP + str(n)
 
             # create the config string
@@ -1102,10 +1101,10 @@ class skyFlash(QObject):
             portionSize = 8192
 
             # new file and it's name
-            nodeNick = "manager" 
+            nodeNick = "manager"
             if nip != self.netManager:
                 nodeNick = "node" + str(n - start)
-            
+
             nodeName = "Skywire_your_" + nodeNick + ".img"
 
             nnfp = os.path.join(self.localPath, nodeName)
