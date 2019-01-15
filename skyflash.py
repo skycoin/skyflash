@@ -1078,6 +1078,7 @@ class skyFlash(QObject):
         start = int(self.netManager[self.netManager.rfind('.') + 1:])
         end = start + int(self.netNodes) + 1
         count = end - start
+        actual = 0
         overallProgress = 0
         singleProgress = 0
         fileSize = os.path.getsize(self.skybianFile)
@@ -1087,6 +1088,9 @@ class skyFlash(QObject):
         for n in range(start, end):
             # build node
             nip = baseIP + str(n)
+
+            # actual node
+            actual = n - start
 
             # create the config string
             ntype = 'manager' if nip == self.netManager else 'node'
@@ -1103,7 +1107,7 @@ class skyFlash(QObject):
             # new file and it's name
             nodeNick = "manager"
             if nip != self.netManager:
-                nodeNick = "node" + str(n - start)
+                nodeNick = "node" + str(actual)
 
             nodeName = "Skywire_your_" + nodeNick + ".img"
 
@@ -1125,8 +1129,8 @@ class skyFlash(QObject):
                 actualPosition += portionSize
                 percent = actualPosition / fileSize
 
-                overAll = percent/count + (n - start)/count
-                data = "Node creation {:.1%}|{:0.3f}".format(percent, overAll)
+                overAll = percent/count + actual/count
+                data = "Node creation {:.1%}|{:0.3f}".format(percent, overAll * 100)
                 progress_callback.emit(percent * 100, data)
 
             # write config
@@ -1143,8 +1147,8 @@ class skyFlash(QObject):
                 actualPosition += portionSize
                 percent = actualPosition / fileSize
 
-                overAll = percent/count + (n - start)/count
-                data = "Node creation {:.1%}|{:0.3f}".format(percent, overAll)
+                overAll = percent/count + actual/count
+                data = "Node creation {:.1%}|{:0.1f}".format(percent, overAll * 100)
                 progress_callback.emit(percent * 100, data)
 
             # close the newNode
