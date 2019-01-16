@@ -324,7 +324,7 @@ class skyFlash(QObject):
     # set the timeout for threads on done
     threadpool.setExpiryTimeout(500)
 
-    # download callbacks to emit signals to QML nd others
+    # callbacks to emit signals to QML and others
 
     #  download ones
 
@@ -482,7 +482,7 @@ class skyFlash(QObject):
     def buildProg(self, percent, data):
         '''Update two progressbar and a status bar in the UI
 
-        The data cames as a percent of the single image, and the
+        The data came as a percent of the single image, and the
         data part carries the comment for the status bar and the
         overall progress that we must cut out to pass to the
         corresponding progress bar
@@ -932,7 +932,7 @@ class skyFlash(QObject):
         fileSize = os.path.getsize(self.skybianFile)
         file = open(self.skybianFile, "rb")
         actualPosition = 0
-        portionSize = 8192
+        portionSize = 81920
 
         # user feedback
         data_callback.emit("Integrity checking, please wait...")
@@ -1102,7 +1102,7 @@ class skyFlash(QObject):
                 configText += "\x00"
 
             actualPosition = 0
-            portionSize = 8192
+            portionSize = imageConfigAddress / 4
 
             # new file and it's name
             nodeNick = "manager"
