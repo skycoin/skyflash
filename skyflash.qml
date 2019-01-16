@@ -511,6 +511,11 @@ ApplicationWindow {
             errorDiag.open()
         }
 
+        // build data passing, hints to the user
+        onBData: {
+            lbBuild.text = data
+        }
+
         // build single image progress
         onBsProg: {
             if (percent > 0) {

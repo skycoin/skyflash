@@ -294,6 +294,8 @@ class skyFlash(QObject):
     uiWarning = pyqtSignal(str, str, arguments=["title", "text"])
     # target is errorwarnDialog Box rise
     uiError = pyqtSignal(str, str, str, arguments=["title", "text", "details"])
+    # build data, show a hint to the users
+    bData = pyqtSignal(str, arguments=["data"])
     # build single process show single file build progress
     bsProg = pyqtSignal(float, arguments=["percent"])
     # build overal progress, show overall progress for the whole image build
@@ -476,8 +478,9 @@ class skyFlash(QObject):
     # build ones
 
     def buildData(self, data):
-        ''''''
-        pass
+        '''Pass a test string to the label nex to the Build Images button'''
+
+        self.bData.emit(data)
 
     def buildProg(self, percent, data):
         '''Update two progressbar and a status bar in the UI
@@ -1114,7 +1117,7 @@ class skyFlash(QObject):
             # new file and it's name
             nodeNick = "manager"
             if nip != self.netManager:
-                nodeNick = "node" + str(actual)
+                nodeNick = "node-" + str(actual)
 
             nodeName = "Skywire_your_" + nodeNick + ".img"
 
@@ -1123,7 +1126,7 @@ class skyFlash(QObject):
             nodes = int(self.netNodes)
 
             # user feedback
-            data_callback.emit("Building node {}".format(nodeName))
+            data_callback.emit("Building node {}".format(nodeNick))
             logging.debug("Building node {}, full path is:\n{}".format(nodeName, nnfp))
 
             # build node loop
