@@ -744,8 +744,14 @@ class skyFlash(QObject):
             '''Callback used to update the progress on file extraction, it reuse the
             self.downloadFileProg(percent, data) function'''
 
-            data = "Extracting downloaded file {:.1%}".format(percent)
-            progress_callback.emit(percent * 100, data)
+            # static var, to avoid saturation of the QML interface with signals
+            # we will emit signals only on > 0.2 changes
+            oldpercent = 0
+
+            if percent - oldpercent > 0.2:
+                oldpercent = percent
+                data = "Extracting downloaded file {:.1%}".format(percent)
+                progress_callback.emit(percent * 100, data)
 
         # update status
         data_callback.emit("Extracting the file, please wait...")
@@ -1102,7 +1108,8 @@ class skyFlash(QObject):
                 configText += "\x00"
 
             actualPosition = 0
-            portionSize = imageConfigAddress / 4
+            # WARNING! imageConfigAddress must be divisible by 4 for this to work ok
+            portionSize = int(imageConfigAddress / 4)
 
             # new file and it's name
             nodeNick = "manager"
