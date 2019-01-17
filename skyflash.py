@@ -980,14 +980,15 @@ class skyFlash(QObject):
         logging.info("====================================================")
         logging.info("")
 
-    @pyqtSlot(str, str, str, str)
-    def imagesBuild(self, gw, dns, manager, nodes):
-        '''Receives the Button order to build the images, passed arguments are:
+    def validateNetworkData(self, gw, dns, manager, nodes):
+        '''Validate the network data passed by the QML UI
 
         gw: the network gateway
         dns: the DNS to use in the format "1.2.3.4, 4.3.2.1" (must pass it along as is)
         manager: ip of the manager
         nodes: number of nodes to build
+
+        Returns true or false to sign result
         '''
 
         # debug
@@ -998,13 +999,13 @@ class skyFlash(QObject):
         if not gwValid:
             self.uiError.emit("Validation error", "The GW IP entered is not valid, please check that", reason)
             logging.debug("GW ip not valid: {}".format(gw))
-            return
+            return False
 
         managerValid, reason = utils.validIP(manager)
         if not managerValid:
             self.uiError.emit("Validation error", "The Manager IP entered is not valid, please check that", reason)
             logging.debug("Manager ip not valid: {}".format(mnager))
-            return
+            return False
 
         # validation #2, dns, two and valid ips
         dnss = dns.split(' ')
@@ -1013,25 +1014,25 @@ class skyFlash(QObject):
             reason = "DNS must be in the format '1.2.3.4, 2.3.4.5'"
             self.uiError.emit("Validation error", "The DNS string entered is not valid, please check that.", reason)
             logging.debug("DNS string is not valid: '{}'".format(dns))
-            return
+            return False
 
         dns1Valid, reason = utils.validIP(dnss[0])
         if not dns1Valid:
             self.uiError.emit("Validation error", "The first IP on the DNS is not valid, please check that.", reason)
             logging.debug("DNS1 IP is not valid: '{}'".format(dns))
-            return
+            return False
 
         dns2Valid, reason = utils.validIP(dnss[1])
         if not dns2Valid:
             self.uiError.emit("Validation error", "The second IP on the DNS is not valid, please check that.", reason)
             logging.debug("DNS2 IP is not valid: '{}'".format(dns))
-            return
+            return False
 
         # validation #3, gw and manager must be on the same IP range
         if gw[0:gw.rfind('.')] != manager[0:manager.rfind('.')]:
             self.uiError.emit("Validation error", "The manager and the gw are not in the same sub-net, please check that", "")
-            logging.debug("Base address for the net differs in gw/manager: '{1} vs. {2}'".format(gw, manager))
-            return
+            logging.debug("Base address for the net differs in gw/manager: '{} vs. {}'".format(gw, manager))
+            return False
 
         # validation #4, node counts + ip is not bigger than 255
         endip = int(manager[manager.rfind('.') + 1:]) + int(nodes)
@@ -1039,16 +1040,36 @@ class skyFlash(QObject):
             self.uiError.emit("Validation error", "The node IP distribution is beyond 255, please lower your manager ip",
                 "The IP of the nodes are distributed from the manager IP and up, if you set the manager node IP so high the node count may not fit")
             logging.debug("Manager IP to high, last node will be {} and that's not possible".format(endip))
-            return
+            return False
 
         # validation #5, gw not in manager & nodes range
         if int(gw[gw.rfind('.') + 1:]) in range(int(manager[manager.rfind('.') + 1:]), endip):
             self.uiError.emit("Validation error", "Please check your GW, Manager & Node selection, the GW is one of the Nodes or Manager IPs",
                 "When we distribute the manager & nodes IP we found that the GW is one of that IP and that's wrong")
             logging.debug("GW ip is on generated nodes range.".format(dns))
+            return False
+
+        # If you reached this point then all is ok
+        return True
+
+    @pyqtSlot(str, str, str, str)
+    def imagesBuild(self, gw, dns, manager, nodes):
+        '''Receives the Button order to build the images, passed arguments are:
+
+        gw: the network gateway
+        dns: the DNS to use in the format "1.2.3.4, 4.3.2.1" (must pass it along as is)
+        manager: ip of the manager
+        nodes: number of nodes to build
+
+        It uses that data to run a network info validation and the proceed if needed 
+        '''
+
+        # run validations
+        result = self.validateNetworkData(gw, dns, manager, nodes)
+        if not result:
             return
 
-        # if you reached this all is good, set the network vars on top of the object
+        # All good carry on, set the network vars on top of the object
         self.netGw = gw
         self.netDns = dns
         self.netManager = manager
