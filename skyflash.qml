@@ -126,7 +126,7 @@ ApplicationWindow {
                 radius: 3
 
                 Label {
-                    text: "1. Get or select the Skybian base Image:"
+                    text: "1. Download it or browse a local Skybian release file:"
                     font.pixelSize: 14
                     font.bold: true
                     color: "black"
@@ -159,7 +159,7 @@ ApplicationWindow {
                         Layout.preferredHeight: 30
                         Layout.preferredWidth: 80
                         text: "Browse"
-                        tooltip: "Click here to browse a already downloaded Skybian image"
+                        tooltip: "Click here to browse for an already downloaded Skybian release file"
 
                         onClicked: { fileDialog.open() }
                     }
@@ -199,7 +199,7 @@ ApplicationWindow {
                 radius: 3
 
                 Label {
-                    text: "2. Set network settings."
+                    text: "2. Configure the network settings."
                     font.pixelSize: 14
                     font.bold: true
                     color: "black"
@@ -316,7 +316,7 @@ ApplicationWindow {
                 radius: 3
 
                 Label {
-                    text: "3. Build the respective images."
+                    text: "3. Build your custom images."
                     font.pixelSize: 14
                     font.bold: true
                     color: "black"
