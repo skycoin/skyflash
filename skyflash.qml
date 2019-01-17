@@ -41,6 +41,17 @@ ApplicationWindow {
         }
     }
 
+    // generic Success/Info dialog
+    MessageDialog {
+        id: okDiag
+        icon: StandardIcon.Information
+        title: ""
+        text: ""
+        onAccepted: {
+            errorDiag.visible = false
+        }
+    }
+
     FileDialog {
         id: fileDialog
         title: "Please choose a file"
@@ -490,6 +501,13 @@ ApplicationWindow {
         // status bar messages
         onSetStatus: {
             sbText.text = msg
+        }
+
+        // on ok dialog
+        onUiOk: {
+            okDiag.title = title
+            okDiag.text = text
+            okDiag.open()
         }
 
         // on warn dialog

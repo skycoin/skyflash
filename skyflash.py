@@ -290,6 +290,8 @@ class skyFlash(QObject):
     dDone = pyqtSignal()
     # target is show download buttons
     sStart = pyqtSignal()
+    # target is okDialog Box rise
+    uiOk = pyqtSignal(str, str, arguments=["title", "text"])
     # target is warnDialog Box rise
     uiWarning = pyqtSignal(str, str, arguments=["title", "text"])
     # target is errorwarnDialog Box rise
@@ -511,8 +513,17 @@ class skyFlash(QObject):
         self.uiError.emit("Build failed!", "The build process failed, please check the logs to see more details", str(eval))
 
     def buildDone(self, data):
-        ''''''
-        pass
+        '''Catch the end of the build process
+
+        Congrats to the user and suggestion to use the burn option
+        (or use your preferred flasher for the task)
+        '''
+
+        self.uiOk.emit("Image build is a success!", "Now you have your custom images for your nodes in the Skybian folder.\nYou can now use your preferred flasher software to do it")
+
+        self.setStatus("Image build was a success!")
+        self.bData("Done with all images")
+
 
     @pyqtSlot()
     def downloadSkybian(self):
