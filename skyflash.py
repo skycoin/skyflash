@@ -425,7 +425,7 @@ class skyFlash(QObject):
         self.setStatus.emit("Please try again")
         etype, eval, etrace = error
         logging.debug("An error ocurred:\n{}".format(eval))
-        self.uiError.emit("Extraction error", "There was an error extracting the downloaded file, this is mainly due to a corruped download, please try again.", str(eval))
+        self.uiError.emit("Extraction error", "There was an error extracting the downloaded file, this is mainly due to a corrupted download, please try again.", str(eval))
 
     # cksum ones
 
@@ -473,7 +473,7 @@ class skyFlash(QObject):
         self.setStatus.emit("An error ocurred, can't do the image verification")
         etype, eval, etrace = error
         logging.debug("An error ocurred while verifying the checksum:\n{}".format(eval))
-        self.uiError.emit("Integrity check failed!", "The Skybian image integrity check failed with an error, please report this to the developers", str(eval))
+        self.uiError.emit("Integrity check failed!", "The Skybian image integrity check failed with an error, please check the logs to see more details", str(eval))
 
     # build ones
 
@@ -502,8 +502,13 @@ class skyFlash(QObject):
         pass
 
     def buildError(self, data):
-        ''''''
-        pass
+        '''Catch any error on the image build process and pass it to the user'''
+
+        self.dData.emit("Build process error...")
+        self.setStatus.emit("An error ocurred, can't build the images")
+        etype, eval, etrace = error
+        logging.debug("An error ocurred while building the images:\n{}".format(eval))
+        self.uiError.emit("Build failed!", "The build process failed, please check the logs to see more details", str(eval))
 
     def buildDone(self, data):
         ''''''
@@ -1147,8 +1152,8 @@ class skyFlash(QObject):
             nodes = int(self.netNodes)
 
             # user feedback
-            data_callback.emit("Building node {}".format(nodeNick))
-            logging.debug("Building node {}, full path is:\n{}".format(nodeName, nnfp))
+            data_callback.emit("Building {} image".format(nodeNick))
+            logging.debug("Building {} image, full path is:\n{}".format(nodeName, nnfp))
 
             # build node loop
             file.seek(actualPosition)
@@ -1161,7 +1166,7 @@ class skyFlash(QObject):
                 percent = actualPosition / fileSize
 
                 overAll = percent/count + actual/count
-                data = "Node creation {:.1%}|{:0.3f}".format(percent, overAll * 100)
+                data = "Image creation {:.1%}|{:0.3f}".format(percent, overAll * 100)
                 progress_callback.emit(percent * 100, data)
 
             # write config
@@ -1179,7 +1184,7 @@ class skyFlash(QObject):
                 percent = actualPosition / fileSize
 
                 overAll = percent/count + actual/count
-                data = "Node creation {:.1%}|{:0.1f}".format(percent, overAll * 100)
+                data = "Image creation {:.1%}|{:0.1f}".format(percent, overAll * 100)
                 progress_callback.emit(percent * 100, data)
 
             # close the newNode
