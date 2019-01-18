@@ -12,6 +12,7 @@ import tarfile
 import ssl
 import hashlib
 import logging
+import shutil
 from urllib.request import Request, urlopen
 
 # OS dependant imports
@@ -1217,7 +1218,7 @@ class skyFlash(QObject):
 
     def drivesWin(self):
         '''Return a list of available drives in windows
-        if possible with a drive label:
+        if possible with a drive label and size in bytes:
 
         [
             ('E:/', '[unlabeled drive]', 2369536),
@@ -1271,8 +1272,45 @@ class skyFlash(QObject):
         return drives
 
     def drivesLinux(self):
-        ''''''
-        pass
+        '''Return a list of available drives in linux
+        if possible with a drive label and sizes on bytes:
+
+        [
+            ('/dev/mmcblk0', '', 2369536),
+            ('/dev/mmcblk1', '', 3995639808)
+        ]
+
+        TODO detect labels of uSDcards in linux
+        '''
+
+        drives = []
+
+        # create a pool of possible drives
+        for i in range(0, 5):
+            drives.append("/dev/mmcblk{}".format(i))
+
+        # check if the drive is there
+        for drive in drives[:]:
+            try:
+                # if this work we detected a drive and is readable
+                disk = open(drive,'rb')
+                disk.close()
+            except FileNotFoundError:
+                # there is no such drive
+                drives.pop(drive.index(drive))
+                pass
+            except PermissionError:
+                # there is a drive, but there is no read access
+                pass
+
+        finalDrives = []
+
+        # getting data for the drives
+        for drive in drives:
+            total, used, free = shutil.disk_usage(drive)
+            finalDrives.append((drive, "", total))
+
+        return finalDrives
 
     def drivesMac(self):
         ''''''
@@ -1285,19 +1323,21 @@ class skyFlash(QObject):
 
         # possible drives, will fill and pop when checking to get at the end
         # real ones.
-        possibleDrives = []
+        drives = []
 
         # OS specific listing
         if sys.platform in ["win32", "cygwin"]:
-            possibleDrives = self.drivesWin()
+            drives = self.drivesWin()
         elif sys.platform.startswith('linux'):
-            possibleDrives = self.drivesLinux()
+            drives = self.drivesLinux()
         elif sys.platform is "darwin":
-            possibleDrives = self.drivesMac()
+            drives = self.drivesMac()
         else:
             # freebsd or others, not supported yet
             # TODO warning about not supported OS
             pass
+
+        return drives
 
 if __name__ == "__main__":
     '''Run the script'''
