@@ -1317,12 +1317,9 @@ class skyFlash(QObject):
         pass
 
     def detectCards(self):
-        '''Detects and identify the uSD cards in the system
-        No matter what OS have you installed
-        '''
+        '''Detects and identify the uSD cards in the system OS agnostic'''
 
-        # possible drives, will fill and pop when checking to get at the end
-        # real ones.
+        # detected drives
         drives = []
 
         # OS specific listing
