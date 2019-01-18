@@ -14,6 +14,17 @@ import hashlib
 import logging
 from urllib.request import Request, urlopen
 
+# OS dependant imports
+if sys.platform in ["win32", "cygwin"]:
+    import ctypes
+    # some aliases
+    getLogicalDrives = ctypes.windll.kernel32.GetLogicalDrives
+    getDriveType = ctypes.windll.kernel32.GetDriveTypeA
+    createUnicodeBuffer = ctypes.create_unicode_buffer
+    getVolumeInformation = ctypes.windll.kernel32.GetVolumeInformationW
+    getDiskFreeSpace = ctypes.windll.kernel32.GetDiskFreeSpaceExA
+
+
 # GUI imports
 from PyQt5.QtGui import QGuiApplication
 from PyQt5.QtQml import QQmlApplicationEngine
@@ -1204,6 +1215,89 @@ class skyFlash(QObject):
         # close the file
         file.close()
 
+    def drivesWin(self):
+        '''Return a list of available drives in windows
+        if possible with a drive label:
+
+        [
+            ('E:/', '[unlabeled drive]', 2369536),
+            ('F:/', 'CO7WT4G', 3995639808)
+        ]
+        '''
+
+        # return list
+        drives = []
+
+        # getting drive list
+        bitmask = getLogicalDrives()
+        for letter in string.ascii_uppercase:
+            drive = "{0}:/".format(letter)
+            driveType = getDriveType(drive.encode("ascii"))
+
+            # check removable drives
+            if bitmask & 1 and driveType == 2:
+                volume_name = ""
+                name_buffer = createUnicodeBuffer(1024)
+                filesystem_buffer = createUnicodeBuffer(1024)
+                error = getVolumeInformation(ctypes.c_wchar_p(drive), name_buffer, ctypes.sizeof(name_buffer), None, None, None, filesystem_buffer, ctypes.sizeof(filesystem_buffer))
+
+                if error != 0:
+                    volume_name = name_buffer.value
+
+                if not volume_name:
+                    volume_name = "[unlabeled drive]"
+
+                # Check for the free space.
+                # Some card readers show up as a drive with 0 space free when there is no card inserted.
+                free_bytes = ctypes.c_longlong(0)
+                size_bytes = ctypes.c_longlong(0)
+                if getDiskFreeSpace(drive.encode("ascii"), ctypes.byref(free_bytes), ctypes.byref(size_bytes), None) == 0:
+                    continue
+
+                if free_bytes.value < 1:
+                    continue
+
+                driveSize = size_bytes.value
+
+                # DEBUG
+                logging.debug("Windows detected removable drives are:")
+                logging.debug("  Drive {} '{}', {} bytes".format(drive, volume_name, driveSize))
+
+                # append final info
+                drives.append((drive, volume_name, driveSize))
+
+            bitmask >>= 1
+
+        return drives
+
+    def drivesLinux(self):
+        ''''''
+        pass
+
+    def drivesMac(self):
+        ''''''
+        pass
+
+    def detectCards(self):
+        '''Detects and identify the uSD cards in the system
+        No matter what OS have you installed
+        '''
+
+        # possible drives, will fill and pop when checking to get at the end
+        # real ones.
+        possibleDrives = []
+
+        # OS specific listing
+        if sys.platform in ["win32", "cygwin"]:
+            possibleDrives = self.drivesWin()
+        elif sys.platform.startswith('linux'):
+            possibleDrives = self.drivesLinux()
+        elif sys.platform is "darwin":
+            possibleDrives = self.drivesMac()
+        else:
+            # freebsd or others, not supported yet
+            # TODO warning about not supported OS
+            pass
 
 if __name__ == "__main__":
     '''Run the script'''
