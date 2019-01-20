@@ -405,29 +405,45 @@ ApplicationWindow {
                     id: cbSdCard
                     currentIndex: 0
                     model: skf.cards
+                    Layout.preferredHeight: 30
+                    Layout.preferredWidth: 200
 
                     onCurrentIndexChanged: console.debug("Actual Index is " + currentIndex)
                     onCurrentTextChanged: {
                         console.debug("Actual Text is " + currentText)
                         if (currentText != "Please insert a card") {
                             skf.selectedCard = currentText
-                            // flash button enabled
+                            btFlash.enabled = true
                         } else {
                             skf.selectedCard = ""
-                            // flash button disabled
+                            btFlash.enabled = false
                         }
                     }
                 }
 
-                // flash ProgressBar
-                ProgressBar {
-                    id: pbFlash
-                    Layout.fillWidth: true
-                    visible: true
-                    maximumValue: 100
-                    minimumValue: 0
-                    value: 88
+                // Start Flashing!
+                Button {
+                    id: btFlash
+                    Layout.preferredHeight: 30
+                    Layout.preferredWidth: 120
+                    enabled: false
+                    text: "Start Flashing"
+                    tooltip: "Click here to start flashing the cards with the built images"
+
+                    onClicked: {
+                        // 
+                    }
                 }
+            }
+
+            // flash ProgressBar
+            ProgressBar {
+                id: pbFlash
+                Layout.fillWidth: true
+                visible: true
+                maximumValue: 100
+                minimumValue: 0
+                value: 88
             }
         }
     }
