@@ -545,8 +545,8 @@ class skyFlash(QObject):
 
         self.uiOk.emit("Image build is a success!", "Now you have your custom images for your nodes in the Skybian folder.\nYou can now use your preferred flasher software to do it")
 
-        self.setStatus("Image build was a success!")
-        self.bData("Done with all images")
+        self.setStatus.emit("Image build was a success!")
+        self.bData.emit("Done with all images")
 
     @pyqtSlot()
     def downloadSkybian(self):
