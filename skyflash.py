@@ -13,6 +13,7 @@ import ssl
 import hashlib
 import logging
 import shutil
+import subprocess
 from urllib.request import Request, urlopen
 
 # OS dependant imports
@@ -1317,7 +1318,36 @@ class skyFlash(QObject):
 
         # getting data for the drives
         for drive in drives:
-            total, used, free = shutil.disk_usage(drive)
+            # classic os.statvfs|shutil.disk_usage don't work on
+            # raw disks, it needs a working fs path so we need to
+            # find the path in wish is mounted the card
+            mountedDrive = ""
+
+            # find the mounted path of the drive
+            dname = drive.split("/")[-1]
+            try:
+                out = subprocess.check_output(["mount | grep {}".format(dname)], shell=True)
+                o = str(out).split(" ")
+                mountedDrive = o[2]
+                logging.debug("Drive {} is mounted on {}".format(drive, mountedDrive))
+            except:
+                # drive is not mounted
+                logging.debug("Drive {} is not  mounted".format(drive))
+                pass
+
+            # if mounted determine the size
+            if len(mountedDrive) > 0:
+                if sys.version_info < (3, 3):
+                    fstat = os.statvfs(mountedDrive)
+                    total = fstat.f_frsize * fstat.f_blocks
+                    free = fstat.f_frsize * fstat.f_bavail
+                    used = total - free
+                else:
+                    total, used, free = shutil.disk_usage(mountedDrive)
+            else:
+                total = 0
+
+            # add it to the final drive list
             finalDrives.append((drive, "", total))
 
         return finalDrives
