@@ -257,6 +257,9 @@ class skyFlash(QObject):
 
     ### init procedure
     def __init__(self, parent=None):
+        super(skyFlash, self).__init__(parent=parent)
+
+        # properties
         self.downloadActive = False
         self.downloadOk = False
         self.downloadSize = 0
@@ -267,6 +270,8 @@ class skyFlash(QObject):
         self.digest = ""
         self.skybianFile = ""
         self.cksumOk = False
+        self.cardsList = []
+        self.selectedCard = ""
 
         # set the working dir for the downloads and extraction to a folder
         # named skyflash on the users home, create it if not there
@@ -277,7 +282,11 @@ class skyFlash(QObject):
         logging.basicConfig(filename=logfile, level=logging.DEBUG)
         self.logStart()
 
-        return super(skyFlash, self).__init__(parent=parent)
+        # timer for the sdCards detection
+        timer = QTimer(self)
+        timer.timeout.connect(self.detectCards)
+        # timer stoped, not started until step 4 is visible
+        timer.start(200)
 
     # some variables
     localPath = ""
@@ -314,6 +323,8 @@ class skyFlash(QObject):
     bsProg = pyqtSignal(float, arguments=["percent"])
     # build overal progress, show overall progress for the whole image build
     boProg = pyqtSignal(float, arguments=["percent"])
+    # warnd the UI that the list of cards has been changed
+    cardsChanged = pyqtSignal()
 
     # download flags
     downloadActive = False
@@ -535,7 +546,6 @@ class skyFlash(QObject):
 
         self.setStatus("Image build was a success!")
         self.bData("Done with all images")
-
 
     @pyqtSlot()
     def downloadSkybian(self):
@@ -1292,17 +1302,17 @@ class skyFlash(QObject):
         # check if the drive is there
         for drive in drives[:]:
             try:
-                # if this work we detected a drive and is readable
+                # if this work we detected a drive and is readable, see else statement
                 disk = open(drive,'rb')
-                disk.close()
             except FileNotFoundError:
                 # there is no such drive
-                drives.pop(drive.index(drive))
+                drives.pop(drives.index(drive))
                 pass
             except PermissionError:
-                # there is a drive, but there is no read access
                 pass
-
+            else:
+                # well it can open the disk, we must close it
+                disk.close()
         finalDrives = []
 
         # getting data for the drives
@@ -1334,7 +1344,32 @@ class skyFlash(QObject):
             # TODO warning about not supported OS
             pass
 
-        return drives
+        # build a user friendly string for the cards if there is a card
+        if len(drives):
+            driveList = []
+            for drive, label, size in drives:
+                if label == "":
+                    driveList.append("{} {}GB".format(drive, size // 2**30))
+                else:
+                    driveList.append("{} '{}' {}GB".format(drive, label, size // 2**30))
+        else:
+            driveList = ["Please insert a card"]
+
+        self.cards = driveList
+
+    @pyqtProperty(list, notify=cardsChanged)
+    def cards(self):
+        '''Return the cards list for the QML UI interface integration'''
+        return self.cardsList
+
+    @cards.setter
+    def cards(self, val):
+        '''Setter of the card property for the combo box of the cards'''
+        if self.cardsList == val:
+            return
+        self.cardsList = val[:]
+        self.cardsChanged.emit()
+
 
 if __name__ == "__main__":
     '''Run the script'''
@@ -1354,6 +1389,9 @@ if __name__ == "__main__":
         engine.rootContext().setContextProperty("skf", skyflash)
         engine.load("skyflash.qml")
         engine.quit.connect(app.quit)
+
+        # update the list of cards
+        skyflash.detectCards()
 
         # main GUI call
         sys.exit(app.exec_())

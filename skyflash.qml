@@ -251,10 +251,6 @@ ApplicationWindow {
                     enabled: false
                     inputMask: "000.000.000.000; "
                     // ToolTip.text: "This is the network Gateway IP"
-
-                    onTextChanged: {
-                        console.log(txtGateway.text)
-                    }
                 }
 
                 // dns
@@ -378,7 +374,7 @@ ApplicationWindow {
         ColumnLayout {
             id: boxFlash
             spacing: 10
-            visible: false
+            visible: true
 
             // box title
             Rectangle {
@@ -408,13 +404,19 @@ ApplicationWindow {
                 ComboBox {
                     id: cbSdCard
                     currentIndex: 0
-                    model: ListModel {
-                        id: cbSdCardItems
-                        ListElement { text: "Select..."; color: "Yellow" }
-                        ListElement { text: "/dev/mmcblk0"; color: "Green" }
-                        ListElement { text: "G:/"; color: "Brown" }
+                    model: skf.cards
+
+                    onCurrentIndexChanged: console.debug("Actual Index is " + currentIndex)
+                    onCurrentTextChanged: {
+                        console.debug("Actual Text is " + currentText)
+                        if (currentText != "Please insert a card") {
+                            skf.selectedCard = currentText
+                            // flash button enabled
+                        } else {
+                            skf.selectedCard = ""
+                            // flash button disabled
+                        }
                     }
-                    onCurrentIndexChanged: console.debug(cbSdCardItems.get(currentIndex).text + ", " + cbSdCardItems.get(currentIndex).color)
                 }
 
                 // flash ProgressBar
