@@ -14,18 +14,9 @@ import hashlib
 import logging
 import shutil
 import subprocess
+import enum
+import string
 from urllib.request import Request, urlopen
-
-# OS dependant imports
-if sys.platform in ["win32", "cygwin"]:
-    import ctypes
-    # some aliases
-    getLogicalDrives = ctypes.windll.kernel32.GetLogicalDrives
-    getDriveType = ctypes.windll.kernel32.GetDriveTypeA
-    createUnicodeBuffer = ctypes.create_unicode_buffer
-    getVolumeInformation = ctypes.windll.kernel32.GetVolumeInformationW
-    getDiskFreeSpace = ctypes.windll.kernel32.GetDiskFreeSpaceExA
-
 
 # GUI imports
 from PyQt5.QtGui import QGuiApplication
@@ -41,6 +32,60 @@ manualUrl = "http://github.com/simelo/skyflash"
 # image config file position and size
 imageConfigAddress = 3670016
 imageConfigDataSize = 256
+
+# OS dependant imports and classes
+if sys.platform in ["win32", "cygwin"]:
+    import ctypes
+    # some aliases
+    getLogicalDrives = ctypes.windll.kernel32.GetLogicalDrives
+    getDriveType = ctypes.windll.kernel32.GetDriveTypeA
+    createUnicodeBuffer = ctypes.create_unicode_buffer
+    getVolumeInformation = ctypes.windll.kernel32.GetVolumeInformationW
+    getDiskFreeSpace = ctypes.windll.kernel32.GetDiskFreeSpaceExA
+
+    # Instabce info
+    class SW(enum.IntEnum):
+        '''Hold the app status in Windows OS'''
+        HIDE = 0
+        MAXIMIZE = 3
+        MINIMIZE = 6
+        RESTORE = 9
+        SHOW = 5
+        SHOWDEFAULT = 10
+        SHOWMAXIMIZED = 3
+        SHOWMINIMIZED = 2
+        SHOWMINNOACTIVE = 7
+        SHOWNA = 8
+        SHOWNOACTIVATE = 4
+        SHOWNORMAL = 1
+
+    # this is needed for privilege scaling in windows
+    class ERROR(enum.IntEnum):
+        '''Holds errors and info associated to Windows OS errors'''
+        ZERO = 0
+        FILE_NOT_FOUND = 2
+        PATH_NOT_FOUND = 3
+        BAD_FORMAT = 11
+        ACCESS_DENIED = 5
+        ASSOC_INCOMPLETE = 27
+        DDE_BUSY = 30
+        DDE_FAIL = 29
+        DDE_TIMEOUT = 28
+        DLL_NOT_FOUND = 32
+        NO_ASSOC = 31
+        OOM = 8
+        SHARE = 26
+
+
+# use this function to request higher privileges on Windows
+def bootstrap():
+    if not ctypes.windll.shell32.IsUserAnAdmin():
+        hinstance = ctypes.windll.shell32.ShellExecuteW(
+            None, 'runas', sys.executable, sys.argv[0], None, SW.SHOWNORMAL
+        )
+        if hinstance <= 32:
+            raise RuntimeError(ERROR(hinstance))
+
 
 # utils class
 class Utils(object):
@@ -1402,7 +1447,11 @@ class skyFlash(QObject):
 
 
 if __name__ == "__main__":
-    '''Run the script'''
+    '''Run the app'''
+
+    #  privilege elevation request in Windows.
+    if sys.platform in ["win32", "cygwin"]:
+        bootstrap()
 
     try:
         # instance of utils
