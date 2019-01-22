@@ -4,7 +4,6 @@
 import os
 import io
 import sys
-import subprocess
 import webbrowser
 import time
 import traceback
@@ -79,6 +78,12 @@ if sys.platform in ["win32", "cygwin"]:
 
 # use this function to request higher privileges on Windows
 def bootstrap():
+    '''
+    This functions check if the script is runing on high privileges, if not
+    the as them to the user using the default Windows OS UAC mechanism
+    handling any error in the process
+    '''
+
     if not ctypes.windll.shell32.IsUserAnAdmin():
         hinstance = ctypes.windll.shell32.ShellExecuteW(
             None, 'runas', sys.executable, sys.argv[0], None, SW.SHOWNORMAL
