@@ -321,8 +321,10 @@ class skyFlash(QObject):
         self.digest = ""
         self.skybianFile = ""
         self.cksumOk = False
-        self.cardsList = []
-        self.selectedCard = ""
+        self.cardList = []
+        self.card = 0
+        self.builtImages = []
+        self.flashingNow = []
 
         # set the working dir for the downloads and extraction to a folder
         # named skyflash on the users home, create it if not there
@@ -353,7 +355,19 @@ class skyFlash(QObject):
     # status bar
     setStatus = pyqtSignal(str, arguments=["msg"])
 
-    # QT QML signals
+    #### QT QML signals
+
+    ## Dialog signals
+
+    # target is okDialog Box rise
+    uiOk = pyqtSignal(str, str, arguments=["title", "text"])
+    # target is warnDialog Box rise
+    uiWarning = pyqtSignal(str, str, arguments=["title", "text"])
+    # target is errorwarnDialog Box rise
+    uiError = pyqtSignal(str, str, str, arguments=["title", "text", "details"])
+
+    ## image related signals
+
     # target is download label
     dData = pyqtSignal(str, arguments=["data"])
     # target is proogress bar
@@ -362,20 +376,26 @@ class skyFlash(QObject):
     dDone = pyqtSignal()
     # target is show download buttons
     sStart = pyqtSignal()
-    # target is okDialog Box rise
-    uiOk = pyqtSignal(str, str, arguments=["title", "text"])
-    # target is warnDialog Box rise
-    uiWarning = pyqtSignal(str, str, arguments=["title", "text"])
-    # target is errorwarnDialog Box rise
-    uiError = pyqtSignal(str, str, str, arguments=["title", "text", "details"])
+
+    ## Signals related to the build process
+
     # build data, show a hint to the users
     bData = pyqtSignal(str, arguments=["data"])
     # build single process show single file build progress
     bsProg = pyqtSignal(float, arguments=["percent"])
-    # build overal progress, show overall progress for the whole image build
+    # build overall progress, show overall progress for the whole image build
     boProg = pyqtSignal(float, arguments=["percent"])
+
+    ## Signals related to the flash process
+
     # warnd the UI that the list of cards has been changed
     cardsChanged = pyqtSignal()
+    # flash data, show a hint to the users
+    fData = pyqtSignal(str, arguments=["data"])
+    # flash single process show single file flash progress
+    fsProg = pyqtSignal(float, arguments=["percent"])
+    # flash overall progress, show overall progress for the whole flash
+    foProg = pyqtSignal(float, arguments=["percent"])
 
     # download flags
     downloadActive = False
@@ -597,6 +617,50 @@ class skyFlash(QObject):
 
         self.setStatus.emit("Image build was a success!")
         self.bData.emit("Done with all images")
+
+    # flash ones
+
+    def flashData(self, data):
+        '''Pass a test string to the label on the flash box'''
+
+        self.fData.emit(data)
+
+    def flashProg(self, percent, data):
+        '''Update two progressbar and a status bar in the UI
+
+        The data came as a percent of the single image, and the
+        data part carries the comment for the status bar and the
+        overall progress that we must cut out to pass to the
+        corresponding progress bar
+        '''
+
+        # split data
+        d = data.split("|")
+        self.fsProg.emit(percent)
+        self.setStatus.emit(d[0])
+        self.foProg.emit(float(d[1]))
+
+    def flashResult(self, data):
+        ''''''
+        pass
+
+    def flashError(self, data):
+        '''Catch any error on the image flash process and pass it to the user'''
+
+        self.dData.emit("Flash process error...")
+        self.setStatus.emit("An error ocurred, while flashing the images")
+        etype, eval, etrace = error
+        logging.debug("An error ocurred while flashing the images:\n{}".format(eval))
+        self.uiError.emit("Flash failed!", "The flash process failed, please check the logs to see more details", str(eval))
+
+    def flashDone(self, data):
+        '''Catch the end of the flash process'''
+
+        # self.uiOk.emit("Image build is a success!", "Now you have your custom images for your nodes in the Skybian folder.\nYou can now use your preferred flasher software to do it")
+
+        # self.setStatus.emit("Image build was a success!")
+        # self.bData.emit("Done with all images")
+        pass
 
     @pyqtSlot()
     def downloadSkybian(self):
@@ -1274,6 +1338,9 @@ class skyFlash(QObject):
             # close the newNode
             newNode.close()
 
+            # add the img path to the list of built images
+            self.builtImages.append(nnfp)
+
         # close the file
         file.close()
 
@@ -1336,6 +1403,8 @@ class skyFlash(QObject):
         '''Return a list of available drives in linux
         if possible with a drive label and sizes on bytes:
 
+        On some linux the SD cards take /dev/sdb and on
+
         [
             ('/dev/mmcblk0', '', 2369536),
             ('/dev/mmcblk1', '', 3995639808)
@@ -1349,6 +1418,10 @@ class skyFlash(QObject):
         # create a pool of possible drives
         for i in range(0, 5):
             drives.append("/dev/mmcblk{}".format(i))
+
+        # add sdb-f as possible mmc drives
+        for i in "bcdef":
+            drives.append("/dev/sd{}".format(i))
 
         # check if the drive is there
         for drive in drives[:]:
@@ -1428,10 +1501,12 @@ class skyFlash(QObject):
         if len(drives):
             driveList = []
             for drive, label, size in drives:
+                if size > 0:
+                    size = size / 2**30
                 if label == "":
-                    driveList.append("{} {}GB".format(drive, size // 2**30))
+                    driveList.append("{} {:0.1f}GB".format(drive, size))
                 else:
-                    driveList.append("{} '{}' {}GB".format(drive, label, size // 2**30))
+                    driveList.append("{} '{}' {:0.1f}GB".format(drive, label, size))
         else:
             driveList = ["Please insert a card"]
 
@@ -1440,16 +1515,50 @@ class skyFlash(QObject):
     @pyqtProperty(list, notify=cardsChanged)
     def cards(self):
         '''Return the cards list for the QML UI interface integration'''
-        return self.cardsList
+        return self.cardList
 
     @cards.setter
     def cards(self, val):
         '''Setter of the card property for the combo box of the cards'''
-        if self.cardsList == val:
+
+        if self.cardList == val:
             return
-        self.cardsList = val[:]
+
+        self.cardList = val[:]
         self.cardsChanged.emit()
 
+    @pyqtSlot(str)
+    def pickCard(self, text):
+        '''Set the actual selected card in the combo box'''
+        print("Selected card is: {}".format(text))
+
+    @pyqtSlot()
+    def imageFlash(self):
+        '''Flash the images, one at a time, each one on a turn'''
+
+        # Preparing the flasher thread
+        # thead start
+        self.flash = Worker(self.flasher)
+        self.flash.signals.data.connect(self.flashData)
+        self.flash.signals.progress.connect(self.flashProg)
+        self.flash.signals.result.connect(self.flashResult)
+        self.flash.signals.error.connect(self.flashError)
+        self.flash.signals.finished.connect(self.flashDone)
+
+        #  cycle trough the images and burn it in a thread
+        for image in self.builtImages:
+            name = image.split(os.sep)[-1]
+            self.flashingNow = [image, name]
+
+            #  start flashing thread
+            self.threadpool.start(self.build)
+
+    def flasher(self, data_callback, progress_callback):
+        '''Flash the images
+
+        The actual image to flash is on self.flashingNow [image, name]'''
+
+        pass
 
 if __name__ == "__main__":
     '''Run the app'''

@@ -408,7 +408,6 @@ ApplicationWindow {
                     Layout.preferredHeight: 30
                     Layout.preferredWidth: 200
 
-                    onCurrentIndexChanged: console.debug("Actual Index is " + currentIndex)
                     onCurrentTextChanged: {
                         console.debug("Actual Text is " + currentText)
                         if (currentText != "Please insert a card") {
@@ -418,6 +417,8 @@ ApplicationWindow {
                             skf.selectedCard = ""
                             btFlash.enabled = false
                         }
+                        // call to update the selected text
+                        skf.pickCard(currentText)
                     }
                 }
 
@@ -431,9 +432,15 @@ ApplicationWindow {
                     tooltip: "Click here to start flashing the cards with the built images"
 
                     onClicked: {
-                        // 
+                        // call skyflash to flash the images
+                        skf.imageFlash()
                     }
                 }
+            }
+
+            Label {
+                id: lbFlash
+                text: ""
             }
 
             // flash ProgressBar
@@ -443,7 +450,17 @@ ApplicationWindow {
                 visible: true
                 maximumValue: 100
                 minimumValue: 0
-                value: 88
+                value: 0
+            }
+
+            // flash ProgressBar
+            ProgressBar {
+                id: pbFlashOverall
+                Layout.fillWidth: true
+                visible: true
+                maximumValue: 100
+                minimumValue: 0
+                value: 0
             }
         }
     }
@@ -564,6 +581,11 @@ ApplicationWindow {
             if (percent > 0) {
                 pbBuildOverall.value = percent
             }
+        }
+
+        // flash data passing, hints to the user
+        onFData: {
+            lbFlash.text = data
         }
     }
 }
