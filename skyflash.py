@@ -220,6 +220,19 @@ class Utils(object):
         # all good
         return (True, "")
 
+    def getLinuxPath(soft):
+        '''Return False if the soft is not in the system or the path string if true'''
+
+        try:
+            output = subprocess.check_output("which {}".format(soft), shell=True)
+        except subprocess.CalledProcessError:
+            return False
+
+        if output == '':
+            output = False
+
+        return bytes(output).decode().strip("\n")
+
 
 # fileio overide class to get progress on tarfile extraction
 class ProgressFileObject(io.FileIO):
@@ -322,7 +335,7 @@ class skyFlash(QObject):
         self.skybianFile = ""
         self.cksumOk = False
         self.cardList = []
-        self.card = 0
+        self.card = ""
         self.builtImages = []
         self.flashingNow = []
 
@@ -638,11 +651,13 @@ class skyFlash(QObject):
         d = data.split("|")
         self.fsProg.emit(percent)
         self.setStatus.emit(d[0])
-        self.foProg.emit(float(d[1]))
+        # self.foProg.emit(float(d[1]))
 
     def flashResult(self, data):
         ''''''
-        pass
+        if data == "Done":
+            self.uiOk.emit("Flash Done!", "Flashing of {} is done, please remove the uSD card, insert a new one and pick your cards device from the drop down list, then ckick flash button again.")
+            return "Done"
 
     def flashError(self, data):
         '''Catch any error on the image flash process and pass it to the user'''
@@ -658,9 +673,8 @@ class skyFlash(QObject):
 
         # self.uiOk.emit("Image build is a success!", "Now you have your custom images for your nodes in the Skybian folder.\nYou can now use your preferred flasher software to do it")
 
-        # self.setStatus.emit("Image build was a success!")
+        self.setStatus.emit("Image build was a success!")
         # self.bData.emit("Done with all images")
-        pass
 
     @pyqtSlot()
     def downloadSkybian(self):
@@ -1157,7 +1171,7 @@ class skyFlash(QObject):
         managerValid, reason = utils.validIP(manager)
         if not managerValid:
             self.uiError.emit("Validation error", "The Manager IP entered is not valid, please check that", reason)
-            logging.debug("Manager ip not valid: {}".format(mnager))
+            logging.debug("Manager ip not valid: {}".format(manager))
             return False
 
         # validation #2, dns, two and valid ips
@@ -1199,7 +1213,7 @@ class skyFlash(QObject):
         if int(gw[gw.rfind('.') + 1:]) in range(int(manager[manager.rfind('.') + 1:]), endip):
             self.uiError.emit("Validation error", "Please check your GW, Manager & Node selection, the GW is one of the Nodes or Manager IPs",
                 "When we distribute the manager & nodes IP we found that the GW is one of that IP and that's wrong")
-            logging.debug("GW ip is on generated nodes range.".format(dns))
+            logging.debug("GW ip is on generated nodes range.")
             return False
 
         # If you reached this point then all is ok
@@ -1452,10 +1466,8 @@ class skyFlash(QObject):
                 out = subprocess.check_output(["mount | grep {}".format(dname)], shell=True)
                 o = str(out).split(" ")
                 mountedDrive = o[2]
-                logging.debug("Drive {} is mounted on {}".format(drive, mountedDrive))
             except:
                 # drive is not mounted
-                logging.debug("Drive {} is not  mounted".format(drive))
                 pass
 
             # if mounted determine the size
@@ -1530,7 +1542,8 @@ class skyFlash(QObject):
     @pyqtSlot(str)
     def pickCard(self, text):
         '''Set the actual selected card in the combo box'''
-        print("Selected card is: {}".format(text))
+        self.card = text.split(" ")[0]
+        print("Selected card is: {}".format(self.card))
 
     @pyqtSlot()
     def imageFlash(self):
@@ -1545,20 +1558,88 @@ class skyFlash(QObject):
         self.flash.signals.error.connect(self.flashError)
         self.flash.signals.finished.connect(self.flashDone)
 
-        #  cycle trough the images and burn it in a thread
-        for image in self.builtImages:
-            name = image.split(os.sep)[-1]
-            self.flashingNow = [image, name]
-
-            #  start flashing thread
-            self.threadpool.start(self.build)
+        #  start flashing thread
+        self.threadpool.start(self.flash)
 
     def flasher(self, data_callback, progress_callback):
         '''Flash the images
-
         The actual image to flash is on self.flashingNow [image, name]'''
 
-        pass
+        if sys.platform in ["win32", "cygwin"]:
+            # windows
+            pass
+        elif sys.platform == "darwin":
+            # mac
+            pass
+        else:
+            # linux
+            self.linuxFlasher(data_callback, progress_callback)
+
+    def linuxFlasher(self, data_callback, progress_callback):
+        '''Linux flasher'''
+
+        #  command to run
+        pkexec = Utils.getLinuxPath("pkexec")
+        dd = Utils.getLinuxPath("dd")
+        pv = Utils.getLinuxPath("pv")
+
+        # there is a image left to burn?
+        if len(self.builtImages) == 0:
+            # nope, all done.
+            self.uiWarning.emit("Flasing Finished!", "Sorry, all built images was flashed already")
+            return "Done"
+
+        # there are images left to burn, pick the first one
+        image = self.builtImages[0]
+        name = image.split(os.sep)[-1]
+        destination = self.card
+        size = os.path.getsize(image)
+
+        data_callback.emit("Flashing now {} image".format(name))
+
+        if pkexec and dd and pv:
+            cmd = "{} if={} | {} -s {} -n -f | {} {} of={}".format(dd, image, pv, size, pkexec, dd, destination)
+            logging.debug("Full cmd line is:\n{}".format(cmd))
+            
+            # TODO Test if the destination file in in there
+
+            try: 
+                p = subprocess.Popen(cmd, 
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    bufsize=0, universal_newlines=True, shell=True)
+
+                output = "fake news"
+                while True:
+                    # exit condition for the endless loop
+                    if output == '' and p.poll() is not None:
+                        break
+
+                    # out, err = p.communicate()
+                    out = p.stdout.readline()
+                    err = p.stderr.readline()
+                    output = out.strip("\n") + err.strip("\n")
+
+                    if output != '':
+                        print(output, flush=True)
+                        if not " " in output:
+                            o = int(output)
+                            progress_callback.emit(o, output)
+
+                logging.debug("Return Code was {}".format(p.returncode))
+
+                # check for return code
+                if p.returncode == 0:
+                    # All ok, pop the image from the list
+                    self.builtImages.pop(self.builtImages.index(image))
+                    logging.debug("Removing {} image from the list of images to burn".format(image))
+                    return "Done"
+
+                return "Oops!"
+            except OSError as e:
+                logging.debug("Failed to execute program '%s': %s" % (cmd, str(e)))
+                raise
+        else:
+            logging.debug("Error getting one of the dependencies")
 
 if __name__ == "__main__":
     '''Run the app'''
