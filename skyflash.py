@@ -656,8 +656,7 @@ class skyFlash(QObject):
     def flashResult(self, data):
         ''''''
         if data == "Done":
-            self.uiOk.emit("Flash Done!", "Flashing of {} is done, please remove the uSD card, insert a new one and pick your cards device from the drop down list, then ckick flash button again.")
-            return "Done"
+            self.uiOk.emit("Flash Done!", "Flashing of {} is done, please remove the uSD card, insert a new one and pick your cards device from the drop down list, then click flash button again to flash the next image.")
 
     def flashError(self, data):
         '''Catch any error on the image flash process and pass it to the user'''
@@ -1582,6 +1581,7 @@ class skyFlash(QObject):
         pkexec = Utils.getLinuxPath("pkexec")
         dd = Utils.getLinuxPath("dd")
         pv = Utils.getLinuxPath("pv")
+        logfile = "/tmp/skf"
 
         # there is a image left to burn?
         if len(self.builtImages) == 0:
@@ -1598,32 +1598,36 @@ class skyFlash(QObject):
         data_callback.emit("Flashing now {} image".format(name))
 
         if pkexec and dd and pv:
-            cmd = "{} if={} | {} -s {} -n -f | {} {} of={}".format(dd, image, pv, size, pkexec, dd, destination)
+            cmd = "{} if={} | {} -s {} -n -f 2>{} | {} {} of={}".format(dd, image, pv, size, logfile, pkexec, dd, destination)
             logging.debug("Full cmd line is:\n{}".format(cmd))
-            
+
             # TODO Test if the destination file in in there
 
-            try: 
-                p = subprocess.Popen(cmd, 
+            try:
+                p = subprocess.Popen(cmd,
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     bufsize=0, universal_newlines=True, shell=True)
 
-                output = "fake news"
+                #  open the log file
+                lf = open(logfile, 'r')
+
                 while True:
                     # exit condition for the endless loop
-                    if output == '' and p.poll() is not None:
+                    if p.poll() is not None:
                         break
 
-                    # out, err = p.communicate()
-                    out = p.stdout.readline()
-                    err = p.stderr.readline()
-                    output = out.strip("\n") + err.strip("\n")
+                    #  capturing progress via a file
+                    l = lf.readline()
+                    l = l.strip("\n")
+                    if l != '':
+                        pr = int(l)
+                        if pr > 0:
+                            msg = "Flashing {}, {}%".format(name, pr)
+                            progress_callback.emit(pr, l)
 
-                    if output != '':
-                        print(output, flush=True)
-                        if not " " in output:
-                            o = int(output)
-                            progress_callback.emit(o, output)
+                #  close the log file
+                if lf:
+                    lf.close()
 
                 logging.debug("Return Code was {}".format(p.returncode))
 
@@ -1633,8 +1637,11 @@ class skyFlash(QObject):
                     self.builtImages.pop(self.builtImages.index(image))
                     logging.debug("Removing {} image from the list of images to burn".format(image))
                     return "Done"
+                else:
+                    # different code
+                    # TODO capture an error
+                    return "Oops!"
 
-                return "Oops!"
             except OSError as e:
                 logging.debug("Failed to execute program '%s': %s" % (cmd, str(e)))
                 raise

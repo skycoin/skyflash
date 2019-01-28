@@ -587,5 +587,10 @@ ApplicationWindow {
         onFData: {
             lbFlash.text = data
         }
+
+        // flash data percent
+        onFsProg: {
+            pbFlash.value = percent
+        }
     }
 }
