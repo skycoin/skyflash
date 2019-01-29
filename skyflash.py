@@ -333,11 +333,18 @@ class skyFlash(QObject):
         self.digestAlgorithm = ""
         self.digest = ""
         self.skybianFile = ""
+        self.localPath = ""
+        self.netGw = ""
+        self.netDns = ""
+        self.netManager = ""
+        self.netNodes = ""
         self.cksumOk = False
         self.cardList = []
         self.card = ""
         self.builtImages = []
         self.flashingNow = []
+        self.flashCount = 0
+        self.flashCountDone = 0
 
         # set the working dir for the downloads and extraction to a folder
         # named skyflash on the users home, create it if not there
@@ -353,15 +360,6 @@ class skyFlash(QObject):
         timer.timeout.connect(self.detectCards)
         # timer stoped, not started until step 4 is visible
         timer.start(200)
-
-    # some variables
-    localPath = ""
-    digestAlgorithm = ""
-    digest = ""
-    netGw = ""
-    netDns = ""
-    netManager = ""
-    netNodes = ""
 
     #### registering Signals to emit to QML GUI
 
@@ -610,7 +608,7 @@ class skyFlash(QObject):
         ''''''
         pass
 
-    def buildError(self, data):
+    def buildError(self, error):
         '''Catch any error on the image build process and pass it to the user'''
 
         self.dData.emit("Build process error...")
@@ -650,19 +648,18 @@ class skyFlash(QObject):
         # split data
         d = data.split("|")
         self.fsProg.emit(percent)
+        self.foProg.emit(float(d[1]))
         self.setStatus.emit(d[0])
-        # self.foProg.emit(float(d[1]))
 
     def flashResult(self, data):
         ''''''
-        if data == "Done":
-            self.uiOk.emit("Flash Done!", "Flashing of {} is done, please remove the uSD card, insert a new one and pick your cards device from the drop down list, then click flash button again to flash the next image.")
+        pass
 
-    def flashError(self, data):
+    def flashError(self, error):
         '''Catch any error on the image flash process and pass it to the user'''
 
-        self.dData.emit("Flash process error...")
-        self.setStatus.emit("An error ocurred, while flashing the images")
+        self.fData.emit("Flash process error...")
+        self.setStatus.emit("An error ocurred while flashing the images")
         etype, eval, etrace = error
         logging.debug("An error ocurred while flashing the images:\n{}".format(eval))
         self.uiError.emit("Flash failed!", "The flash process failed, please check the logs to see more details", str(eval))
@@ -670,10 +667,10 @@ class skyFlash(QObject):
     def flashDone(self, data):
         '''Catch the end of the flash process'''
 
-        # self.uiOk.emit("Image build is a success!", "Now you have your custom images for your nodes in the Skybian folder.\nYou can now use your preferred flasher software to do it")
+        self.uiOk.emit("Image flashing succeeded!", "To flash the next image just remove the actual SD card and place a new one and select the proper device in the combo box, then click the Flash button.")
 
-        self.setStatus.emit("Image build was a success!")
-        # self.bData.emit("Done with all images")
+        self.setStatus.emit("Flash process was a success!")
+        self.fData.emit("Flash process was a success!")
 
     @pyqtSlot()
     def downloadSkybian(self):
@@ -1353,6 +1350,7 @@ class skyFlash(QObject):
 
             # add the img path to the list of built images
             self.builtImages.append(nnfp)
+            self.flashCount = len(self.builtImages)
 
         # close the file
         file.close()
@@ -1583,6 +1581,11 @@ class skyFlash(QObject):
         pv = Utils.getLinuxPath("pv")
         logfile = "/tmp/skf"
 
+        # touch (& truncate) the logfile
+        f = open(logfile, 'w')
+        f.write("0")
+        f.close()
+
         # there is a image left to burn?
         if len(self.builtImages) == 0:
             # nope, all done.
@@ -1591,7 +1594,7 @@ class skyFlash(QObject):
 
         # there are images left to burn, pick the first one
         image = self.builtImages[0]
-        name = image.split(os.sep)[-1]
+        name = image.split(os.sep)[-1].split(".")[0]
         destination = self.card
         size = os.path.getsize(image)
 
@@ -1617,13 +1620,13 @@ class skyFlash(QObject):
                         break
 
                     #  capturing progress via a file
-                    l = lf.readline()
-                    l = l.strip("\n")
+                    l = lf.readline().strip("\n")
                     if l != '':
                         pr = int(l)
                         if pr > 0:
-                            msg = "Flashing {}, {}%".format(name, pr)
-                            progress_callback.emit(pr, l)
+                            overAll = pr/100/self.flashCount + self.flashCountDone/self.flashCount
+                            msg = "Flashing {}, {}%|{}".format(name, pr, overAll * 100)
+                            progress_callback.emit(pr, msg)
 
                 #  close the log file
                 if lf:
@@ -1635,6 +1638,7 @@ class skyFlash(QObject):
                 if p.returncode == 0:
                     # All ok, pop the image from the list
                     self.builtImages.pop(self.builtImages.index(image))
+                    self.flashCountDone = self.flashCount - len(self.builtImages)
                     logging.debug("Removing {} image from the list of images to burn".format(image))
                     return "Done"
                 else:
