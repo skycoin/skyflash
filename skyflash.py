@@ -332,8 +332,9 @@ class skyFlash(QObject):
         self.extractionOK = False
         self.digestAlgorithm = ""
         self.digest = ""
-        self.skybianFile = ""
+        self.localPathDownloads = ""
         self.localPath = ""
+        self.checked = ""
         self.netGw = ""
         self.netDns = ""
         self.netManager = ""
@@ -489,6 +490,9 @@ class skyFlash(QObject):
         if self.downloadOk and self.downloadedFile != "":
             self.dDone.emit()
 
+            # logs
+            logging.debug("Downloaded file is {}".format(self.downloadedFile))
+
             # call to handle the download (a img or a compressed one)
             self.downloadProcess()
 
@@ -565,6 +569,15 @@ class skyFlash(QObject):
             # next step
             self.netConfig.emit()
             self.buildImages.emit()
+
+            # set the checked file
+            f = open(self.checked, 'w')
+            f.write(self.skybianFile + "\n")
+            f.close()
+        else:
+            # TODO Raise error if checksum is bad
+            if os.path.exists(self.checked):
+                os.unlink(self.checked)
 
     def cksumError(self, error):
         '''Process the error of the checksum, this only process error in the
@@ -755,7 +768,7 @@ class skyFlash(QObject):
 
         # chuck size @ 100KB
         blockSize = 102400
-        filePath = os.path.join(self.localPath, fileName)
+        filePath = os.path.join(self.localPathDownloads, fileName)
         startTime = 0
         elapsedTime = 0
 
@@ -857,7 +870,7 @@ class skyFlash(QObject):
         # all seems good, emit and go on
         self.downloadOk = True
         self.downloadFileResult(file)
-        time.sleep(3)
+        time.sleep(1)
         self.downloadFileDone("OK")
 
     def downloadProcess(self):
@@ -903,7 +916,7 @@ class skyFlash(QObject):
 
         # change cwd temporarily to extract the files
         cwd = os.getcwd()
-        os.chdir(self.localPath)
+        os.chdir(self.localPathDownloads)
 
         # tar extraction progress
         def tarExtractionProgress(percent):
@@ -1006,8 +1019,19 @@ class skyFlash(QObject):
 
         # test if the folder is already there
         if not os.path.isdir(path):
+            # creating the folder, or not if created
             os.makedirs(path, exist_ok=True)
-            print("Creating app folder")
+
+        # set downloads folder & path to checked file
+        self.localPathDownloads = os.path.join(path,"Downloads")
+        self.checked = os.path.join(self.localPathDownloads, ".checked")
+
+        if not os.path.isdir(self.localPathDownloads):
+            # creating a downloads folder inside it
+            os.makedirs(self.localPathDownloads, exist_ok=True)
+
+        print("Downloads folder is {}".format(self.localPathDownloads))
+        print("Checked file will be {}".format(self.checked))
 
         # return it
         return path
@@ -1028,12 +1052,12 @@ class skyFlash(QObject):
         digestType = ""
 
         # detect the sums files
-        files = os.listdir(self.localPath)
+        files = os.listdir(self.localPathDownloads)
         for file in files:
             ext = file.split(".")[-1]
             if ext in digestAlgorithms:
                 logging.debug("Found checksum file: {}".format(file))
-                digestFile = os.path.join(self.localPath, file)
+                digestFile = os.path.join(self.localPathDownloads, file)
                 digestType = ext
                 break
 
@@ -1057,7 +1081,7 @@ class skyFlash(QObject):
             raise
 
         # cleaning the filename (it has a starting * and ends with a newline)
-        imgFile = os.path.join(self.localPath, imgFile.strip("*"))
+        imgFile = os.path.join(self.localPathDownloads, imgFile.strip("*"))
         imgFile = imgFile.strip("\n")
 
         # DEBUG
@@ -1652,6 +1676,39 @@ class skyFlash(QObject):
         else:
             logging.debug("Error getting one of the dependencies")
 
+    def loadPrevious(self):
+        '''Check for a already downloaded and checksum tested image in the
+        downloads folder
+
+        If so enable the next steps, and show a coment to the user, the fact
+        that we have an already downloaded and validated image is shown buy
+        the precense of a file called '.checked' with the name of the file in
+        the downlads folder.
+        '''
+
+        #  check if a file named .checked is on the downloads path
+        baseImage = ""
+        if os.path.exists(self.checked):
+            f = open(self.checked)
+            baseImage = f.readline().strip("\n")
+            logging.debug("Found a checked file, loading it to process")
+        else:
+            logging.debug("No previous work found.")
+
+        if baseImage != "" and os.path.exists(baseImage):
+            # we have a checked image in the file
+            logging.debug("You have an already checked image, loading it")
+
+            self.skybianFile = baseImage
+            self.extractionOK = True
+            self.setStatus.emit("Found an already downloaded file, loading it")
+            self.dData.emit("Local image loaded")
+            self.netConfig.emit()
+            self.buildImages.emit()
+        else:
+            logging.debug("Checked file not valid or corrumpt, erasing it")
+            os.unlink(self.checked)
+
 if __name__ == "__main__":
     '''Run the app'''
 
@@ -1675,8 +1732,8 @@ if __name__ == "__main__":
         engine.load("skyflash.qml")
         engine.quit.connect(app.quit)
 
-        # update the list of cards
-        skyflash.detectCards()
+        # check to see is we can load a previous downloaded & tested image
+        skyflash.loadPrevious()
 
         # main GUI call
         sys.exit(app.exec_())
