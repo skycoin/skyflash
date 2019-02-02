@@ -224,12 +224,22 @@ ApplicationWindow {
                         txtDNS.enabled = false
                         txtManager.enabled = false
                         txtNodes.enabled = false
+                        // net details are not shown
+                        networkDetails.visible = false
                     } else {
                         // enable the fields for edit
                         txtGateway.enabled = true
                         txtDNS.enabled = true
                         txtManager.enabled = true
                         txtNodes.enabled = true
+                        // net details are shown
+                        networkDetails.visible = true
+                    }
+
+                    // if you change the config of the network and the
+                    // build button is disables, you must enable it
+                    if (btBuild.enabled == false) {
+                        btBuild.enabled = true
                     }
                 }
             }
@@ -238,6 +248,8 @@ ApplicationWindow {
             GridLayout {
                 columns: 2
                 rows: 4
+                id: networkDetails
+                visible: false
 
                 // gateway
                 Label { text: "Network gateway:" }
