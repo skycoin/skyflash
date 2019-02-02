@@ -337,35 +337,41 @@ ApplicationWindow {
                 }
             }
 
-            // particular image progress
-            RowLayout{
-                Label {
-                    text: "Single image progress:"
-                    color: "black"
-                }
-                ProgressBar {
-                    id: pbBuildSingle
-                    Layout.fillWidth: true
-                    visible: true
-                    maximumValue: 100
-                    minimumValue: 0
-                    value: 0
-                }
-            }
+            // image progress bars
+            ColumnLayout {
+                id: buildProgressBars
+                visible: true
 
-            // overall progress
-            RowLayout{
-                Label {
-                    text: "Overall progress:"
-                    color: "black"
+                // particular image progress
+                RowLayout{
+                    Label {
+                        text: "Single image progress:"
+                        color: "black"
+                    }
+                    ProgressBar {
+                        id: pbBuildSingle
+                        Layout.fillWidth: true
+                        visible: true
+                        maximumValue: 100
+                        minimumValue: 0
+                        value: 0
+                    }
                 }
-                ProgressBar {
-                    id: pbBuildOverall
-                    Layout.fillWidth: true
-                    visible: true
-                    maximumValue: 100
-                    minimumValue: 0
-                    value: 0
+
+                // overall progress
+                RowLayout{
+                    Label {
+                        text: "Overall progress:"
+                        color: "black"
+                    }
+                    ProgressBar {
+                        id: pbBuildOverall
+                        Layout.fillWidth: true
+                        visible: true
+                        maximumValue: 100
+                        minimumValue: 0
+                        value: 0
+                    }
                 }
             }
         }
@@ -374,7 +380,7 @@ ApplicationWindow {
         ColumnLayout {
             id: boxFlash
             spacing: 10
-            visible: true
+            visible: false
 
             // box title
             Rectangle {
@@ -530,7 +536,8 @@ ApplicationWindow {
         onBuildImages: {
             // set next step visible
             boxBuild.visible = true
-            windows.height = 360
+            buildProgressBars.visible = true
+            // windows.height = 360
         }
 
         // status bar messages
@@ -581,6 +588,13 @@ ApplicationWindow {
             if (percent > 0) {
                 pbBuildOverall.value = percent
             }
+        }
+
+        // hide the progress bars at the end of the build process
+        onBFinished: {
+            buildProgressBars.visible = false
+            boxFlash.visible = true
+            btBuild.enabled = false
         }
 
         // flash data passing, hints to the user

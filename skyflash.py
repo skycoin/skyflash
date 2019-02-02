@@ -397,6 +397,8 @@ class skyFlash(QObject):
     bsProg = pyqtSignal(float, arguments=["percent"])
     # build overall progress, show overall progress for the whole image build
     boProg = pyqtSignal(float, arguments=["percent"])
+    # hide the progress bars after the built is done, and show Flash box
+    bFinished = pyqtSignal()
 
     ## Signals related to the flash process
 
@@ -637,10 +639,9 @@ class skyFlash(QObject):
         (or use your preferred flasher for the task)
         '''
 
-        self.uiOk.emit("Image build is a success!", "Now you have your custom images for your nodes in the Skybian folder.\nYou can now use your preferred flasher software to do it")
-
-        self.setStatus.emit("Image build was a success!")
-        self.bData.emit("Done with all images")
+        self.setStatus.emit("Images build was a success, next step is flashing!")
+        self.bData.emit("All images was built")
+        self.bFinished.emit()
 
     # flash ones
 
