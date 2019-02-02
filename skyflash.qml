@@ -457,15 +457,15 @@ ApplicationWindow {
                 }
             }
 
-            Label {
-                id: lbFlash
-                text: "Select a card from the list and click on Start Flashing button"
-            }
-
             // box
             ColumnLayout {
                 id: flashProgressBox
                 visible: false
+
+                Label {
+                    id: lbFlash
+                    text: "Select a card from the list and click on Start Flashing button"
+                }
 
                 // flash ProgressBar
                 ProgressBar {
