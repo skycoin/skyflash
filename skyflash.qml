@@ -450,7 +450,8 @@ ApplicationWindow {
                     tooltip: "Click here to start flashing the cards with the built images"
 
                     onClicked: {
-                        // call skyflash to flash the images
+                        // call skyflash to flash the images and     show the progress
+                        flashProgressBox.visible = true
                         skf.imageFlash()
                     }
                 }
@@ -458,27 +459,33 @@ ApplicationWindow {
 
             Label {
                 id: lbFlash
-                text: ""
+                text: "Select a card from the list and click on Start Flashing button"
             }
 
-            // flash ProgressBar
-            ProgressBar {
-                id: pbFlash
-                Layout.fillWidth: true
-                visible: true
-                maximumValue: 100
-                minimumValue: 0
-                value: 0
-            }
+            // box
+            ColumnLayout {
+                id: flashProgressBox
+                visible: false
 
-            // flash ProgressBar
-            ProgressBar {
-                id: pbFlashOverall
-                Layout.fillWidth: true
-                visible: true
-                maximumValue: 100
-                minimumValue: 0
-                value: 0
+                // flash ProgressBar
+                ProgressBar {
+                    id: pbFlash
+                    Layout.fillWidth: true
+                    visible: true
+                    maximumValue: 100
+                    minimumValue: 0
+                    value: 0
+                }
+
+                // flash ProgressBar
+                ProgressBar {
+                    id: pbFlashOverall
+                    Layout.fillWidth: true
+                    visible: true
+                    maximumValue: 100
+                    minimumValue: 0
+                    value: 0
+                }
             }
         }
     }
