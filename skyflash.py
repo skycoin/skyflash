@@ -1542,14 +1542,14 @@ class skyFlash(QObject):
             drives = self.drivesWin()
         elif sys.platform.startswith('linux'):
             drives = self.drivesLinux()
+            # dev test hack to speed up the flash part
+            drives.append(["/dev/null", "Null Sink", 0])
         elif sys.platform is "darwin":
             drives = self.drivesMac()
         else:
             # freebsd or others, not supported yet
             # TODO warning about not supported OS
             pass
-
-        drives.append(["/dev/null", "Null Sink", 0])
 
         # build a user friendly string for the cards if there is a card
         if len(drives) > 0:
@@ -1728,7 +1728,8 @@ class skyFlash(QObject):
             self.buildImages.emit()
         else:
             logging.debug("Checked file not valid or corrumpt, erasing it")
-            os.unlink(self.checked)
+            if os.path.exists(self.checked): 
+                os.unlink(self.checked)
 
 if __name__ == "__main__":
     '''Run the app'''
