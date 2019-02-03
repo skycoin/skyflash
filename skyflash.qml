@@ -6,8 +6,6 @@ import QtQuick.Dialogs 1.1
 ApplicationWindow {
     id: windows
     width: 398
-    //height: 420
-    height: 148
     visible: true
     title: qsTr("Skyflash tool")
 
@@ -548,9 +546,6 @@ ApplicationWindow {
             btDown.visible = true
             btDown.text = "Download"
             btDown.tooltip = "Click here to download the base Skybian image from the official site"
-            // TODO resize windows
-            windows.width = 398
-            windows.height = 148
             // hide other box placeholders
             boxNetwork.visible = false
             boxBuild.visible = false
@@ -560,7 +555,6 @@ ApplicationWindow {
         onNetConfig: {
             // set next step visible
             boxNetwork.visible = true
-            windows.height = 300
         }
 
         // show build images config
@@ -568,7 +562,6 @@ ApplicationWindow {
             // set next step visible
             boxBuild.visible = true
             buildProgressBars.visible = true
-            // windows.height = 360
         }
 
         // status bar messages
