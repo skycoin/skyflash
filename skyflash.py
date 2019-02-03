@@ -409,7 +409,7 @@ class skyFlash(QObject):
     # flash single process show single file flash progress
     fsProg = pyqtSignal(float, arguments=["percent"])
     # flash overall progress, show overall progress for the whole flash
-    foProg = pyqtSignal(float, arguments=["percent"])
+    fsProgOverall = pyqtSignal(float, arguments=["percent"])
 
     # download flags
     downloadActive = False
@@ -455,7 +455,7 @@ class skyFlash(QObject):
         '''Stop the threaded task and produce feedback to the user'''
 
         # stop the download & reset env
-        self.cleanWorkspace()
+        self.resetWorkspace()
 
         # download error feedback
         self.setStatus.emit("Please try again")
@@ -476,7 +476,7 @@ class skyFlash(QObject):
             self.downloadedFile = file
         else:
             # reset the env
-            self.cleanWorkspace()
+            self.resetWorkspace()
 
             # specific feedback
             self.setStatus.emit("Download canceled or error happened")
@@ -532,7 +532,7 @@ class skyFlash(QObject):
         '''Process the error of the extraction'''
 
         # stop the extraction & reset env
-        self.cleanWorkspace()
+        self.resetWorkspace()
 
         # specific feedback
         self.setStatus.emit("Please try again")
@@ -588,7 +588,7 @@ class skyFlash(QObject):
         '''
 
         # stop the extraction & reset env
-        self.cleanWorkspace()
+        self.resetWorkspace()
 
         # specific feedback
         self.dData.emit("Checksum process error...")
@@ -662,7 +662,7 @@ class skyFlash(QObject):
         # split data
         d = data.split("|")
         self.fsProg.emit(percent)
-        self.foProg.emit(float(d[1]))
+        self.fsProgOverall.emit(float(d[1]))
         self.setStatus.emit(d[0])
 
     def flashResult(self, data):
@@ -681,7 +681,8 @@ class skyFlash(QObject):
     def flashDone(self, data):
         '''Catch the end of the flash process'''
 
-        self.uiOk.emit("Image flashing succeeded!", "To flash the next image just remove the actual SD card and place a new one and select the proper device in the combo box, then click the Flash button.")
+        if len(self.builtImages) > 0:
+            self.uiOk.emit("Image flashing succeeded!", "Congratulations, you have flashed it successfully!\n\nTo flash the next image just follow these steps:\n1. Unmount & remove the actual card from your PC\n2. Insert the next node card into the slot\n3. Select the proper device in the combo box\n4. Click the Flash button.")
 
         self.setStatus.emit("Flash process was a success!")
         self.fData.emit("Flash process was a success!")
@@ -968,20 +969,34 @@ class skyFlash(QObject):
             except OSError:
                 logging.debug("Please open a browser on: " + manualUrl)
 
-    def cleanWorkspace(self):
-        '''Cleans the workspace, erase any temp/work file and resets the
-        interface to start all over again like a fresh start, erasing
-        vars from the previous run'''
+    def cleanFolder(self, path):
+        '''Cleans the passed folder of any temp/work file, covered files to erase
+        are the ones in the filePatterns list
+        '''
 
-        logging.debug("Clean workspace called, cleaning the house")
+        logging.debug("Clean of folder {} called".format(path))
 
-        # erase any working file
+        # list of file extensions to erase
         filePatterns = ["img", "gz", "xz", "sha1", "md5"]
-        for item in os.listdir(self.localPath):
+
+        for item in os.listdir(path):
             itemExtension = item.split(".")[-1]
             if itemExtension in filePatterns:
                 logging.debug("Erasing file {}".format(item))
-                os.unlink(self.localPath + "/" + item)
+                os.unlink(path + "/" + item)
+
+    def resetWorkspace(self):
+        '''Reset the workspace, erase any temp/work file and resets the
+        interface to start all over again like a fresh start, erasing
+        vars from the previous run'''
+
+        logging.debug("Reset workspace called, cleaning the house")
+
+        # clean work folder
+        self.cleanFolder(self.localPath)
+
+        # clean download folder
+        self.cleanFolder(self.localPathDownloads)
 
         # vars reset
         self.downloadedFile = ""
@@ -1257,6 +1272,9 @@ class skyFlash(QObject):
         if not result:
             return
 
+        # erase old images on final folder
+        self.cleanFolder(self.localPath)
+
         # All good carry on, set the network vars on top of the object
         self.netGw = gw
         self.netDns = dns
@@ -1531,8 +1549,10 @@ class skyFlash(QObject):
             # TODO warning about not supported OS
             pass
 
+        drives.append(["/dev/null", "Null Sink", 0])
+
         # build a user friendly string for the cards if there is a card
-        if len(drives):
+        if len(drives) > 0:
             driveList = []
             for drive, label, size in drives:
                 if size > 0:

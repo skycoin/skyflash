@@ -26,7 +26,7 @@ ApplicationWindow {
         title: ""
         text: ""
         onAccepted: {
-            warnD.visible = false
+            warnDiag.visible = false
         }
     }
 
@@ -357,7 +357,7 @@ ApplicationWindow {
                 // particular image progress
                 RowLayout{
                     Label {
-                        text: "Single image progress:"
+                        text: "Single image:"
                         color: "black"
                     }
                     ProgressBar {
@@ -373,7 +373,7 @@ ApplicationWindow {
                 // overall progress
                 RowLayout{
                     Label {
-                        text: "Overall progress:"
+                        text: "Overall:"
                         color: "black"
                     }
                     ProgressBar {
@@ -450,7 +450,7 @@ ApplicationWindow {
                     tooltip: "Click here to start flashing the cards with the built images"
 
                     onClicked: {
-                        // call skyflash to flash the images and     show the progress
+                        // call skyflash to flash the images and show the progress
                         flashProgressBox.visible = true
                         skf.imageFlash()
                     }
@@ -468,23 +468,35 @@ ApplicationWindow {
                 }
 
                 // flash ProgressBar
-                ProgressBar {
-                    id: pbFlash
-                    Layout.fillWidth: true
-                    visible: true
-                    maximumValue: 100
-                    minimumValue: 0
-                    value: 0
+                RowLayout{
+                    Label {
+                        text: "Single Image:"
+                        color: "black"
+                    }
+                    ProgressBar {
+                        id: pbFlash
+                        Layout.fillWidth: true
+                        visible: true
+                        maximumValue: 100
+                        minimumValue: 0
+                        value: 0
+                    }
                 }
 
                 // flash ProgressBar
-                ProgressBar {
-                    id: pbFlashOverall
-                    Layout.fillWidth: true
-                    visible: true
-                    maximumValue: 100
-                    minimumValue: 0
-                    value: 0
+                RowLayout{
+                    Label {
+                        text: "Overall:"
+                        color: "black"
+                    }
+                    ProgressBar {
+                        id: pbFlashOverall
+                        Layout.fillWidth: true
+                        visible: true
+                        maximumValue: 100
+                        minimumValue: 0
+                        value: 0
+                    }
                 }
             }
         }
@@ -624,6 +636,11 @@ ApplicationWindow {
         // flash data percent
         onFsProg: {
             pbFlash.value = percent
+        }
+
+        // flash overal data percent
+        onFsProgOverall: {
+            pbFlashOverall.value = percent
         }
     }
 }
