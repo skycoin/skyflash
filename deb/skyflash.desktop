@@ -1,10 +1,10 @@
 [Desktop Entry]
 Encoding=UTF-8
-Exec=/usr/local/bin/skyflash
-Icon=/usr/local/share/skybian/Skycoin.png
+Exec=/usr/bin/skyflash
+Icon=/usr/share/skyflash/skyflash.png
 Type=Application
 Terminal=false
-Comment=Skycoin skyminner flashing & configuring tool
+Comment=Skycoin skyminer OS flashing & configuring tool
 Name=Skyflash
 GenericName=Skyflash
 StartupNotify=true
