@@ -42,7 +42,7 @@ if sys.platform in ["win32", "cygwin"]:
     getVolumeInformation = ctypes.windll.kernel32.GetVolumeInformationW
     getDiskFreeSpace = ctypes.windll.kernel32.GetDiskFreeSpaceExA
 
-    # Instabce info
+    # Instance info
     class SW(enum.IntEnum):
         '''Hold the app status in Windows OS'''
         HIDE = 0
@@ -1616,6 +1616,54 @@ class skyFlash(QObject):
         else:
             # linux
             self.linuxFlasher(data_callback, progress_callback)
+
+    def windowsFlasher(self, data_callback, progress_callback):
+        '''Windows flasher'''
+
+        # there is a image left to burn?
+        if len(self.builtImages) == 0:
+            # nope, all done.
+            self.uiWarning.emit("Flasing Finished!", "Sorry, all built images was flashed already")
+            return "Done"
+
+        # there are images left to burn, pick the first one
+        image = self.builtImages[0]
+        name = image.split(os.sep)[-1].split(".")[0]
+        size = os.path.getsize(image)
+        source = open(image, 'rb')
+
+        # TODO: Need windows device lock to allow raw write
+        dest = open(self.card, 'wb')
+
+        actualPosition = 0
+        # WARNING! imageConfigAddress must be divisible by 4 for this to work ok
+        portionSize = int(imageConfigAddress / 4)
+
+        # user feedback
+        data_callback.emit("Flashing {} image".format(name))
+        logging.debug("Flashing {} image".format(image))
+
+        # build node loop
+        source.seek(actualPosition)
+        while actualPosition < size:
+            data = source.read(portionSize)
+            dest.write(data)
+
+            # progress and cycle update
+            actualPosition += portionSize
+            percent = actualPosition / fileSize
+
+            overAll = percent/self.flashCount + self.flashCountDone/self.flashCount
+            data = "Flashing {}, {}%|{}".format(name, percent, overAll * 100)
+            progress_callback.emit(percent * 100, data)
+
+        self.builtImages.pop(self.builtImages.index(image))
+        self.flashCountDone = self.flashCount - len(self.builtImages)
+        logging.debug("Removing {} image from the list of images to burn".format(image))
+
+        # TODO windows unlock device access
+
+        return "Done"
 
     def linuxFlasher(self, data_callback, progress_callback):
         '''Linux flasher'''
