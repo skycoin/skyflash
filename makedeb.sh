@@ -21,8 +21,8 @@ mkdir -p $PKG/usr/bin
 mkdir -p $PKG/DEBIAN
 cp skyflash.py $PKG/opt/$PKG/
 cp skyflash.qml $PKG/opt/$PKG/
+cp skyflash.png $PKG/opt/$PKG/
 cp README.md $PKG/opt/$PKG/
-cp deb/skyflash.png $PKG/opt/$PKG/
 cp skyflash-cli $PKG/usr/bin/
 cp deb/skyflash $PKG/usr/bin/
 cp deb/skyflash.desktop $PKG/usr/share/applications/

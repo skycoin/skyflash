@@ -18,7 +18,7 @@ import string
 from urllib.request import Request, urlopen
 
 # GUI imports
-from PyQt5.QtGui import QGuiApplication
+from PyQt5.QtGui import QGuiApplication, QIcon
 from PyQt5.QtQml import QQmlApplicationEngine
 from PyQt5.QtCore import *
 
@@ -1792,6 +1792,11 @@ if __name__ == "__main__":
 
         # GUI app
         app = QGuiApplication(sys.argv)
+        appPath = QFileInfo(__file__).absolutePath()
+        app.setWindowIcon(QIcon(os.path.join(appPath, 'skyflash.png')))
+
+        # debug
+        print("App path is: {}".format(appPath))
 
         # main workspace, skyflash object
         skyflash = skyFlash()
@@ -1801,7 +1806,7 @@ if __name__ == "__main__":
         engine.rootContext().setContextProperty("skf", skyflash)
 
         # Conditional QML file loading, first try to load it from the local folder
-        localQML = os.path.join(os.getcwd(), "skyflash.qml")
+        localQML = os.path.join(appPath, "skyflash.qml")
         if os.path.exists(localQML):
             # local qml file
             engine.load(localQML)
