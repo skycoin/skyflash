@@ -1809,7 +1809,7 @@ if __name__ == "__main__":
             # other locations by OS
             if sys.platform.startswith('linux'):
                 # first locally, then on install path
-                installedQML = "/usr/share/skyflash/skyflash.qml"
+                installedQML = "/opt/skyflash/skyflash.qml"
                 if os.path.exists(installedQML):
                     # the one installed by the .deb package
                     engine.load(installedQML)
