@@ -8,7 +8,7 @@
 # some variables
 VER=0.0.3
 PKG=skyflash
-DEBNAME="$PKG"_"$VER"_amd64.deb
+DEBNAME="$PKG"_"$VER"_all.deb
 
 # remove trash to start fresh
 rm -rdf $PKG &> /dev/null
