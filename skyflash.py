@@ -1800,37 +1800,32 @@ if __name__ == "__main__":
         engine = QQmlApplicationEngine()
         engine.rootContext().setContextProperty("skf", skyflash)
 
-        # Conditional QML file loading
+        # Conditional QML file loading, first try to load it from the local folder
         localQML = os.path.join(os.getcwd(), "skyflash.qml")
-        if sys.platform.startswith('linux'):
-            # first locally, then on install path
-            installedQML = "/usr/share/skyflash/skyflash.qml"
-            if os.path.exists(localQML):
-                # local qml file
-                engine.load(localQML)
-            elif os.path.exists(installedQML):
-                # the one installed by the .deb package
-                engine.load(installedQML)
-            else:
-                # cant find the QML file
-                print("Crap! I'm unable to find a file I need to render the user interface, exiting")
-                sys.exit(-1)
-        elif sys.platform in ["win32", "cygwin"]:
-            # windows versions
-            if os.path.exists(localQML):
-                # local qml file
-                engine.load(localQML)
-            else:
-                # cant find the QML file
-                print("Crap! I'm unable to find a file I need to render the user interface, exiting")
-                sys.exit(-1)
+        if os.path.exists(localQML):
+            # local qml file
+            engine.load(localQML)
         else:
-            # Mac OS
-            pass
+            # other locations by OS
+            if sys.platform.startswith('linux'):
+                # first locally, then on install path
+                installedQML = "/usr/share/skyflash/skyflash.qml"
+                if os.path.exists(installedQML):
+                    # the one installed by the .deb package
+                    engine.load(installedQML)
+                else:
+                    # cant find the QML file
+                    print("Crap! I'm unable to find a file I need to render the user interface, exiting")
+                    sys.exit(-1)
+            else:
+                    # cant find the QML file
+                    print("Crap! I'm unable to find a file I need to render the user interface, exiting")
+                    sys.exit(-1)
 
+        # connect the engine
         engine.quit.connect(app.quit)
 
-        # check to see is we can load a previous downloaded & tested image
+        # check to see if we can load a previous downloaded & tested image
         skyflash.loadPrevious()
 
         # main GUI call
@@ -1841,5 +1836,3 @@ if __name__ == "__main__":
         logging.debug("Unexpected error:", sys.exc_info()[0])
         raise
         sys.exit(-1)
-
-
