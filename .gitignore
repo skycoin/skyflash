@@ -2,3 +2,8 @@
 *.qmlc
 *.pyc
 .vscode
+dist/*
+build/*
+*.egg-info
+*.code-workspace
+
