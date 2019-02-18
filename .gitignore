@@ -6,4 +6,5 @@ dist/*
 build/*
 *.egg-info
 *.code-workspace
-
+deb_dist/*
+*.tar.gz

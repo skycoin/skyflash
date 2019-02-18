@@ -11,7 +11,7 @@ from PyQt5.QtCore import QFileInfo
 
 # local imports
 from skyflash.skyflash import Skyflash
-from skyflash.misc.utils import *
+from skyflash.utils import *
 
 if __name__ == "__main__":
     '''Run the app'''

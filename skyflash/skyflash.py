@@ -23,13 +23,11 @@ from PyQt5.QtQml import QQmlApplicationEngine
 from PyQt5.QtCore import *
 
 # New imports
-from skyflash.misc.utils import *
+from skyflash.utils import *
 
 # image config file position and size
 imageConfigAddress = 3670016
 imageConfigDataSize = 256
-
-version = "0.0.3"
 
 # OS dependent imports for windows.
 if sys.platform in ["win32", "cygwin"]:
