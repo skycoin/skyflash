@@ -1,5 +1,0 @@
-#!/bin/bash
-
-# Script to call the GUI version for skyflash
-
-/usr/bin/env python3 /opt/skyflash/skyflash.py

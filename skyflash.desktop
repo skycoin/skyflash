@@ -1,7 +1,7 @@
 [Desktop Entry]
 Encoding=UTF-8
 Exec=/usr/bin/skyflash
-Icon=/opt/skyflash/skyflash.png
+Icon=/usr/share/icons/skyflash.png
 Type=Application
 Terminal=false
 Comment=Skycoin skyminer OS flashing & configuring tool

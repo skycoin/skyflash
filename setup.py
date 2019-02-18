@@ -84,4 +84,9 @@ setup(
     project_urls={
         'Source': 'https://github.com/skycoin/skyflash/',
     },
+
+    data_files={
+        ('share/applications/', ('skyflash.desktop',)),
+        ('share/icons/', ('skyflash.png',)),
+    },
 )
