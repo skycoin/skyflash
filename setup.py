@@ -91,5 +91,8 @@ setup(
         ('share/skyflash/', (
             'skyflash/data/skyflash.qml',
         )),
+        ('bin/', (
+            'skyflash/data/skyflash-cli',
+        )),
     },
 )
