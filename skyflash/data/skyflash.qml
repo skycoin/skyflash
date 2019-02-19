@@ -175,7 +175,7 @@ ApplicationWindow {
             ProgressBar {
                 id: pbDownload
                 Layout.fillWidth: true
-                visible: true
+                visible: false
                 maximumValue: 100
                 minimumValue: 0
                 value: 0.1
@@ -350,7 +350,7 @@ ApplicationWindow {
             // image progress bars
             ColumnLayout {
                 id: buildProgressBars
-                visible: true
+                visible: false
 
                 // particular image progress
                 RowLayout{
@@ -521,10 +521,18 @@ ApplicationWindow {
 
         // receiving the percent of the download
         onDProg: {
+            // make it visible if not already
+            if (pbDownload.visible == false) {
+                pbDownload.visible = true
+            }
+
+            // set percent
             if (percent > 0) {
+                // set value
                 pbDownload.indeterminate = false
                 pbDownload.value = percent
             } else {
+                // set indeterminate state
                 pbDownload.indeterminate = true
             }
         }
@@ -561,7 +569,6 @@ ApplicationWindow {
         onBuildImages: {
             // set next step visible
             boxBuild.visible = true
-            buildProgressBars.visible = true
         }
 
         // status bar messages
@@ -602,6 +609,12 @@ ApplicationWindow {
 
         // build single image progress
         onBsProg: {
+            // make bars visible
+            if (buildProgressBars.visible == false) {
+                buildProgressBars.visible = true
+            }
+
+            // set percent
             if (percent > 0) {
                 pbBuildSingle.value = percent
             }
@@ -609,6 +622,12 @@ ApplicationWindow {
 
         // build overall image progress
         onBoProg: {
+            // make bars visible
+            if (buildProgressBars.visible == false) {
+                buildProgressBars.visible = true
+            }
+
+            // set percent
             if (percent > 0) {
                 pbBuildOverall.value = percent
             }
