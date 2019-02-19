@@ -71,9 +71,9 @@ setup(
     # For example, the following would provide a command called `sample` which
     # executes the function `main` from this package when invoked:
     entry_points={
-        'console_scripts': [
-            'skyflash=skyfash:main',
-        ],
+        'gui_scripts': [
+            'skyflash = skyflash:app',
+        ]
     },
 
     # List additional URLs that are relevant to your project as a dict.
@@ -82,7 +82,13 @@ setup(
     },
 
     data_files={
-        ('share/applications/', ('skyflash.desktop',)),
-        ('share/icons/', ('skyflash.png',)),
+        ('share/applications/', (
+            'skyflash/data/skyflash.desktop',
+        )),
+        ('share/icons/', (
+            'skyflash/data/skyflash.png',
+        )),
     },
+
+    include_package_data=True,
 )

@@ -1422,7 +1422,7 @@ class Skyflash(QObject):
         '''Check for a already downloaded and checksum tested image in the
         downloads folder
 
-        If so enable the next steps, and show a coment to the user, the fact
+        If so enable the next steps, and show a comment to the user, the fact
         that we have an already downloaded and validated image is shown buy
         the precense of a file called '.checked' with the name of the file in
         the downlads folder.
