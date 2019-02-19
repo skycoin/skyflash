@@ -88,7 +88,8 @@ setup(
         ('share/icons/', (
             'skyflash/data/skyflash.png',
         )),
+        ('share/skyflash/', (
+            'skyflash/data/skyflash.qml',
+        )),
     },
-
-    include_package_data=True,
 )

@@ -63,8 +63,8 @@ def app():
         else:
             # other locations by OS
             if sys.platform.startswith('linux'):
-                # first locally, then on install path
-                installedQML = "/opt/skyflash/skyflash.qml"
+                # first locally, then on deb install path
+                installedQML = "/usr/share/skyflash/skyflash.qml"
                 if os.path.exists(installedQML):
                     # the one installed by the .deb package
                     engine.load(installedQML)
