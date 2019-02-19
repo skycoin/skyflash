@@ -1,12 +1,8 @@
-"""Setup file for the Skyflash tool 
-"""
+"""Setup file for the Skyflash tool"""
 
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
 from os import path
-from skyflash.skyflash import Skyflash
-
-skyflash = Skyflash()
 
 here = path.abspath(path.dirname(__file__))
 
@@ -65,7 +61,7 @@ setup(
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['pyqt5'],
+    # install_requires=['python3-pyqt5'],
 
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
