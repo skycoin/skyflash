@@ -6,6 +6,7 @@ import os
 import io
 import enum
 import traceback
+import subprocess
 
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, pyqtSlot
 

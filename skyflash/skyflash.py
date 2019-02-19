@@ -349,6 +349,7 @@ class Skyflash(QObject):
         self.setStatus.emit("Images build was a success, next step is flashing!")
         self.bData.emit("All images was built")
         self.bFinished.emit()
+        self.timerStart()
 
     # flash ones
 
@@ -507,9 +508,9 @@ class Skyflash(QObject):
 
                 # emit progress
                 if self.downloadSize > 0:
-                    prog = "{:.1%}, {}, {} to go".format(progress/100,  utils.speed(bps), utils.eta(etas))
+                    prog = "{:.1%}, {}, {} to go".format(progress/100,  speed(bps), eta(etas))
                 else:
-                    prog = "{} so far at {}, unknown ETA".format(utils.size(downloadedChunk),  utils.speed(bps))
+                    prog = "{} so far at {}, unknown ETA".format(size(downloadedChunk),  speed(bps))
 
                 # emit progress
                 progress_callback.emit(progress, prog)
@@ -849,11 +850,11 @@ class Skyflash(QObject):
         logging.info("====================================================")
         logging.info("")
 
-    def timerStart():
+    def timerStart(self):
         '''Start the timer to check for SD cards'''
         timer = QTimer(self)
-        timer.timeout.connect(detectCards)
-        # timer stoped, not started until step 4 is visible
+        timer.timeout.connect(self.detectCards)
+        # timer stopped, not started until step 4 is visible
         timer.start(200)
 
     def validateNetworkData(self, gw, dns, manager, nodes):
@@ -1342,9 +1343,9 @@ class Skyflash(QObject):
         '''Linux flasher'''
 
         #  command to run
-        pkexec = Utils.getLinuxPath("pkexec")
-        dd = Utils.getLinuxPath("dd")
-        pv = Utils.getLinuxPath("pv")
+        pkexec = getLinuxPath("pkexec")
+        dd = getLinuxPath("dd")
+        pv = getLinuxPath("pv")
         logfile = "/tmp/skf"
 
         # touch (& truncate) the logfile
