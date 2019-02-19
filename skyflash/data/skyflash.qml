@@ -81,12 +81,12 @@ ApplicationWindow {
             title: "&Help"
 
             MenuItem {
-                text: "Manual"
+                text: "User's Manual"
                 onTriggered: skf.openManual()
             }
 
             MenuItem {
-                text: "About..."
+                text: "About."
                 onTriggered: aboutDiag.open()
             }
         }
