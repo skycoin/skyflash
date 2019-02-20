@@ -124,7 +124,7 @@ ApplicationWindow {
                 radius: 3
 
                 Label {
-                    text: "1. Download it or browse a local Skybian release file:"
+                    text: "1. Download or browse a local Skybian release file:"
                     font.pixelSize: 14
                     font.bold: true
                     color: "black"
@@ -207,7 +207,7 @@ ApplicationWindow {
             // defaults CheckBox
             CheckBox {
                 id: ckbDefaultNetwork
-                text: "Use skyminner defaults"
+                text: "Use the Skyminer's defaults"
                 checked: true
 
                 onCheckedChanged: {
@@ -292,7 +292,7 @@ ApplicationWindow {
                 }
 
                 // node count
-                Label { text: "Node's count:" }
+                Label { text: "Minions count:" }
 
                 TextField  {
                     id: txtNodes
@@ -302,7 +302,7 @@ ApplicationWindow {
                     maximumLength: 5
                     enabled: false
                     inputMask: "000"
-                    // ToolTip.text: "How many nodes we must build images for, not counting the manager node"
+                    // ToolTip.text: "How many minions we must build images for, not counting the manager node"
                 }
             }
         }
@@ -333,7 +333,7 @@ ApplicationWindow {
             // build button
                 Button {
                     id: btBuild
-                    text: "Build the Images "
+                    text: "Build the images "
 
                     onClicked: {
                         // call skyflash to build the images
@@ -505,7 +505,7 @@ ApplicationWindow {
             anchors.fill: parent
             Label { 
                 id: sbText
-                text: "Welcomed, please follow the steps"
+                text: "Welcome, please follow the steps"
             }
         }
     }

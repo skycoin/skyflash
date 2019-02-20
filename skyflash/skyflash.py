@@ -30,6 +30,7 @@ imageConfigAddress = 3670016
 imageConfigDataSize = 256
 
 # skybian URL
+# TODO Change it to the final skycoin repository
 skybianUrl = "https://github.com/simelo/skybian/releases/download/0.1.0-alpha/Skybian-0.1.0-alpha.tar.xz"
 
 # OS dependent imports for windows.
@@ -917,16 +918,16 @@ class Skyflash(QObject):
         # validation #4, node counts + ip is not bigger than 255
         endip = int(manager[manager.rfind('.') + 1:]) + int(nodes)
         if endip > 255:
-            self.uiError.emit("Validation error", "The node IP distribution is beyond 255, please lower your manager ip",
-                "The IP of the nodes are distributed from the manager IP and up, if you set the manager node IP so high the node count may not fit")
-            logging.debug("Manager IP to high, last node will be {} and that's not possible".format(endip))
+            self.uiError.emit("Validation error", "The nodes IP distribution is beyond 255, please lower your manager ip",
+                "The IP of the minions are distributed from the manager IP and up, if you set the manager node IP so high the minion count may not fit")
+            logging.debug("Manager IP to high, last minion will be {} and that's not possible".format(endip))
             return False
 
         # validation #5, gw not in manager & nodes range
         if int(gw[gw.rfind('.') + 1:]) in range(int(manager[manager.rfind('.') + 1:]), endip):
-            self.uiError.emit("Validation error", "Please check your GW, Manager & Node selection, the GW is one of the Nodes or Manager IPs",
-                "When we distribute the manager & nodes IP we found that the GW is one of that IP and that's wrong")
-            logging.debug("GW ip is on generated nodes range.")
+            self.uiError.emit("Validation error", "Please check your GW, Manager & Minion selection, the GW is one of the Minions or Manager IPs",
+                "When we distribute the manager & Minions IP we found that the GW is one of that IP and that's wrong")
+            logging.debug("GW ip is on generated Minions range.")
             return False
 
         # If you reached this point then all is ok
@@ -1021,9 +1022,9 @@ class Skyflash(QObject):
             # new file and it's name
             nodeNick = "manager"
             if nip != self.netManager:
-                nodeNick = "node-" + str(actual)
+                nodeNick = "minion-" + str(actual)
 
-            nodeName = "Skywire_your_" + nodeNick + ".img"
+            nodeName = "Skybian_your_" + nodeNick + ".img"
 
             nnfp = os.path.join(self.localPath, nodeName)
             newNode = open(nnfp, 'wb')

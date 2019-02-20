@@ -15,7 +15,7 @@ The preferred method to configure & flash skybian images is by using this GUI to
 
 ### Installing
 
-To install this tool, go to the [Releases](https://github.com/skycoin/skyflash/releases) link on this page and grab the file corresponding to your OS, use the following table to figure it out:
+To install this tool, go to the [Releases](https://github.com/skycoin/skyflash/releases) link on this page and grab the file corresponding file to your OS, use the following table to figure it out:
 
 | Operating System | You must download the one... |
 |:----------------:|:--------------------------------:|
@@ -49,14 +49,14 @@ For a default configuration of skybian as a skyminer you just need to run it lik
 ./skyflash-cli -a Skybian-0.1.0.img
 ```
 
-This will generate 8 images, one for the manager and 7 nodes. Network configuration is the skyminers default:
+This will generate 8 images, one for the manager and 7 minions. Network configuration is the skyminers default:
 
 * Network: 192.168.0.0/24
 * Netmask: 255.255.255.0 (aka: /24)
 * Gateway: 192.168.0.1
 * DNS servers: 1.0.0.1, 1.1.1.1
 * Manager IP: 192.168.0.2
-* Node IPs: 192.168.0.[3-9] (7 nodes)
+* Minions IPs: 192.168.0.[3-9] (7 minions)
 
 If you need a different setup just check the `skyflash-cli -h` to know more, for example for a manager and 22 nodes with this details:
 
