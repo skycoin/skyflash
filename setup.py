@@ -15,7 +15,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='skyflash',
-    version="0.0.3",
+    version="0.0.3-rc",
     description='Skycoin Skyminer\'s OS configuring and flashing',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -63,13 +63,7 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     # install_requires=['python3-pyqt5'],
 
-    # To provide executable scripts, use entry points in preference to the
-    # "scripts" keyword. Entry points provide cross-platform support and allow
-    # `pip` to create the appropriate form of executable for the target
-    # platform.
-    #
-    # For example, the following would provide a command called `sample` which
-    # executes the function `main` from this package when invoked:
+    # To provide executable scripts, in this case a gui app
     entry_points={
         'gui_scripts': [
             'skyflash = skyflash:app',

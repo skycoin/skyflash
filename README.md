@@ -15,7 +15,7 @@ The preferred method to configure & flash skybian images is by using this GUI to
 
 ### Installing
 
-To install this tool, go to the releases tab on this page and grab the file corresponding to your OS, use the following table to figure it out:
+To install this tool, go to the [Releases](https://github.com/skycoin/skyflash/releases) link on this page and grab the file corresponding to your OS, use the following table to figure it out:
 
 | Operating System | You must download the one... |
 |:----------------:|:--------------------------------:|

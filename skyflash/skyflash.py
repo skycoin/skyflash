@@ -29,6 +29,9 @@ from skyflash.utils import *
 imageConfigAddress = 3670016
 imageConfigDataSize = 256
 
+# skybian URL
+skybianUrl = "https://github.com/simelo/skybian/releases/download/0.1.0-alpha/Skybian-0.1.0-alpha.tar.xz"
+
 # OS dependent imports for windows.
 if sys.platform in ["win32", "cygwin"]:
     import ctypes
