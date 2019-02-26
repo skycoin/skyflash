@@ -76,16 +76,16 @@ setup(
     },
 
     data_files={
-        ('share/applications/', (
+        ('share/applications', (
             'skyflash/data/skyflash.desktop',
         )),
-        ('share/icons/', (
+        ('share/icons', (
             'skyflash/data/skyflash.png',
         )),
-        ('share/skyflash/', (
+        ('share/skyflash', (
             'skyflash/data/skyflash.qml',
         )),
-        ('bin/', (
+        ('bin', (
             'skyflash/data/skyflash-cli',
         )),
     },
