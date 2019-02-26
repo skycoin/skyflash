@@ -117,7 +117,7 @@ To start the flashing process you need to select the proper device in the combo 
 
 ### WARNING!
 
-The flashing process **is not reversible**, please double check that the device selected on the combo box is the correct one or you may flash the Skybian Image to one of your HDDs rendering it unusable and loss the data on it.
+The flashing process **is not reversible**, please double check that the device selected on the combo box is the correct one or you may flash the Skybian Image to one of your HDDs rendering it unusable and will loss the data on it.
 
 The process to detect the correct uSDCard device is tricky (specially on Linux with recent kernels) and we have to extend it to a few common devices, that may lead into false detection of flash thumb drives and even partitions of the HDD.
 
