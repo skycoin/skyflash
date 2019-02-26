@@ -44,8 +44,8 @@ OPTIONS:
     -g: Gateway IP for the network
     -m: Manager IP on the network
     -d: DNS to use, can be more than one like this "1.0.0.1, 1.1.1.1"
-    -n: [A-B] the range of the IPs to use on the network
-    -a: All defaults set networks by the defaults
+    -n: [A-B] the range of the IPs to use on the network for the minions
+    -a: All defaults: set networks by the defaults
     -v: Version of the script
     -i: Image file
 
@@ -55,7 +55,7 @@ Network defaults:
     Gateway:     192.168.0.1
     DNS servers: 1.0.0.1, 1.1.1.1
     Manager IP:  192.168.0.2
-    Node IPs:    192.168.0.[3-9] (7 nodes)
+    Minion IPs:    192.168.0.[3-9] (7 minions)
 
 Warnings:
     * By now you need to provide the downloaded image to the script, no download
@@ -70,25 +70,28 @@ Warnings:
     * Option '-n' refers to the last digit of the IPv4 address, base is taken
       from the manager. It´s a continuous range from A to B [A-B] both inclusive
 
-Configured images will be placed on the same directory of the base image and will be
-appened the suffixes: '-manager' and 'nodeN' where N is a incremental number from 0  
+Configured images will be placed on the same directory of the base image and
+will be appened the suffixes: '-manager' and 'minionN' where N is a
+incremental number from 0
 
 Examples:
-    Configure a base image with defaults: 8 images, one manager and 7 nodes, gw is 
-    192.168.0.1, 192.168.1.2 is the manager and 192.168.1.3..192.168.1.9 are nodes 
+    Configure a base image with defaults: 8 images, one manager and 7 minions,
+    gw is 192.168.0.1, 192.168.1.2 is the manager and 192.168.1.3..192.168.1.9
+    are minions
 
     $0 -a skybian.img
 
-    Configure 1 manager and 10 nodes, network 192.168.100.0/24, gw is 192.168.100.254
-    manager is 192.168.100.50 & nodes are 192.168.100.90 - 192.168.100.99
+    Configure 1 manager and 10 minions, network 192.168.100.0/24, gw is
+    192.168.100.254 manager is 192.168.100.50 & minions are 192.168.100.90
+    - 192.168.100.99
 
     $0 -g 192.168.100.254 -m 192.168.100.50 -n 90-100 -i skybian.img
 
-    The same of above but with custom DNS servers (using a local forwarder) please
-    note the use of the "" to glob both servers on one argument and the ', ' 
-    separating the DNS servers IPs
+    The same of above but with custom DNS servers (using a local forwarder)
+    please note the use of the "" to glob both servers on one argument and
+    the ', ' separating the DNS servers IPs
 
-    $0 -g 192.168.100.254 -m 192.168.100.50 -n 90-100 \
+    $0 -g 192.168.100.254 -m 192.168.100.50 -n 90-100 \\
       -d "192.168.100.254, 1.1.1.1" -i skybian.img
 
 EOF
@@ -146,7 +149,7 @@ function set_defaults() {
 # check for blank/bad arguments.
 function blank_bad_args() {
     # exits with an error if an arg is missing, else pass silent
-    local raw=`echo "Gateway:$1 Manager:$2 Nodes:$3 Image:$4 DNS:$5" | xargs`
+    local raw=`echo "Gateway:$1 Manager:$2 Minions:$3 Image:$4 DNS:$5" | xargs`
 
     for arg in $raw ; do
         # extract
@@ -210,7 +213,7 @@ function validate_generate_nodes() {
     # validate start </!= stop
     if [ $start -eq $stop -o $start -gt $stop ] ; then
         # not equal, nor backwards
-        echo "Error: Node start number in range must be lower than end one [$2] is wrong"
+        echo "Error: Minion start number in range must be lower than end one [$2] is wrong"
         echo "Please fix that"
         exit 1
     fi
@@ -218,7 +221,7 @@ function validate_generate_nodes() {
     # validate stop being less than 254
     if [ $stop -gt 254 ] ; then
         # can't fit on a subnet
-        echo "Error: last digit of a node IP can be 255 or greater"
+        echo "Error: last digit of a minions IP can be 255 or greater"
         echo "Please fix that"
         exit 1
     fi
@@ -238,7 +241,7 @@ function validate_generate_nodes() {
     local ismgt=`echo $NODEIPS | grep "$MAN "`
     if [ -n "$isgwt" -o -n "$ismgt" ] ; then
         # manager or gateway in node range
-        echo "Error: manager and gateway IPs can be on the node ranges"
+        echo "Error: manager and gateway IPs can be on the minion's ranges"
         echo "Please fix that"
         exit 1
     fi
@@ -253,8 +256,8 @@ function display_proceed() {
     echo "Gateway is: $GW"
     echo "DNS is: $DNS"
     echo "Manager is: $MAN"
-    echo "Will build $NAMOUNT nodes with the following IPs:"
-    echo "$NODEIPS"
+    echo "Will build $NAMOUNT minions with the following IPs:"
+    echo "$NODEIPS" | tr ' ' '\n'
     echo ""
     echo "All looks good, take a time to review the info, will resume the work in"
     echo "30 seconds if no answer, this is the last chance to quit."
@@ -290,13 +293,13 @@ function create_images() {
 
     # check for old files
     local OLDMAN=`ls | grep manager | grep \.img`
-    local OLDNOD=`ls | grep node | grep \.img`
+    local OLDNOD=`ls | grep minion | grep \.img`
     if [ -n "$OLDMAN" -o -n "$OLDNOD" ] ; then
         # yes, there is old files here
         echo "Warning: there are old generated files on the FS, will erase them"
         echo ""
         rm -f *manager*img
-        rm -f *node*img
+        rm -f *minion*img
     fi
 
     # iterate
@@ -310,7 +313,7 @@ function create_images() {
         if [ "$type" = "manager" ] ; then
             IMAGE=$name-$type.img
         else
-            IMAGE=$name-$type$count.img
+            IMAGE=$name-minion$count.img
             count=`echo "$count + 1" | bc`
         fi
 
