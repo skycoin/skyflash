@@ -8,8 +8,8 @@ before_script:
 - sudo apt install -y python3 python3-pyqt5 python3-pyqt5.qtquick qml-module-qtquick2 qml-module-qtquick-window2 qml-module-qtquick-layouts qml-module-qtquick-extras qml-module-qtquick-dialogs qml-module-qtquick-controls qml-module-qt-labs-folderlistmodel qml-module-qt-labs-settings
 
 script:
-- bash python3 setup.py build
-- sudo bash python3 setup.py install
+- python3 setup.py build
+- sudo python3 setup.py install
 
 notifications:
   webhooks: https://fathomless-fjord-24024.herokuapp.com/notify
