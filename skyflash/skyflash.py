@@ -30,8 +30,8 @@ imageConfigAddress = 3670016
 imageConfigDataSize = 256
 
 # skybian URL
-# TODO Change it to the final skycoin repository
 skybianUrl = "https://github.com/skycoin/skybian/releases/download/Skybian-v0.0.3/Skybian-v0.0.3.tar.xz"
+manualUrl = "https://github.com/skycoin/skyflash/blob/develop/USER_MANUAL.md"
 
 # OS dependent imports for windows.
 if sys.platform in ["win32", "cygwin"]:
