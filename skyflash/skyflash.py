@@ -31,7 +31,7 @@ imageConfigDataSize = 256
 
 # skybian URL
 # TODO Change it to the final skycoin repository
-skybianUrl = "https://github.com/simelo/skybian/releases/download/0.1.0-alpha/Skybian-0.1.0-alpha.tar.xz"
+skybianUrl = "https://github.com/skycoin/skybian/releases/download/Skybian-v0.0.3/Skybian-v0.0.3.tar.xz"
 
 # OS dependent imports for windows.
 if sys.platform in ["win32", "cygwin"]:
