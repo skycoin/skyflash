@@ -401,7 +401,7 @@ ApplicationWindow {
                 radius: 3
 
                 Label {
-                    text: "4. Flash the images."
+                    text: "4. Flash the images [Optional see User Manual]"
                     font.pixelSize: 14
                     font.bold: true
                     color: "black"
