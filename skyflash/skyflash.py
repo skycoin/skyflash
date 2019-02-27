@@ -1217,13 +1217,13 @@ class Skyflash(QObject):
 
         # OS specific listing
         if sys.platform in ["win32", "cygwin"]:
-            drives = self.drivesWin()
+            # drives = self.drivesWin()
+            logging.debug("Flashing on Microsoft Windows is not working yet")
         elif sys.platform.startswith('linux'):
             drives = self.drivesLinux()
-            # dev test hack to speed up the flash part
-            drives.append(["/dev/null", "Null Sink", 0])
         elif sys.platform is "darwin":
-            drives = self.drivesMac()
+            # drives = self.drivesMac()
+            logging.debug("Flashing on MacOs is not working yet")
         else:
             # freebsd or others, not supported yet
             # TODO warning about not supported OS
@@ -1268,6 +1268,11 @@ class Skyflash(QObject):
     @pyqtSlot()
     def imageFlash(self):
         '''Flash the images, one at a time, each one on a turn'''
+
+        # warn about yet non implemented features
+        if not sys.platform.startswith('linux'):
+            self.uiWarning.emit("Feature not implemented", "The flash part is not implemented for your operating system yet, but you can use any flashing software (Balena Etcher) to flash your uSD Cards with created images.")
+            return
 
         # Preparing the flasher thread
         # thead start
