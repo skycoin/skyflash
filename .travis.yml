@@ -17,7 +17,7 @@ notifications:
   webhooks: https://fathomless-fjord-24024.herokuapp.com/notify
 
 before_deploy:
-- bash python3 setup.py --command-packages=stdeb.command bdist_deb
+- python3 setup.py --command-packages=stdeb.command bdist_deb
 
 deploy:
   provider: releases
