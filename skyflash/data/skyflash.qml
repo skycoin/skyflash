@@ -13,7 +13,7 @@ ApplicationWindow {
     MessageDialog {
         id: aboutDiag
         title: "About Skyflash"
-        text: "Skyflash is the official tool to create the\nSkyminers images from Skybian."
+        text: "Skyflash is the official tool to configure & create the Skyminers images from Skybian.\n\nActual version is: v0.0.3-rc"
         onAccepted: visible = false
     }
 
