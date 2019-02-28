@@ -73,3 +73,30 @@ If you need a different setup just check the `skyflash-cli -h` to know more, for
 ```
 
 Please note that in the case of the DNS (option '-d') if you need to pass more than one IP you need to surround it with double quotes and separate it with a comma and a space, just like the example above.
+
+### Releases
+
+To do a release you must follow these steps:
+
+0. Check if there are commits on the master branch that must be applied to develop (hot fixes or security ones), apply them and fix any merge issues.
+0. On develop branch, check any pending issues in order to close them if possible on this release and close them is possible.
+0. Check the latest release of Skybian and if the URL of the latest image is different rise a issue and solve it by the default way.
+0. Merge the develop branch into the release one and fix any conflicts if any.
+0. Update the new version number in the `setup.py` & `skyflash/data/skyflash.qml` files.
+0. Update the `CHANGELOG.md` file with any needed info and move the `Unreleased` part to the new release version.
+0. Review & update the `README.md` file for any needed updates or changes that need attention in the front page.
+0. Wait for travis to validate all the changes.
+0. On success, check the draft release is published on the repository, improve it and keep it as a draft.
+0. Download the releases files and test them.
+0. If problems are found with raise issues where needed (skyflash/skybian) and fix them before continue with the next step.
+0. Download the releases files after the fix in the previous step (if needed) and test them.
+0. Fix any issues if found (work in the release branch)
+0. After all problems are solved and work as expected, tag it as `Skyflash-X.Y.Z` & raise a PR against master branch, solve any issues and merge it.
+0. Wait for travis completion and check the release files are published on the Github repository under releases.
+0. Edit & comment the release with the changes in CHANGELOG.md that match this release, change status from Draft to Official release.
+0. Merge master into develop.
+0. Check if there is needed to raise issues & PR on the following repositories:
+
+    * [Skybian](https://github.com/skycoin/skybian): if needed.
+    * [Skycoin](https://github.com/skycoin/skycoin): mentions in it's README.md and elsewhere if applicable
+    * [Skywire](https://github.com/skycoin/skywire): to note the new release and the use of skybian/skyflash
