@@ -10,12 +10,13 @@ before_script:
 - pip3 install stdeb
 - pip3 install pyqt5
 - pip3 install PyInstaller
+- pip3 freeze > requirements.txt
 
 script:
 - python3 setup.py build
-- sudo python3 setup.py install
 - python3 setup.py --command-packages=stdeb.command bdist_deb
 - python3 -m PyInstaller --onefile skyflash.py
+- sudo python3 setup.py install
 
 notifications:
   webhooks: https://fathomless-fjord-24024.herokuapp.com/notify
