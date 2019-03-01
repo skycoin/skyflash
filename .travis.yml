@@ -20,6 +20,7 @@ script:
 - sudo python3 setup.py install
 - python3 setup.py --command-packages=stdeb.command bdist_deb
 - python3 -m PyInstaller --onefile skyflash-gui.py
+- rm dist/skyflash-gui
 - docker run -v "$(pwd):/src/" cdrx/pyinstaller-windows "pyinstaller skyflash-gui.py"
 - ls -lh dist/windows/
 
