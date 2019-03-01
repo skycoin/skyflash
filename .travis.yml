@@ -5,7 +5,7 @@ language: bash
 
 before_script:
 - sudo apt-get update -q
-- sudo apt install -y python3 python3-pip python3-pyqt5 python3-pyqt5.qtquick qml-module-qtquick2 qml-module-qtquick-window2 qml-module-qtquick-layouts qml-module-qtquick-extras qml-module-qtquick-dialogs qml-module-qtquick-controls qml-module-qt-labs-folderlistmodel qml-module-qt-labs-settings
+- sudo apt install -y python3 python3-pip python3-pyqt5 python3-pyqt5.qtquick qml-module-qtquick2 qml-module-qtquick-window2 qml-module-qtquick-layouts qml-module-qtquick-extras qml-module-qtquick-dialogs qml-module-qtquick-controls qml-module-qt-labs-folderlistmodel qml-module-qt-labs-settings fakeroot
 - pip3 install setuptools
 - pip3 install stdeb
 - pip3 install pyqt5
@@ -14,7 +14,7 @@ before_script:
 script:
 - python3 setup.py build
 - sudo python3 setup.py install
-- sudo python3 setup.py --command-packages=stdeb.command bdist_deb
+- python3 setup.py --command-packages=stdeb.command bdist_deb
 - python3 -m PyInstaller --onefile skyflash.py
 
 notifications:
