@@ -21,9 +21,9 @@ script:
 - python3 setup.py --command-packages=stdeb.command bdist_deb
 - python3 -m PyInstaller --onefile skyflash-gui.py
 - cd dist && tar -cvzf skyflash-gui.tar.gz skyflash-gui && rm skyflash-gui && cd ..
-- docker run -v "$(pwd):/src/" cdrx/pyinstaller-windows "pyinstaller skyflash-gui.py"
+- docker run -v "$(pwd):/src/" cdrx/pyinstaller-windows
 - ls -lh dist/
-- ls -lh dist/windows/
+- ls -lh build/skyflash-gui/
 
 notifications:
   webhooks: https://fathomless-fjord-24024.herokuapp.com/notify
