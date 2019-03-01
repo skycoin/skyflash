@@ -66,7 +66,7 @@ setup(
     # To provide executable scripts, in this case a gui app
     entry_points={
         'gui_scripts': [
-            'skyflash = skyflash:app',
+            'skyflash-gui = skyflash:app',
         ]
     },
 
