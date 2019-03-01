@@ -12,7 +12,6 @@ before_script:
 - pip3 install setuptools
 - pip3 install pyqt5
 - pip3 install PyInstaller
-- pip3 freeze | grep -v 'xapian-index' > requirements.txt
 - docker pull cdrx/pyinstaller-windows
 
 script:
