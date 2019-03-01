@@ -14,7 +14,7 @@ before_script:
 script:
 - python3 setup.py build
 - sudo python3 setup.py install
-- python3 setup.py --command-packages=stdeb.command bdist_deb
+- sudo python3 setup.py --command-packages=stdeb.command bdist_deb
 - python3 -m PyInstaller --onefile skyflash.py
 
 notifications:
