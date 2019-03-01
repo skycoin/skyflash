@@ -13,7 +13,6 @@ before_script:
 - pip3 install pyqt5
 - pip3 install PyInstaller
 - pip3 freeze > requirements.txt
-- echo "pyqt5==5.11.3" >> requirements.txt
 - docker pull cdrx/pyinstaller-windows
 
 script:
