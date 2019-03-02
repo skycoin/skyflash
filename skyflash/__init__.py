@@ -2,6 +2,7 @@
 
 import os
 import sys
+import shutil
 from glob import glob
 
 module_dir = os.path.dirname(sys.modules["skyflash"].__file__)
@@ -31,16 +32,47 @@ def app():
         bootstrap()
 
     try:
+        # app instance
+        skyflash = Skyflash()
+
         # GUI app
         app = QGuiApplication(sys.argv)
         appPath = QFileInfo(__file__).absolutePath()
-        app.setWindowIcon(QIcon(os.path.join(appPath, 'skyflash.png')))
-
-        # debug
         print("App path is: {}".format(appPath))
+        appFolder = appPath.replace("skyflash", "")
 
-        # app instance
-        skyflash = Skyflash()
+        # is we are in linux with the static binary we must provide the qml and icon files
+        if sys.platform.startswith("linux"):
+            # local files for static
+            qmlfile = os.path.join(Skyflash.runPath, "skyflash.qml")
+            iconfile = os.path.join(Skyflash.runPath, "skyflash.png")
+
+            if os.path.exists(qmlfile):
+                try:
+                    shutil.copy(qmlfile, os.path.join(appFolder, "skyflash.qml"))
+                    print("QML file copied to app path")
+                except:
+                    pass
+
+            if os.path.exists(iconfile):
+                try:
+                    shutil.copy(iconfile, os.path.join(appFolder, "skyflash.png"))
+                    print("Icon file copied to app path")
+                except:
+                    pass
+
+        # app icon
+        iconPath = os.path.join(appPath, 'skyflash.png')
+        if os.path.exists(iconPath):
+            # default path
+            app.setWindowIcon(QIcon(iconPath))
+        else:
+            # alternative icon path, for linux standalone
+            iconPath = os.path.join(appFolder, 'skyflash.png')
+            if os.path.exists(iconPath):
+                app.setWindowIcon(QIcon(iconPath))
+            else:
+                print("Can not find the icon of the app.")
 
         # main workspace, skyflash object
         path, download, checked = setPath("Skyflash")
@@ -55,16 +87,20 @@ def app():
         engine = QQmlApplicationEngine()
         engine.rootContext().setContextProperty("skf", skyflash)
 
-        # Conditional QML file loading, first try to load it from the local folder
-        localQML = os.path.join(appPath, "data" + os.sep + "skyflash.qml")
-        if os.path.exists(localQML):
-            # local qml file
-            engine.load(localQML)
+        # Conditional QML file loading
+        localQMLdata = os.path.join(appPath, "data" + os.sep + "skyflash.qml")
+        localQMLfile = os.path.join(appFolder, "skyflash.qml")
+        installedQML = "/usr/share/skyflash/skyflash.qml"
+        if os.path.exists(localQMLdata):
+            # local qml file in data folder
+            engine.load(localQMLdata)
+        elif os.path.exists(localQMLfile):
+            # qml file in app path folder
+            engine.load(localQMLfile)
         else:
             # other locations by OS
             if sys.platform.startswith('linux'):
                 # first locally, then on deb install path
-                installedQML = "/usr/share/skyflash/skyflash.qml"
                 if os.path.exists(installedQML):
                     # the one installed by the .deb package
                     engine.load(installedQML)

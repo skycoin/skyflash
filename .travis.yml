@@ -22,6 +22,7 @@ script:
 - python3 -m PyInstaller --onefile skyflash-gui.py
 - cp skyflash/data/skyflash.qml dist/
 - cd dist && tar -cvzf skyflash-linux64-static.tar.gz skyflash-gui skyflash.qml && cd ..
+- rm dist/skyflash-gui
 - docker run -v "$(pwd):/src/" cdrx/pyinstaller-windows
 - ls -lh dist/
 - ls -lh dist/windows/
