@@ -24,9 +24,11 @@ script:
 - cd dist && tar -cvzf skyflash-linux64-static.tar.gz skyflash-gui skyflash.qml skyflash.png && cd ..
 - rm dist/skyflash-gui
 - docker run -v "$(pwd):/src/" cdrx/pyinstaller-windows
+- cp skyflash/data/skyflash.qml dist/windows/ && cp skyflash/data/skyflash.png dist/windows/
+- cd dist/windows/ && zip skyflash-static-win32.zip skyflash-gui skyflash.qml skyflash.png && cd ../../
 - ls -lh dist/
 - ls -lh dist/windows/
-- cd dist && zip skyflash-static-win32.zip skyflash-gui skyflash.qml skyflash.png && cd ..
+
 
 notifications:
   webhooks: https://fathomless-fjord-24024.herokuapp.com/notify
@@ -41,6 +43,7 @@ deploy:
   file_glob: true
   file:
     - "dist/*static*"
+    - "dist/windows/*static*"
     - "deb_dist/*.deb"
   draft: true
   skip_cleanup: true
