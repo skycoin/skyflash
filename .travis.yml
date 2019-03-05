@@ -25,7 +25,7 @@ script:
 - rm dist/skyflash-gui
 - docker run -v "$(pwd):/src/" cdrx/pyinstaller-windows
 - cp skyflash/data/skyflash.qml dist/windows/ && cp skyflash/data/skyflash.png dist/windows/
-- cd dist/windows/ && zip skyflash-static-win32.zip skyflash-gui skyflash.qml skyflash.png && cd ../../
+- cd dist/windows/ && zip skyflash-static-win32.zip skyflash-gui.exe skyflash.qml skyflash.png && cd ../../
 - ls -lh dist/
 - ls -lh dist/windows/
 
