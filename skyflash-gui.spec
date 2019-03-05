@@ -36,4 +36,4 @@ exe = EXE(pyz,
           upx=True,
           runtime_tmpdir=None,
           console=False,
-          icon='skyflash.ico')
+          icon='skyflash/data/skyflash.ico')
