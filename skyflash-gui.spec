@@ -2,10 +2,6 @@
 
 from PIL import Image
 
-# convert the png to ico format
-image = Image.open('skyflash/data/skyflash.png')
-image.save('skyflash.ico') 
-
 block_cipher = None
 
 a = Analysis(['skyflash-gui.py'],
