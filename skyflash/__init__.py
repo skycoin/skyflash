@@ -3,6 +3,7 @@
 import os
 import sys
 import shutil
+import time
 from glob import glob
 
 module_dir = os.path.dirname(sys.modules["skyflash"].__file__)
@@ -41,25 +42,23 @@ def app():
         print("App path is: {}".format(appPath))
         appFolder = appPath.replace("skyflash", "")
 
-        # is we are in linux with the static binary we must provide the qml and icon files
-        if sys.platform.startswith("linux"):
-            # local files for static
-            qmlfile = os.path.join(Skyflash.runPath, "skyflash.qml")
-            iconfile = os.path.join(Skyflash.runPath, "skyflash.png")
+        # local files for static
+        qmlfile = os.path.join(Skyflash.runPath, "skyflash.qml")
+        iconfile = os.path.join(Skyflash.runPath, "skyflash.png")
 
-            if os.path.exists(qmlfile):
-                try:
-                    shutil.copy(qmlfile, os.path.join(appFolder, "skyflash.qml"))
-                    print("QML file copied to app path")
-                except:
-                    pass
+        if os.path.exists(qmlfile):
+            try:
+                shutil.copy(qmlfile, os.path.join(appFolder, "skyflash.qml"))
+                print("QML file copied to app path")
+            except:
+                pass
 
-            if os.path.exists(iconfile):
-                try:
-                    shutil.copy(iconfile, os.path.join(appFolder, "skyflash.png"))
-                    print("Icon file copied to app path")
-                except:
-                    pass
+        if os.path.exists(iconfile):
+            try:
+                shutil.copy(iconfile, os.path.join(appFolder, "skyflash.png"))
+                print("Icon file copied to app path")
+            except:
+                pass
 
         # app icon
         iconPath = os.path.join(appPath, 'skyflash.png')
