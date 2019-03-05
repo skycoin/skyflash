@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-from PIL import Image
-
 block_cipher = None
 
 a = Analysis(['skyflash-gui.py'],
