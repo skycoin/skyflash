@@ -42,24 +42,6 @@ def app():
         print("App path is: {}".format(appPath))
         appFolder = appPath.replace("skyflash", "")
 
-        # local files for static
-        qmlfile = os.path.join(Skyflash.runPath, "skyflash.qml")
-        iconfile = os.path.join(Skyflash.runPath, "skyflash.png")
-
-        if os.path.exists(qmlfile):
-            try:
-                shutil.copy(qmlfile, os.path.join(appFolder, "skyflash.qml"))
-                print("QML file copied to app path")
-            except:
-                pass
-
-        if os.path.exists(iconfile):
-            try:
-                shutil.copy(iconfile, os.path.join(appFolder, "skyflash.png"))
-                print("Icon file copied to app path")
-            except:
-                pass
-
         # app icon
         iconPath = os.path.join(appPath, 'skyflash.png')
         if os.path.exists(iconPath):
