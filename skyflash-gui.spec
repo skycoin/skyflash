@@ -4,7 +4,10 @@ block_cipher = None
 
 a = Analysis(['skyflash-gui.py'],
              binaries=[],
-             datas=[],
+             datas=[
+                 ('skyflash/data/skyflash.qml', '.'),
+                 ('skyflash/data/skyflash.png', '.'),
+            ],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
@@ -30,4 +33,6 @@ exe = EXE(pyz,
           upx=False,
           runtime_tmpdir=None,
           console=False,
+          uac_admin=True,
+          uac_uiaccess=True,
           icon='skyflash/data/skyflash.ico')
