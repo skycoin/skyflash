@@ -35,4 +35,5 @@ exe = EXE(pyz,
           console=False,
           uac_admin=True,
           uac_uiaccess=True,
+          manifest='skyflash-gui.exe.manifest',
           icon='skyflash/data/skyflash.ico')
