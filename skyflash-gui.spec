@@ -20,20 +20,50 @@ a = Analysis(['skyflash-gui.py'],
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 
-exe = EXE(pyz,
+import platform
+import os
+
+# Linux build
+if platform.system() == "Linux":
+    exe = EXE(pyz,
+            a.scripts,
+            a.binaries,
+            a.zipfiles,
+            a.datas,
+            [],
+            name='skyflash-gui',
+            debug=False,
+            bootloader_ignore_signals=False,
+            strip=False,
+            upx=False,
+            runtime_tmpdir=None,
+            console=False,
+            icon='skyflash/data/skyflash.ico')
+
+if platform.system() == "Windows":
+    exe = EXE(pyz,
           a.scripts,
-          a.binaries,
-          a.zipfiles,
-          a.datas,
+        #   a.binaries,
+        #   a.zipfiles,
+        #   a.datas,
           [],
+          exclude_binaries=False,
           name='skyflash-gui',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
-          upx=False,
-          runtime_tmpdir=None,
-          console=False,
+          upx=True,
           uac_admin=True,
           uac_uiaccess=True,
           manifest='skyflash-gui.exe.manifest',
-          icon='skyflash/data/skyflash.ico')
+          console=True )
+          
+    coll = COLLECT(exe,
+               a.binaries,
+               a.zipfiles,
+               a.datas,
+               strip=False,
+               upx=True,
+               uac_admin=True,
+               uac_uiaccess=True,
+               name='skyflash-gui')

@@ -41,6 +41,7 @@ def app():
         appPath = QFileInfo(__file__).absolutePath()
         print("App path is: {}".format(appPath))
         appFolder = appPath.replace("skyflash", "")
+        print("App folder is: {}".format(appFolder))
 
         # app icon
         iconPath = os.path.join(appPath, 'skyflash.png')
