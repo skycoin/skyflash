@@ -43,9 +43,9 @@ if platform.system() == "Linux":
 if platform.system() == "Windows":
     exe = EXE(pyz,
           a.scripts,
-        #   a.binaries,
-        #   a.zipfiles,
-        #   a.datas,
+          a.binaries,
+          a.zipfiles,
+          a.datas,
           [],
           exclude_binaries=False,
           name='skyflash-gui',
@@ -56,14 +56,4 @@ if platform.system() == "Windows":
           uac_admin=True,
           uac_uiaccess=True,
           manifest='skyflash-gui.exe.manifest',
-          console=True )
-          
-    coll = COLLECT(exe,
-               a.binaries,
-               a.zipfiles,
-               a.datas,
-               strip=False,
-               upx=True,
-               uac_admin=True,
-               uac_uiaccess=True,
-               name='skyflash-gui')
+          console=False )
