@@ -21,7 +21,7 @@ script:
 - python3 setup.py --command-packages=stdeb.command bdist_deb
 - python3 -m PyInstaller skyflash-gui.spec
 - cd dist && gzip skyflash-gui && mv skyflash-gui.gz skyflash-gui_linux64-static.gz && cd ..
-- cp skyflash-gui.exe.manifest dist/
+- cp skyflash-gui.exe.manifest dist/windows/
 - docker run -v "$(pwd):/src/" cdrx/pyinstaller-windows
 - cd dist/windows/ && zip skyflash-static-win32.zip skyflash-gui.exe && cd ../../
 - ls -lh dist/
