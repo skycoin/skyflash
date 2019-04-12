@@ -186,12 +186,10 @@ if sys.platform in ["win32", "cygwin"]:
         handling any error in the process
         '''
 
-        # if not ctypes.windll.shell32.IsUserAnAdmin():
-        #     hinstance = ctypes.windll.shell32.ShellExecuteW(
-        #         None, 'runas', sys.executable, sys.argv[0], None, SW.SHOWNORMAL
-        #     )
-        #     if hinstance <= 32:
-        #         raise RuntimeError(ERROR(hinstance))
+        if not ctypes.windll.shell32.IsUserAnAdmin():
+            print("You are not admnin")
+        else:
+            print("You are Admin")
 
 def setPath(dir):
     '''Pick the correct path for the current OS and create it if not there

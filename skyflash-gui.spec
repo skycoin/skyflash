@@ -49,11 +49,11 @@ if platform.system() == "Windows":
           [],
           exclude_binaries=False,
           name='skyflash-gui',
-          debug=False,
+          debug=True,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
           uac_admin=True,
           uac_uiaccess=True,
           manifest='skyflash-gui.exe.manifest',
-          console=False )
+          console=True )
