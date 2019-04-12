@@ -24,7 +24,7 @@ script:
 - mkdir dist/windows/
 - cp skyflash-gui.exe.manifest dist/windows/
 - docker run -v "$(pwd):/src/" cdrx/pyinstaller-windows
-- cd dist/windows/ && zip skyflash-static-win32.zip skyflash-gui.exe && cd ../../
+- cd dist/windows/ && zip skyflash-static-windows.zip skyflash-gui.exe && cd ../../
 - ls -lh dist/
 - ls -lh dist/windows/
 
@@ -48,4 +48,4 @@ deploy:
   skip_cleanup: true
   on:
     all_branches: true
-    condition: "$TRAVIS_BRANCH =~ ^master|release$"
+    condition: "$TRAVIS_BRANCH =~ ^master|release.*$"
