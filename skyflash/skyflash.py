@@ -71,7 +71,6 @@ class Skyflash(QObject):
     flashingNow = []
     flashCount = 0
     flashCountDone = 0
-    runPath = ""
 
     #### registering Signals to emit to QML GUI
 

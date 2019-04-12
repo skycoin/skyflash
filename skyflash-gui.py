@@ -2,10 +2,8 @@
 
 import os
 
-runPath = os.getcwd()
-print("Run Path is: {}".format(runPath))
+print("Run Path is_: {}".format(os.getcwd()))
 
 import skyflash
-skyflash.runPath = runPath
 skyflash.app()
 
