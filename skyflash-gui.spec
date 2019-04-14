@@ -54,4 +54,4 @@ if platform.system() == "Windows":
           strip=False,
           upx=True,
           console=False,
-          icon='skyflash/data/skyflash.png')
+          icon='skyflash/data/skyflash.ico')
