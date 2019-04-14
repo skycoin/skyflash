@@ -378,10 +378,17 @@ class Skyflash(QObject):
 
     def flashResult(self, data):
         ''''''
+
+        # restart the timer
+        self.timerStart()
+
         pass
 
     def flashError(self, error):
         '''Catch any error on the image flash process and pass it to the user'''
+
+        # restart the timer
+        self.timerStart()
 
         self.fData.emit("Flash process error...")
         self.setStatus.emit("An error ocurred while flashing the images")
@@ -391,6 +398,9 @@ class Skyflash(QObject):
 
     def flashDone(self, data):
         '''Catch the end of the flash process'''
+
+        # restart the timer
+        self.timerStart()
 
         if len(self.builtImages) > 0:
             self.uiOk.emit("Image flashing succeeded!", "Congratulations, you have flashed it successfully!\n\nTo flash the next image just follow these steps:\n1. Unmount & remove the actual card from your PC\n2. Insert the next node card into the slot\n3. Select the proper device in the combo box\n4. Click the Flash button.")
@@ -855,10 +865,19 @@ class Skyflash(QObject):
 
     def timerStart(self):
         '''Start the timer to check for SD cards'''
-        timer = QTimer(self)
-        timer.timeout.connect(self.detectCards)
+
+        try:
+            self.timer = QTimer(self)
+            self.timer.timeout.connect(self.detectCards)
+        except:
+            pass
+
         # timer stopped, not started until step 4 is visible
-        timer.start(200)
+        self.timer.start(200)
+
+    def timerStop(self):
+        '''Stop the timer to check for SD cards'''
+        self.timer.stop()
 
     def validateNetworkData(self, gw, dns, manager, nodes):
         '''Validate the network data passed by the QML UI
@@ -1138,7 +1157,8 @@ class Skyflash(QObject):
 
         [
             ('/dev/mmcblk0', '', 2369536),
-            ('/dev/mmcblk1', '', 3995639808)
+            ('/dev/mmcblk1', '', 3995639808),
+            ('/dev/sda', '', 8300555)
         ]
 
         TODO detect labels of uSDcards in linux
@@ -1151,7 +1171,7 @@ class Skyflash(QObject):
             drives.append("/dev/mmcblk{}".format(i))
 
         # add sdb-f as possible mmc drives
-        for i in "bcdef":
+        for i in "abcdef":
             drives.append("/dev/sd{}".format(i))
 
         # check if the drive is there
@@ -1216,8 +1236,7 @@ class Skyflash(QObject):
 
         # OS specific listing
         if sys.platform in ["win32", "cygwin"]:
-            # drives = self.drivesWin()
-            logging.debug("Flashing on Microsoft Windows is not working yet")
+            drives = self.drivesWin()
         elif sys.platform.startswith('linux'):
             drives = self.drivesLinux()
         elif sys.platform is "darwin":
@@ -1267,6 +1286,9 @@ class Skyflash(QObject):
     @pyqtSlot()
     def imageFlash(self):
         '''Flash the images, one at a time, each one on a turn'''
+
+        # stop the timer, it must not mess with the device on the copy process
+        self.timerStop()
 
         # warn about yet non implemented features
         if not sys.platform.startswith('linux'):
