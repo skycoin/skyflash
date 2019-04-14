@@ -15,7 +15,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='skyflash',
-    version="0.0.3-rc",
+    version="0.0.3rc0",
     description='Skycoin Skyminer\'s OS configuring and flashing',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -27,7 +27,7 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Betha',
 
         # Indicate who your project is intended for
         'Intended Audience :: Users',
@@ -66,7 +66,7 @@ setup(
     # To provide executable scripts, in this case a gui app
     entry_points={
         'gui_scripts': [
-            'skyflash = skyflash:app',
+            'skyflash-gui = skyflash:app',
         ]
     },
 

@@ -1,6 +1,6 @@
 [Desktop Entry]
 Encoding=UTF-8
-Exec=/usr/bin/skyflash
+Exec=/usr/bin/skyflash-gui
 Icon=/usr/share/icons/skyflash.png
 Type=Application
 Terminal=false

@@ -2,6 +2,8 @@
 
 import os
 import sys
+import shutil
+import time
 from glob import glob
 
 module_dir = os.path.dirname(sys.modules["skyflash"].__file__)
@@ -31,16 +33,34 @@ def app():
         bootstrap()
 
     try:
-        # GUI app
-        app = QGuiApplication(sys.argv)
-        appPath = QFileInfo(__file__).absolutePath()
-        app.setWindowIcon(QIcon(os.path.join(appPath, 'skyflash.png')))
-
-        # debug
-        print("App path is: {}".format(appPath))
-
         # app instance
         skyflash = Skyflash()
+
+        # GUI app
+        app = QGuiApplication(sys.argv)
+        if getattr( sys, 'frozen', False ) :
+            # running in a pyinstaller bundle
+            appFolder = sys._MEIPASS
+            print("NOTICE! running from a pyinstaller bundle")
+        else :
+            # running live
+            appFolder = QFileInfo(__file__).path()
+
+        print("App run folder is: {}".format(appFolder))
+
+        # app icon
+        iconPath = os.path.join(appFolder, 'skyflash.png')
+        iconPathData = os.path.join(appFolder, "data" + os.sep + "skyflash.png")
+        if os.path.exists(iconPath):
+            # default path
+            print("Found Icon file in: {}".format(iconPath))
+            app.setWindowIcon(QIcon(iconPath))
+        elif os.path.exists(iconPathData):
+            # data folder for source runs
+            print("Found Icon file in: {}".format(iconPathData))
+            app.setWindowIcon(QIcon(iconPathData))
+        else:
+            print("Can not find the icon of the app.")
 
         # main workspace, skyflash object
         path, download, checked = setPath("Skyflash")
@@ -55,18 +75,25 @@ def app():
         engine = QQmlApplicationEngine()
         engine.rootContext().setContextProperty("skf", skyflash)
 
-        # Conditional QML file loading, first try to load it from the local folder
-        localQML = os.path.join(appPath, "data" + os.sep + "skyflash.qml")
-        if os.path.exists(localQML):
-            # local qml file
-            engine.load(localQML)
+        # Conditional QML file loading
+        localQMLdata = os.path.join(appFolder, "data" + os.sep + "skyflash.qml")
+        localQMLfile = os.path.join(appFolder, "skyflash.qml")
+        installedQML = "/usr/share/skyflash/skyflash.qml"
+        if os.path.exists(localQMLdata):
+            # local qml file in data folder
+            print("Found QML file in: {}".format(localQMLdata))
+            engine.load(localQMLdata)
+        elif os.path.exists(localQMLfile):
+            # qml file in app path folder
+            print("Found QML file in: {}".format(localQMLfile))
+            engine.load(localQMLfile)
         else:
             # other locations by OS
             if sys.platform.startswith('linux'):
                 # first locally, then on deb install path
-                installedQML = "/usr/share/skyflash/skyflash.qml"
                 if os.path.exists(installedQML):
                     # the one installed by the .deb package
+                    print("Found QML file in: {}".format(installedQML))
                     engine.load(installedQML)
                 else:
                     # cant find the QML file

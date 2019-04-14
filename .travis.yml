@@ -3,30 +3,48 @@ dist: bionic
 sudo: required
 language: bash
 
+services:
+  - docker
+
 before_script:
 - sudo apt-get update -q
-- sudo apt install -y python3 python3-pip python3-pyqt5 python3-pyqt5.qtquick qml-module-qtquick2 qml-module-qtquick-window2 qml-module-qtquick-layouts qml-module-qtquick-extras qml-module-qtquick-dialogs qml-module-qtquick-controls qml-module-qt-labs-folderlistmodel qml-module-qt-labs-settings
+- sudo apt install -y python3 python3-all python3-pip python3-pyqt5 python3-pyqt5.qtquick qml-module-qtquick2 qml-module-qtquick-window2 qml-module-qtquick-layouts qml-module-qtquick-extras qml-module-qtquick-dialogs qml-module-qtquick-controls qml-module-qt-labs-folderlistmodel qml-module-qt-labs-settings fakeroot python3-stdeb
 - pip3 install setuptools
 - pip3 install pyqt5
+- pip3 install PyInstaller
+- docker pull cdrx/pyinstaller-windows
 
 script:
 - python3 setup.py build
+- python3 setup.py sdist
 - sudo python3 setup.py install
+- python3 setup.py --command-packages=stdeb.command bdist_deb
+- python3 -m PyInstaller skyflash-gui.spec
+- cd dist && gzip skyflash-gui && mv skyflash-gui.gz skyflash-gui_linux64-static.gz && cd ..
+- mkdir dist/windows/
+- docker run -v "$(pwd):/src/" cdrx/pyinstaller-windows
+- cd dist/windows/ && zip skyflash-static-windows.zip skyflash-gui.exe && cd ../../
+- ls -lh dist/
+- ls -lh dist/windows/
+
 
 notifications:
   webhooks: https://fathomless-fjord-24024.herokuapp.com/notify
 
 before_deploy:
-- bash python3 setup.py --command-packages=stdeb.command bdist_deb
+- python3 setup.py --command-packages=stdeb.command bdist_deb
 
 deploy:
   provider: releases
   api_key:
-    secure: mk0/aqvi4ky8RQ8h6vG+cw+wXHfLGyF8NmEigLuVtVbL5jz7zpvuO5i9HQkvsgNj7cXjUY2beepM17aF+LroLZUe21zpuhGib4k5rP9/Jxy8LBxIKMZZWg7HFqt5A29yAU4dYqPvV4Mig2nh0X1/HDcmnLLS8q1MFBPc655Sv//UERvlavvfXCL8rMjC+cX07eJoHpGJfyG+n6c6PiMKSnQ1sxjb1HADjP5HxdPHPl9BiKGkmKG2f92SKuR4FH5IfutcMWaCH+uSwzoE8RvqAEXspw0auLD1bLfbcatziR96DaK60DpSMUxrztImYnw+Yv/ratUHQjauk0qDOg+iPsem+OzoySutT3CLzENaeh54krKcZyc5rJFrhuF5mDbh2VnSZ1P/AszeYe/QUqCpbkzYIV8lWf7HMs+RfUec6qMpNTihIZjY5YyP6fff36N/jM50EZZNXdhifIpVdp3iOPeynktRvM2b/3elF6duerrPIUNlhmQHroQm3bU60Ksb+sceHHzuHIcKmPMTabg24Fvi36VCETn9rsyiilN2AIbjTGqR9TjOyg/Bp8QyCkvn1xNNtGqY2yI1AHn1LUMlkFwqsBc5jU+mJBOZYQcpmgQmJAt4Gnwi+1uOtR1tG+cF20YmRMhLqJQsKLQ/Jd0tyWlFhKmZHDc/jQ9VngZFXlI=
+    secure: otyfBiezSZgvexnUY7c3lOVlPe1tBNswPMi7n7zuUsfmBJl+gRrhkliXgVBShyqrZ5y7/pG2mQKB5kU6GvUv6ljciIXxeRsTD6+b06hSW1Xl1oFqu3xjGCyXvQrLYW8jgp5dGfoOoldkMG0zcB53X+zqYlX41VS8pMGEMrh5Un9yWkCMTHDc4qGv58aVLyh246Rti2ewqeET5HW/S+NSyTdUhfMMd6YTXWuQC7uoXGI5Dln62V9qOxEfY0UT1jfarSoDY8XVN3kVQCND/KQG5cr/aap9Sg/qBwPOi3O3W5tMn6WljwKoxdc+ZtzR4BxL4Qak6FPe9X4HDDa4/bD4yezT27ipGn5gYVXRGuXfIvyE6tyZWWWIq5c1OU2xyMVK1RTV8G0y74QRL1hrbyVh0BaldgbfcPf3uutjjuX/4DJTEjXBpmat/CsCAl0v8ji1QV5GuegnKlW+rA2l9Yhvdq2SRPT5Dy0yn0mA4Nt/sGrvColsFuVuLSwqiMqxx8BLk4aB4l5layT2RF9cv+vT4towxHEfz8fLm/pD72HPohLy1DYR/ZDqXB0nCqiLQdDhG7KnXsa4kUBFLTf8LdsAu/tTu2T2Sc6ykmTBVnxT4+ZDK0N64UpDJR4ky+47BQQeu10gXbbPD6fF6whG7Xoa/PbfPyHk39C6HL2qKNuXF5k=
   file_glob: true
-  file: "deb_dist/*.deb"
+  file:
+    - "dist/*static*"
+    - "dist/windows/*static*"
+    - "deb_dist/*.deb"
   draft: true
   skip_cleanup: true
   on:
     all_branches: true
-    condition: "$TRAVIS_BRANCH =~ ^master|release$"
+    condition: "$TRAVIS_BRANCH =~ ^master|release-*$"

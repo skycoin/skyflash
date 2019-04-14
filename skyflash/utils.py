@@ -7,6 +7,7 @@ import io
 import enum
 import traceback
 import subprocess
+import ctypes
 
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, pyqtSlot
 
@@ -186,11 +187,9 @@ if sys.platform in ["win32", "cygwin"]:
         '''
 
         if not ctypes.windll.shell32.IsUserAnAdmin():
-            hinstance = ctypes.windll.shell32.ShellExecuteW(
-                None, 'runas', sys.executable, sys.argv[0], None, SW.SHOWNORMAL
-            )
-            if hinstance <= 32:
-                raise RuntimeError(ERROR(hinstance))
+            print("You are not admnin")
+        else:
+            print("You are Admin")
 
 def setPath(dir):
     '''Pick the correct path for the current OS and create it if not there
