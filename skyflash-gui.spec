@@ -38,7 +38,7 @@ if platform.system() == "Linux":
             upx=False,
             runtime_tmpdir=None,
             console=False,
-            icon='skyflash/data/skyflash.ico')
+            icon='skyflash/data/skyflash.png')
 
 if platform.system() == "Windows":
     exe = EXE(pyz,
@@ -49,11 +49,9 @@ if platform.system() == "Windows":
           [],
           exclude_binaries=False,
           name='skyflash-gui',
-          debug=True,
+          debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
-          uac_admin=True,
-          uac_uiaccess=True,
-          manifest='skyflash-gui.exe.manifest',
-          console=True )
+          console=False,
+          icon='skyflash/data/skyflash.png')
