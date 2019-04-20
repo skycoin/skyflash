@@ -131,17 +131,30 @@ def validIP(ip):
     return (True, "")
 
 def getLinuxPath(soft):
-    '''Return False if the soft is not in the system or the path string if true'''
+    '''Make use of getDataFromCLI
+       Return False if the soft is not in the system or the path string if true'''
+
+    output = getDataFromCLI("which {}".format(soft))
+
+    if not output:
+        return output
+    else:
+        return output.strip("\n")
+
+def getDataFromCLI(cmd):
+    '''Returns the data from a cmd line to run on linux
+       if data is empty returns false
+    '''
 
     try:
-        output = subprocess.check_output("which {}".format(soft), shell=True)
+        output = subprocess.check_output(cmd, shell=True)
     except subprocess.CalledProcessError:
         return False
 
     if output == '':
         output = False
 
-    return bytes(output).decode().strip("\n")
+    return bytes(output).decode()
 
 # use this function to request higher privileges on Windows
 if sys.platform in ["win32", "cygwin"]:

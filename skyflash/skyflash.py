@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import enum
 import string
+import json
 from urllib.request import Request, urlopen
 
 # GUI imports
@@ -26,7 +27,7 @@ from PyQt5.QtCore import *
 from skyflash.utils import *
 
 # image config file position and size
-imageConfigAddress = 3670016
+imageConfigAddress = 12582912
 imageConfigDataSize = 256
 
 # skybian URL
@@ -1160,8 +1161,6 @@ class Skyflash(QObject):
             ('/dev/mmcblk1', '', 3995639808),
             ('/dev/sda', '', 8300555)
         ]
-
-        TODO detect labels of uSDcards in linux
         '''
 
         drives = []
@@ -1188,39 +1187,38 @@ class Skyflash(QObject):
             else:
                 # well it can open the disk, we must close it
                 disk.close()
+
+        # if we detected a drive, gather the details via lsblk
+        if drives:
+            d = " ".join(drives)
+            js = getDataFromCLI("lsblk -JpbI 8 {}".format(d))
+        else:
+            # TODO: warn the user
+            logging.debug("Error, no storage drive detected, WTF!")
+            return False
+
+        # is no usefull data exit
+        if js is False:
+            logging.debug("Storage drive detected, but none is removable WTF!")
+            return False
+
+        # usefull data beyond this point
         finalDrives = []
+        data = json.loads(js)
 
-        # getting data for the drives
-        for drive in drives:
-            # classic os.statvfs|shutil.disk_usage don't work on
-            # raw disks, it needs a working fs path so we need to
-            # find the path in wish is mounted the card
-            mountedDrive = ""
+        # getting data, output format is: [(drive, "LABEL", total),]
+        for device in data['blockdevices']:
+            if device['rm'] == '1':
+                cap = int(device['size'])
+                mounted = ""
+                for c in device['children']:
+                    if c['mountpoint']:
+                        mounted += " ".join([c['mountpoint'].split("/")[-1]])
 
-            # find the mounted path of the drive
-            dname = drive.split("/")[-1]
-            try:
-                out = subprocess.check_output(["mount | grep {}".format(dname)], shell=True)
-                o = str(out).split(" ")
-                mountedDrive = o[2]
-            except:
-                # drive is not mounted
-                pass
+                if len(mounted) <= 0:
+                    mounted += "Not in use"
 
-            # if mounted determine the size
-            if len(mountedDrive) > 0:
-                if sys.version_info < (3, 3):
-                    fstat = os.statvfs(mountedDrive)
-                    total = fstat.f_frsize * fstat.f_blocks
-                    free = fstat.f_frsize * fstat.f_bavail
-                    used = total - free
-                else:
-                    total, used, free = shutil.disk_usage(mountedDrive)
-            else:
-                total = 0
-
-            # add it to the final drive list
-            finalDrives.append((drive, "", total))
+                finalDrives.append((device['name'], mounted, cap))
 
         return finalDrives
 
@@ -1248,7 +1246,7 @@ class Skyflash(QObject):
             pass
 
         # build a user friendly string for the cards if there is a card
-        if len(drives) > 0:
+        if drives:
             driveList = []
             for drive, label, size in drives:
                 if size > 0:
