@@ -168,54 +168,6 @@ def getDataFromCLI(cmd):
 
     return bytes(output).decode()
 
-# use this function to request higher privileges on Windows
-if sys.platform in ["win32", "cygwin"]:
-
-    class SW(enum.IntEnum):
-        '''Hold the app status in Windows OS'''
-        HIDE = 0
-        MAXIMIZE = 3
-        MINIMIZE = 6
-        RESTORE = 9
-        SHOW = 5
-        SHOWDEFAULT = 10
-        SHOWMAXIMIZED = 3
-        SHOWMINIMIZED = 2
-        SHOWMINNOACTIVE = 7
-        SHOWNA = 8
-        SHOWNOACTIVATE = 4
-        SHOWNORMAL = 1
-
-    # this is needed for privilege scaling in windows
-    class ERROR(enum.IntEnum):
-        '''Holds errors and info associated to Windows OS errors'''
-        ZERO = 0
-        FILE_NOT_FOUND = 2
-        PATH_NOT_FOUND = 3
-        BAD_FORMAT = 11
-        ACCESS_DENIED = 5
-        ASSOC_INCOMPLETE = 27
-        DDE_BUSY = 30
-        DDE_FAIL = 29
-        DDE_TIMEOUT = 28
-        DLL_NOT_FOUND = 32
-        NO_ASSOC = 31
-        OOM = 8
-        SHARE = 26
-
-
-    def bootstrap():
-        '''
-        This functions check if the script is runing on high privileges, if not
-        the as them to the user using the default Windows OS UAC mechanism
-        handling any error in the process
-        '''
-
-        if not ctypes.windll.shell32.IsUserAnAdmin():
-            print("You are not admnin")
-        else:
-            print("You are Admin")
-
 def setPath(dir):
     '''Pick the correct path for the current OS and create it if not there
     This is the path in with we will download, extract, create, etc.

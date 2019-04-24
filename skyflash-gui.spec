@@ -43,15 +43,20 @@ if platform.system() == "Linux":
 if platform.system() == "Windows":
     exe = EXE(pyz,
           a.scripts,
-          a.binaries,
-          a.zipfiles,
-          a.datas,
           [],
-          exclude_binaries=False,
+          exclude_binaries=True,
           name='skyflash-gui',
-          debug=False,
           bootloader_ignore_signals=False,
           strip=False,
-          upx=True,
-          console=False,
-          icon='skyflash/data/skyflash.ico')
+          console=True,
+          debug=True,
+          icon='skyflash/data/skyflash.ico',
+          uac_admin=True)
+
+coll = COLLECT(exe,
+               a.binaries,
+               a.zipfiles,
+               a.datas,
+               strip=False,
+               upx=True,
+               name='skyflash-gui')
