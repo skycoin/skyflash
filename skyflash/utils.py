@@ -7,9 +7,21 @@ import io
 import enum
 import traceback
 import subprocess
-import ctypes
+import re
+import csv
 
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, pyqtSlot
+
+# regular expresions used below, precompiled here.
+red = re.compile('Disk \#\d\, Partition \#\d')
+rel = re.compile(' [A-Z]: ')
+
+if 'nt' in os.name:
+    import ctypes
+    # some aliases
+    getLogicalDrives = ctypes.windll.kernel32.GetLogicalDrives
+    getVolumeInformation = ctypes.windll.kernel32.GetVolumeInformationW
+    createUnicodeBuffer = ctypes.create_unicode_buffer
 
 def shortenPath(fullpath, ccount):
     '''Shorten a passed FS path to a char count size'''
@@ -249,6 +261,172 @@ def setPath(dir):
     # return it
     return (path, downloads, checked)
 
+def sysexec(cmd):
+    '''
+    Execute a command in the console of the base os, this one is intended
+    for windows only.
+
+    It parses the output into a list (by line endings) and cleans empty ones
+    '''
+
+    l = subprocess.check_output(cmd, shell=True)
+    l = l.decode(encoding='oem').splitlines()
+
+    # cleans empty lines
+    for i in l:
+        if i == '': l.remove('')
+
+    return l
+
+def getLetter(logicaldrive):
+    '''
+    Windows Only:
+    It get the device ID in this format: "Disk #0, Partition #0"
+    and answer back with an drive letter matching or a empty str
+    if not mounted/used
+    '''
+
+    l = sysexec("wmic partition where (DeviceID='{}') assoc /assocclass:Win32_LogicalDiskToPartition".format(logicaldrive))
+
+    r = []
+    # filter for " G: "
+    # if not matching need to return ""
+
+    for e in l:
+        fe = rel.findall(e)
+        for ee in fe:
+            nee = ee.strip()
+            if not nee in r:
+                r.append(nee)
+
+    if len(r) > 0:
+        # DEBUG
+        d = r[0].strip()
+        return d
+    else:
+        return ''
+
+def getLogicalDrive(phydrive):
+    '''
+    Get the physical drive (\\\\.\\PHYSICALDRIVE0) name and
+    return the logical volumes in a list like this
+        Disk #0, Partition #0
+        Disk #0, Partition #1
+        etc...
+
+    associated with it
+    '''
+
+    # scape the \'s in the name of the device
+    phydrive = phydrive.replace('\\\\.\\', '\\\\\\\\.\\\\')
+    l = sysexec("wmic DiskDrive where \"DeviceID='" + "{}".format(phydrive) + "'\" Assoc /assocclass:Win32_DiskDriveToDiskPartition")
+
+    record = []
+    data = []
+
+    # the list has many times the same info, pick unique names
+    # dive into results
+    for element in l:
+        # matching it via regular expressions
+        for logVol in red.findall(element):
+            # already present?
+            if not logVol in record:
+                record.append(logVol)
+                # get the drive letter associated with the logDrive
+                l = getLetter(logVol)
+                # adding the info to the return list
+                data.append([logVol, l, getLabel(l)])
+
+    return data
+
+def getLabel(d):
+    '''
+    Windows Only:
+
+    From a drive letter, get the label if proceed
+    '''
+    name_buffer = createUnicodeBuffer(1024)
+    filesystem_buffer = createUnicodeBuffer(1024)
+    volume_name = ""
+    drive = u"{}/".format(d)
+    # drive = drive.encode("ascii")
+    error = getVolumeInformation(ctypes.c_wchar_p(drive), name_buffer,
+            ctypes.sizeof(name_buffer), None, None, None,
+            filesystem_buffer, ctypes.sizeof(filesystem_buffer))
+
+    if error != 0:
+        volume_name = name_buffer.value
+
+    if not volume_name:
+        volume_name = "[No Label]"
+
+    return volume_name
+
+def getPHYDrives():
+    '''
+    List all physical drives, filter for the ones with the removable
+    media flag (most likely card readers & USB thumb drives) and
+    retrieve the logical drive name and it's letter if proceed
+
+    Returns an array with physical & logical names for drives, it's
+    associated letter, size and the interface type.
+    '''
+
+    l = sysexec("wmic diskdrive list full /format:csv")
+
+    # get the headers
+    listd = csv.reader(l)
+    header = next(listd)
+
+    # extracted fields
+    capa = header.index("Capabilities") # {3;4;7} we are looking for '7' aka removable media
+    phydrive = header.index("DeviceID")
+    interface = header.index("InterfaceType")
+    descDirty = header.index("PNPDeviceID")
+    size = header.index("Size")
+
+    data = []
+
+    for r in listd:
+        if len(r) == 0:
+            continue
+
+        d = dict()
+
+        # check if the media is removable (cap has #7)
+        capas = r[capa].strip('{}').split(';')
+        if '7' in capas:
+            d["phydrive"] = r[phydrive]
+            d['drives'] = getLogicalDrive(r[phydrive])
+            d["interface"] = r[interface]
+            d["desc"] = r[descDirty]
+            d["size"] = r[size]
+            data.append(d)
+
+    # sample output
+    #
+    # >> Laptop internal card reader via PCI
+    # {'phydrive': '\\\\.\\PHYSICALDRIVE1',
+    #   'drives': [
+    #               ['Disk #1, Partition #0', 'F:, "[No Label]"],
+    #               ['Disk #1, Partition #1', 'G:, "Root"],
+    #            ]
+    #   'interface': '',
+    #   'desc': 'PCISTOR\\DISK&amp;VEN_RSPER&amp;PROD_RTS5208LUN0&amp;REV_1.00\\0000',
+    #   'size': '7739988480'
+    # }
+    #
+    # >> USB card reader
+    # {'phydrive': '\\\\.\\PHYSICALDRIVE2',
+    #   'drives': [
+    #               ['Disk #2, Partition #0', 'H:', "Ubuntu 18.04 LTS"]
+    #            ],
+    #   'interface': 'USB',
+    #   'desc': 'USBSTOR\\DISK&amp;VEN_MASS&amp;PROD_STORAGE_DEVICE&amp;REV_1.00\\121220160204&amp;0',
+    #   'size': '8052549120'
+    # }
+
+    return data
 
 # fileio overide class to get progress on tarfile extraction
 # TODO How to overide a class from a module

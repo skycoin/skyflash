@@ -34,15 +34,6 @@ imageConfigDataSize = 256
 skybianUrl = "https://github.com/skycoin/skybian/releases/download/Skybian-v0.0.3/Skybian-v0.0.3.tar.xz"
 manualUrl = "https://github.com/skycoin/skyflash/blob/develop/USER_MANUAL.md"
 
-# OS dependent imports for windows.
-if sys.platform in ["win32", "cygwin"]:
-    import ctypes
-    # some aliases
-    getLogicalDrives = ctypes.windll.kernel32.GetLogicalDrives
-    getDriveType = ctypes.windll.kernel32.GetDriveTypeA
-    createUnicodeBuffer = ctypes.create_unicode_buffer
-    getVolumeInformation = ctypes.windll.kernel32.GetVolumeInformationW
-    getDiskFreeSpace = ctypes.windll.kernel32.GetDiskFreeSpaceExA
 
 class Skyflash(QObject):
     '''Main/Base object for all procedures and properties, this is the core
@@ -1108,47 +1099,25 @@ class Skyflash(QObject):
         # return list
         drives = []
 
-        # getting drive list
-        bitmask = getLogicalDrives()
-        for letter in string.ascii_uppercase:
-            drive = "{0}:/".format(letter)
-            driveType = getDriveType(drive.encode("ascii"))
+        ds = getPHYDrives()
+        if len(ds) > 0:
+            for d in ds:
+                dletters = ""
+                volNames = ""
+                for i in d['drives']:
+                    dletters += " {}".format(i[1])
+                    volNames += " {}".format(i[2])
 
-            # check removable drives
-            if bitmask & 1 and driveType == 2:
-                volume_name = ""
-                name_buffer = createUnicodeBuffer(1024)
-                filesystem_buffer = createUnicodeBuffer(1024)
-                error = getVolumeInformation(ctypes.c_wchar_p(drive), name_buffer, ctypes.sizeof(name_buffer), None, None, None, filesystem_buffer, ctypes.sizeof(filesystem_buffer))
+                dletters = dletters.strip()
+                driveSize = d['size']
 
-                if error != 0:
-                    volume_name = name_buffer.value
+                drives.append((dletters, volNames, int(driveSize)))
 
-                if not volume_name:
-                    volume_name = "[unlabeled drive]"
-
-                # Check for the free space.
-                # Some card readers show up as a drive with 0 space free when there is no card inserted.
-                free_bytes = ctypes.c_longlong(0)
-                size_bytes = ctypes.c_longlong(0)
-                if getDiskFreeSpace(drive.encode("ascii"), ctypes.byref(free_bytes), ctypes.byref(size_bytes), None) == 0:
-                    continue
-
-                if free_bytes.value < 1:
-                    continue
-
-                driveSize = size_bytes.value
-
-                # DEBUG
-                logging.debug("Windows detected removable drives are:")
-                logging.debug("  Drive {} '{}', {} bytes".format(drive, volume_name, driveSize))
-
-                # append final info
-                drives.append((drive, volume_name, driveSize))
-
-            bitmask >>= 1
-
-        return drives
+            return drives
+        else:
+            # TODO: warn the user
+            logging.debug("Error, no storage drive detected...")
+            return False
 
     def drivesLinux(self):
         '''Return a list of available drives in linux
