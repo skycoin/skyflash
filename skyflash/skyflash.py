@@ -876,7 +876,10 @@ class Skyflash(QObject):
 
     def timerStop(self):
         '''Stop the timer to check for SD cards'''
-        self.timer.stop()
+        try:
+            self.timer.stop()
+        except:
+            pass
 
     def validateNetworkData(self, gw, dns, manager, nodes):
         '''Validate the network data passed by the QML UI

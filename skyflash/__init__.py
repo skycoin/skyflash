@@ -113,8 +113,10 @@ def app():
         # main GUI call
         sys.exit(app.exec_())
     except SystemExit:
+        skyflash.timerStop()
         sys.exit("By, see you soon.")
     except:
+        skyflash.timerStop()
         print("Unexpected error:", sys.exc_info()[0])
         raise
         sys.exit(-1)
