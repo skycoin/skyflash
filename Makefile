@@ -34,7 +34,7 @@ linux-static: clean ## Create a linux amd64 compatible static (portable) app
 
 win-static: clean build ## Create a windows static (portable) app
 	mkdir -p dist/windows/
-	docker run -v "$(pwd):/src/" cdrx/pyinstaller-windows
+	docker run -v "$(pwd):/src/" cdrx/pyinstaller-windows "pyinstaller --clean -y --dist ./dist/windows --workpath /wine/drive_c/tmp *.spec && chown -R --reference=. ./dist/windows"
 	cd dist/windows && 7z a skyfwi.7z skyflash-gui/
 	cp win-build/*sfx* dist/windows/
 	cd dist/windows && cat 7zSD.sfx sfx_config.txt skyfwi.7z > ../final/Skyflash-gui_win-static.exe
