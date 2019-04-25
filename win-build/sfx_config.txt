@@ -1,0 +1,4 @@
+;!@Install@!UTF-8!
+RunProgram="skyflash-gui/skyflash-gui.exe"
+;!@InstallEnd@!
+

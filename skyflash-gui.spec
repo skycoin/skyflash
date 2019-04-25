@@ -20,27 +20,27 @@ a = Analysis(['skyflash-gui.py'],
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 
-import platform
 import os
 
 # Linux build
-if platform.system() == "Linux":
+if 'posix' in os.name:
     exe = EXE(pyz,
-            a.scripts,
-            a.binaries,
-            a.zipfiles,
-            a.datas,
-            [],
-            name='skyflash-gui',
-            debug=False,
-            bootloader_ignore_signals=False,
-            strip=False,
-            upx=False,
-            runtime_tmpdir=None,
-            console=False,
-            icon='skyflash/data/skyflash.png')
+          a.scripts,
+          a.binaries,
+          a.zipfiles,
+          a.datas,
+          [],
+          name='skyflash-gui',
+          debug=False,
+          bootloader_ignore_signals=False,
+          strip=False,
+          upx=False,
+          runtime_tmpdir=None,
+          console=False,
+          icon='skyflash/data/skyflash.png'
+          )
 
-if platform.system() == "Windows":
+if 'nt' in os.name:
     exe = EXE(pyz,
           a.scripts,
           [],
@@ -51,12 +51,14 @@ if platform.system() == "Windows":
           console=True,
           debug=True,
           icon='skyflash/data/skyflash.ico',
-          uac_admin=True)
+          uac_admin=True
+          )
 
-coll = COLLECT(exe,
-               a.binaries,
-               a.zipfiles,
-               a.datas,
-               strip=False,
-               upx=True,
-               name='skyflash-gui')
+    coll = COLLECT(exe,
+           a.binaries,
+           a.zipfiles,
+           a.datas,
+           strip=False,
+           upx=True,
+           name='skyflash-gui'
+           )
