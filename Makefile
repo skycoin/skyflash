@@ -33,7 +33,7 @@ linux-static: clean ## Create a linux amd64 compatible static (portable) app
 	ls -lh final/
 
 win-static: clean ## Create a windows static (portable) app
-	mkdir dist/windows/
+	mkdir -p dist/windows/
 	docker run -v "$(pwd):/src/" cdrx/pyinstaller-windows
 	cd dist/windows && 7z a skyfwi.7z skyflash-gui/
 	cp win-build/*sfx* dist/windows/
