@@ -1,6 +1,6 @@
 # Windows standalone build tools
 
-The windows app is generated with the pyinstaller tool inside a docker environment using wine: the linux windows emulator. But some bug on the UAC privilege escalation inside pyinstaller forbids us to generate a single .exe file, instead we need to use a folder with the skyflash-gui.exe inside.
+The windows app is generated with the pyinstaller tool inside a docker environment using wine: the linux windows emulator. But some bug on the UAC privilege escalation inside pyinstaller fails to generate a single .exe file with a correct UAC on it, instead we need to use a folder with the skyflash-gui.exe and all other files inside in which the UAC work flawlessly.
 
 The tools design is a static .exe file so we took some design decision: The ingle file static app must be generated with a external tool, that tools need to be:
 
