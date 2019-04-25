@@ -32,7 +32,7 @@ linux-static: clean ## Create a linux amd64 compatible static (portable) app
 	mv dist/skyflash-gui.gz final/skyflash-gui_linux64-static.gz
 	ls -lh final/
 
-win-static: clean ## Create a windows static (portable) app
+win-static: clean build ## Create a windows static (portable) app
 	mkdir -p dist/windows/
 	docker run -v "$(pwd):/src/" cdrx/pyinstaller-windows
 	cd dist/windows && 7z a skyfwi.7z skyflash-gui/
