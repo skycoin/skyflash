@@ -2,13 +2,17 @@
 
 .PHONY : clean build
 
+PWD = $(shell pwd)
+
 clean: ## Clean the environment to have a fresh start
 	-sudo rm -rdf skyflash.egg-info
 	-sudo rm -rdf deb_dist
-	-rm -rdf dist
-	-rm -rdf build
-	-rm -rdf __pycache__
-	-rm -rdf skyflash/__pycache__
+	-sudo rm -rdf dist
+	-sudo rm -rdf build
+	-sudo rm -rdf __pycache__
+	-sudo rm -rdf skyflash/__pycache__
+	-sudo rm skyflash-*.tar.gz
+	-sudo rm -rdf tmp
 
 init: clean ## Initial cleanup, erase even the final app dir
 	-rm -rdf final
@@ -17,6 +21,8 @@ init: clean ## Initial cleanup, erase even the final app dir
 build: clean ## Build the pip compatible install file
 	python3 setup.py build
 	python3 setup.py sdist
+	mv dist/skyflash-*.tar.gz final/
+	ls -lh final/
 
 install: build ## Install the built pip file
 	sudo python3 setup.py install
@@ -32,12 +38,13 @@ linux-static: clean ## Create a linux amd64 compatible static (portable) app
 	mv dist/skyflash-gui.gz final/skyflash-gui_linux64-static.gz
 	ls -lh final/
 
-win-static: clean build ## Create a windows static (portable) app
+win-static: clean ## Create a windows static (portable) app
 	mkdir -p dist/windows/
-	docker run -v "$(pwd):/src/" cdrx/pyinstaller-windows "mkdir tmp && pyinstaller --clean -y --dist ./dist/windows --workpath tmp *.spec && chown -R --reference=. ./dist/windows"
+	docker run --rm -v "$(PWD):/src/" cdrx/pyinstaller-windows 
 	cd dist/windows && 7z a skyfwi.7z skyflash-gui/
-	cp win-build/*sfx* dist/windows/
-	cd dist/windows && cat 7zSD.sfx sfx_config.txt skyfwi.7z > ../final/Skyflash-gui_win-static.exe
+	cp win-build/* dist/windows/
+	cd dist/windows && cat 7zSD.sfx sfx_config.txt skyfwi.7z > Skyflash.exe
+	mv dist/windows/*.exe final/
 	ls -lh final/
 
 help:
