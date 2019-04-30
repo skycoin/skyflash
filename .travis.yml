@@ -9,27 +9,22 @@ services:
 before_script:
 - sudo apt-get update -q
 - sudo apt install -y python3 python3-all python3-pip python3-pyqt5 python3-pyqt5.qtquick qml-module-qtquick2 qml-module-qtquick-window2 qml-module-qtquick-layouts qml-module-qtquick-extras qml-module-qtquick-dialogs qml-module-qtquick-controls qml-module-qt-labs-folderlistmodel qml-module-qt-labs-settings fakeroot python3-stdeb p7zip-full make
-- pip3 install setuptools
-- pip3 install pyqt5
-- pip3 install PyInstaller
+- pip3 install setuptools pyqt5 PyInstaller
 - docker pull cdrx/pyinstaller-windows
 
 script:
 - make init
 - make install
-- make deb
-- make linux-static
-- make win-static
 
 notifications:
   email:
     - pavelmc@gmail.com
   webhooks: https://fathomless-fjord-24024.herokuapp.com/notify
 
-# before_deploy:
-  # - make deb
-  # - make linux-static
-  # - make win-static
+before_deploy:
+  - make deb
+  - make linux-static
+  - make win-static
 
 deploy:
   provider: releases
