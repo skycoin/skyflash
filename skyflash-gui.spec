@@ -48,8 +48,8 @@ if 'nt' in os.name:
           name='skyflash-gui',
           bootloader_ignore_signals=False,
           strip=False,
-          console=True,
-          debug=True,
+          console=False,
+          debug=False,
           icon='skyflash/data/skyflash.ico',
           uac_admin=True
           )
@@ -59,6 +59,6 @@ if 'nt' in os.name:
            a.zipfiles,
            a.datas,
            strip=False,
-           upx=True,
+           upx=False,
            name='skyflash-gui'
            )
