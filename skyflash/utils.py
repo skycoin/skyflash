@@ -7,9 +7,22 @@ import io
 import enum
 import traceback
 import subprocess
-import ctypes
+import re
+import csv
+from pprint import pprint
 
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, pyqtSlot
+
+# regular expresions used below, precompiled here.
+red = re.compile('Disk \#\d\, Partition \#\d')
+rel = re.compile(' [A-Z]: ')
+
+if 'nt' in os.name:
+    import ctypes
+    # some aliases
+    getLogicalDrives = ctypes.windll.kernel32.GetLogicalDrives
+    getVolumeInformation = ctypes.windll.kernel32.GetVolumeInformationW
+    createUnicodeBuffer = ctypes.create_unicode_buffer
 
 def shortenPath(fullpath, ccount):
     '''Shorten a passed FS path to a char count size'''
@@ -131,65 +144,30 @@ def validIP(ip):
     return (True, "")
 
 def getLinuxPath(soft):
-    '''Return False if the soft is not in the system or the path string if true'''
+    '''Make use of getDataFromCLI
+       Return False if the soft is not in the system or the path string if true'''
+
+    output = getDataFromCLI("which {}".format(soft))
+
+    if not output:
+        return output
+    else:
+        return output.strip("\n")
+
+def getDataFromCLI(cmd):
+    '''Returns the data from a cmd line to run on linux
+       if data is empty returns false
+    '''
 
     try:
-        output = subprocess.check_output("which {}".format(soft), shell=True)
+        output = subprocess.check_output(cmd, shell=True)
     except subprocess.CalledProcessError:
         return False
 
     if output == '':
         output = False
 
-    return bytes(output).decode().strip("\n")
-
-# use this function to request higher privileges on Windows
-if sys.platform in ["win32", "cygwin"]:
-
-    class SW(enum.IntEnum):
-        '''Hold the app status in Windows OS'''
-        HIDE = 0
-        MAXIMIZE = 3
-        MINIMIZE = 6
-        RESTORE = 9
-        SHOW = 5
-        SHOWDEFAULT = 10
-        SHOWMAXIMIZED = 3
-        SHOWMINIMIZED = 2
-        SHOWMINNOACTIVE = 7
-        SHOWNA = 8
-        SHOWNOACTIVATE = 4
-        SHOWNORMAL = 1
-
-    # this is needed for privilege scaling in windows
-    class ERROR(enum.IntEnum):
-        '''Holds errors and info associated to Windows OS errors'''
-        ZERO = 0
-        FILE_NOT_FOUND = 2
-        PATH_NOT_FOUND = 3
-        BAD_FORMAT = 11
-        ACCESS_DENIED = 5
-        ASSOC_INCOMPLETE = 27
-        DDE_BUSY = 30
-        DDE_FAIL = 29
-        DDE_TIMEOUT = 28
-        DLL_NOT_FOUND = 32
-        NO_ASSOC = 31
-        OOM = 8
-        SHARE = 26
-
-
-    def bootstrap():
-        '''
-        This functions check if the script is runing on high privileges, if not
-        the as them to the user using the default Windows OS UAC mechanism
-        handling any error in the process
-        '''
-
-        if not ctypes.windll.shell32.IsUserAnAdmin():
-            print("You are not admnin")
-        else:
-            print("You are Admin")
+    return bytes(output).decode()
 
 def setPath(dir):
     '''Pick the correct path for the current OS and create it if not there
@@ -236,6 +214,196 @@ def setPath(dir):
     # return it
     return (path, downloads, checked)
 
+def sysexec(cmd):
+    '''
+    Execute a command in the console of the base os, this one is intended
+    for windows only.
+
+    It parses the output into a list (by line endings) and cleans empty ones
+    '''
+
+    l = subprocess.check_output(cmd, shell=True)
+    l = l.decode(encoding='oem').splitlines()
+
+    # cleans empty lines
+    for i in l:
+        if i == '': l.remove('')
+
+    return l
+
+def getLetter(logicaldrive):
+    '''
+    Windows Only:
+    It get the device ID in this format: "Disk #0, Partition #0"
+    and answer back with an drive letter matching or a empty str
+    if not mounted/used
+    '''
+
+    l = sysexec("wmic partition where (DeviceID='{}') assoc /assocclass:Win32_LogicalDiskToPartition".format(logicaldrive))
+
+    r = []
+    # filter for " G: "
+    # if not matching need to return ""
+
+    for e in l:
+        fe = rel.findall(e)
+        for ee in fe:
+            nee = ee.strip()
+            if not nee in r:
+                r.append(nee)
+
+    if len(r) > 0:
+        # DEBUG
+        d = r[0].strip()
+        return d
+    else:
+        return ''
+
+def getLogicalDrive(phydrive):
+    '''
+    Get the physical drive (\\\\.\\PHYSICALDRIVE0) name and
+    return the logical volumes in a list like this
+        Disk #0, Partition #0
+        Disk #0, Partition #1
+        etc...
+
+    associated with it
+    '''
+
+    # scape the \'s in the name of the device
+    phydrive = phydrive.replace('\\\\.\\', '\\\\\\\\.\\\\')
+    l = sysexec("wmic DiskDrive where \"DeviceID='" + "{}".format(phydrive) + "'\" Assoc /assocclass:Win32_DiskDriveToDiskPartition")
+
+    record = []
+    data = []
+
+    # the list has many times the same info, pick unique names
+    # dive into results
+    for element in l:
+        # matching it via regular expressions
+        for logVol in red.findall(element):
+            # already present?
+            if not logVol in record:
+                record.append(logVol)
+                # get the drive letter associated with the logDrive
+                l = getLetter(logVol)
+                # get the guid
+                g = getWinGUID(l)
+                # adding the info to the return list
+                data.append([logVol, l, getLabel(l), g])
+
+    return data
+
+def getLabel(d):
+    '''
+    Windows Only:
+
+    From a drive letter, get the label if proceed
+    '''
+    name_buffer = createUnicodeBuffer(1024)
+    filesystem_buffer = createUnicodeBuffer(1024)
+    volume_name = ""
+    drive = u"{}/".format(d)
+    # drive = drive.encode("ascii")
+    error = getVolumeInformation(ctypes.c_wchar_p(drive), name_buffer,
+            ctypes.sizeof(name_buffer), None, None, None,
+            filesystem_buffer, ctypes.sizeof(filesystem_buffer))
+
+    if error != 0:
+        volume_name = name_buffer.value
+
+    if not volume_name:
+        volume_name = "[No Label]"
+
+    return volume_name
+
+def getWinGUID(drive):
+    '''Windows Only
+    Get the capacity, deviceId, driveletter for all storage devices on the machine
+    then filter by drive and & return false or the string of the guid
+
+    Tip: if ithas no letter windows can't handle it, so no worry
+    '''
+
+    l = sysexec("wmic volume get DeviceID,DriveLetter /format:csv")
+    listd = csv.reader(l)
+    header = next(listd)
+
+    # extracted fields
+    guidh = header.index("DeviceID")
+    letter = header.index("DriveLetter")
+
+    guid = False
+    for r in listd:
+        if len(r) == 0:
+            continue
+
+        # if no drive letter match the size
+        if len(r[letter]) > 0 and r[letter] == drive:
+            guid = r[guidh]
+
+    return guid
+
+def getPHYDrives():
+    '''
+    List all physical drives, filter for the ones with the removable
+    media flag (most likely card readers & USB thumb drives) and
+    retrieve the logical drive name and it's letter if proceed
+
+    Returns an array with physical & logical names for drives, it's
+    associated letter, size and the interface type.
+    '''
+
+    l = sysexec("wmic diskdrive list full /format:csv")
+
+    # get the headers
+    listd = csv.reader(l)
+    header = next(listd)
+
+    # extracted fields
+    capa = header.index("Capabilities") # {3;4;7} we are looking for '7' aka removable media
+    phydrive = header.index("DeviceID")
+    interface = header.index("InterfaceType")
+    descDirty = header.index("PNPDeviceID")
+    size = header.index("Size")
+
+    data = []
+
+    for r in listd:
+        if len(r) == 0:
+            continue
+
+        d = dict()
+
+        # check if the media is removable (cap has #7)
+        capas = r[capa].strip('{}').split(';')
+        if '7' in capas:
+            d["phydrive"] = r[phydrive]
+            d['drives'] = getLogicalDrive(r[phydrive])
+            d["interface"] = r[interface]
+            d["desc"] = r[descDirty]
+            d["size"] = r[size]
+            data.append(d)
+
+    # sample output
+    # [{'desc': 'USBSTOR\\DISK&amp;VEN_VERBATIM&amp;PROD_STORE_N_GO&amp;REV_PMAP\\900067B77116E868&amp;0',
+    # 'drives': [['Disk #1, Partition #0',
+    #             'F:',
+    #             'MULTIBOOT',
+    #             '\\\\?\\Volume{62c491be-0ec2-11e9-a1ea-080027b4fa52}\\']],
+    # 'interface': 'USB',
+    # 'phydrive': '\\\\.\\PHYSICALDRIVE1',
+    # 'size': '7739988480'},
+    # {'desc': 'USBSTOR\\DISK&amp;VEN_MASS&amp;PROD_STORAGE_DEVICE&amp;REV_1.00\\121220160204&amp;0',
+    # 'drives': [['Disk #2, Partition #0',
+    #             'H:',
+    #             '[No Label]',
+    #             '\\\\?\\Volume{37189f6b-5e76-11e9-a1fd-0800275fd42d}\\']],
+    # 'interface': 'USB',
+    # 'phydrive': '\\\\.\\PHYSICALDRIVE2',
+    # 'size': '8052549120'}]
+
+    return data
 
 # fileio overide class to get progress on tarfile extraction
 # TODO How to overide a class from a module

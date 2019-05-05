@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import enum
 import string
+import json
 from urllib.request import Request, urlopen
 
 # GUI imports
@@ -26,22 +27,13 @@ from PyQt5.QtCore import *
 from skyflash.utils import *
 
 # image config file position and size
-imageConfigAddress = 3670016
+imageConfigAddress = 12582912
 imageConfigDataSize = 256
 
 # skybian URL
 skybianUrl = "https://github.com/skycoin/skybian/releases/download/Skybian-v0.0.3/Skybian-v0.0.3.tar.xz"
 manualUrl = "https://github.com/skycoin/skyflash/blob/develop/USER_MANUAL.md"
 
-# OS dependent imports for windows.
-if sys.platform in ["win32", "cygwin"]:
-    import ctypes
-    # some aliases
-    getLogicalDrives = ctypes.windll.kernel32.GetLogicalDrives
-    getDriveType = ctypes.windll.kernel32.GetDriveTypeA
-    createUnicodeBuffer = ctypes.create_unicode_buffer
-    getVolumeInformation = ctypes.windll.kernel32.GetVolumeInformationW
-    getDiskFreeSpace = ctypes.windll.kernel32.GetDiskFreeSpaceExA
 
 class Skyflash(QObject):
     '''Main/Base object for all procedures and properties, this is the core
@@ -352,7 +344,9 @@ class Skyflash(QObject):
         self.setStatus.emit("Images build was a success, next step is flashing!")
         self.bData.emit("All images was built")
         self.bFinished.emit()
+        # check for cards timer start
         self.timerStart()
+
 
     # flash ones
 
@@ -877,7 +871,10 @@ class Skyflash(QObject):
 
     def timerStop(self):
         '''Stop the timer to check for SD cards'''
-        self.timer.stop()
+        try:
+            self.timer.stop()
+        except:
+            pass
 
     def validateNetworkData(self, gw, dns, manager, nodes):
         '''Validate the network data passed by the QML UI
@@ -1107,47 +1104,25 @@ class Skyflash(QObject):
         # return list
         drives = []
 
-        # getting drive list
-        bitmask = getLogicalDrives()
-        for letter in string.ascii_uppercase:
-            drive = "{0}:/".format(letter)
-            driveType = getDriveType(drive.encode("ascii"))
+        ds = getPHYDrives()
+        if len(ds) > 0:
+            for d in ds:
+                dletters = ""
+                volNames = ""
+                for i in d['drives']:
+                    dletters += " {}".format(i[1])
+                    volNames += " {}".format(i[2])
 
-            # check removable drives
-            if bitmask & 1 and driveType == 2:
-                volume_name = ""
-                name_buffer = createUnicodeBuffer(1024)
-                filesystem_buffer = createUnicodeBuffer(1024)
-                error = getVolumeInformation(ctypes.c_wchar_p(drive), name_buffer, ctypes.sizeof(name_buffer), None, None, None, filesystem_buffer, ctypes.sizeof(filesystem_buffer))
+                dletters = dletters.strip()
+                driveSize = d['size']
 
-                if error != 0:
-                    volume_name = name_buffer.value
+                drives.append((dletters, volNames, int(driveSize)))
 
-                if not volume_name:
-                    volume_name = "[unlabeled drive]"
-
-                # Check for the free space.
-                # Some card readers show up as a drive with 0 space free when there is no card inserted.
-                free_bytes = ctypes.c_longlong(0)
-                size_bytes = ctypes.c_longlong(0)
-                if getDiskFreeSpace(drive.encode("ascii"), ctypes.byref(free_bytes), ctypes.byref(size_bytes), None) == 0:
-                    continue
-
-                if free_bytes.value < 1:
-                    continue
-
-                driveSize = size_bytes.value
-
-                # DEBUG
-                logging.debug("Windows detected removable drives are:")
-                logging.debug("  Drive {} '{}', {} bytes".format(drive, volume_name, driveSize))
-
-                # append final info
-                drives.append((drive, volume_name, driveSize))
-
-            bitmask >>= 1
-
-        return drives
+            return drives
+        else:
+            # TODO: warn the user
+            logging.debug("Error, no storage drive detected...")
+            return False
 
     def drivesLinux(self):
         '''Return a list of available drives in linux
@@ -1160,8 +1135,6 @@ class Skyflash(QObject):
             ('/dev/mmcblk1', '', 3995639808),
             ('/dev/sda', '', 8300555)
         ]
-
-        TODO detect labels of uSDcards in linux
         '''
 
         drives = []
@@ -1188,39 +1161,38 @@ class Skyflash(QObject):
             else:
                 # well it can open the disk, we must close it
                 disk.close()
+
+        # if we detected a drive, gather the details via lsblk
+        if drives:
+            d = " ".join(drives)
+            js = getDataFromCLI("lsblk -JpbI 8 {}".format(d))
+        else:
+            # TODO: warn the user
+            logging.debug("Error, no storage drive detected, WTF!")
+            return False
+
+        # is no usefull data exit
+        if js is False:
+            logging.debug("Storage drive detected, but none is removable WTF!")
+            return False
+
+        # usefull data beyond this point
         finalDrives = []
+        data = json.loads(js)
 
-        # getting data for the drives
-        for drive in drives:
-            # classic os.statvfs|shutil.disk_usage don't work on
-            # raw disks, it needs a working fs path so we need to
-            # find the path in wish is mounted the card
-            mountedDrive = ""
+        # getting data, output format is: [(drive, "LABEL", total),]
+        for device in data['blockdevices']:
+            if device['rm'] == '1':
+                cap = int(device['size'])
+                mounted = ""
+                for c in device['children']:
+                    if c['mountpoint']:
+                        mounted += " ".join([c['mountpoint'].split("/")[-1]])
 
-            # find the mounted path of the drive
-            dname = drive.split("/")[-1]
-            try:
-                out = subprocess.check_output(["mount | grep {}".format(dname)], shell=True)
-                o = str(out).split(" ")
-                mountedDrive = o[2]
-            except:
-                # drive is not mounted
-                pass
+                if len(mounted) <= 0:
+                    mounted += "Not in use"
 
-            # if mounted determine the size
-            if len(mountedDrive) > 0:
-                if sys.version_info < (3, 3):
-                    fstat = os.statvfs(mountedDrive)
-                    total = fstat.f_frsize * fstat.f_blocks
-                    free = fstat.f_frsize * fstat.f_bavail
-                    used = total - free
-                else:
-                    total, used, free = shutil.disk_usage(mountedDrive)
-            else:
-                total = 0
-
-            # add it to the final drive list
-            finalDrives.append((drive, "", total))
+                finalDrives.append((device['name'], mounted, cap))
 
         return finalDrives
 
@@ -1248,7 +1220,7 @@ class Skyflash(QObject):
             pass
 
         # build a user friendly string for the cards if there is a card
-        if len(drives) > 0:
+        if drives:
             driveList = []
             for drive, label, size in drives:
                 if size > 0:
@@ -1289,11 +1261,6 @@ class Skyflash(QObject):
 
         # stop the timer, it must not mess with the device on the copy process
         self.timerStop()
-
-        # warn about yet non implemented features
-        if not sys.platform.startswith('linux'):
-            self.uiWarning.emit("Feature not implemented", "The flash part is not implemented for your operating system yet, but you can use any flashing software (Balena Etcher) to flash your uSD Cards with created images.")
-            return
 
         # Preparing the flasher thread
         # thead start

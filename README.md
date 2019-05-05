@@ -6,8 +6,8 @@ The resulting images will only run on the official skyminer hardware, aka: Orang
 
 The tool has two variants:
 
-* A general use GUI tool (skyflash) that works on Linux/Mac/Windows
-* A Linux only CLI tool (skyflash-cli) **_for developers and advanced users_**.
+* A general use GUI tool (skyflash) that works on Linux/Windows (Mac soon)
+* A Linux only CLI tool (skyflash-cli) **_for developers and advanced users only_**.
 
 ## Skyflash GUI tool
 
@@ -21,7 +21,9 @@ To install this tool, go to the [Releases](https://github.com/skycoin/skyflash/r
 |:----------------:|:--------------------------------:|
 | Windows | ...that ends with **.exe** |
 | Linux | ...that ends with **.deb** |
+| Linux static | ...that ends with **linux64-static.gz** |
 | MacOS | ...that ends with **.dmg** |
+| Python3 pkg | ...that ends with .tar.gz  _(advanced users)_| 
 
 Installing it and running is done by the default OS way.
 
@@ -29,11 +31,13 @@ Installing it and running is done by the default OS way.
 
 To see more detailed instructions on how to use the Skyflash GUI utility please visit the [User's Manual](USER_MANUAL.md)
 
+A note: on Windows the app will only build the images and will suggest to burn the image with a third party flashing tool like [Balena Etcher](https://www.balena.io/etcher/)
+
 ## skyflash-cli tool
 
-The tool `skyflash-cli` is intended to be run on linux (soon on Mac too) and will generate the needed images for a base image.
+The tool `skyflash-cli` is intended to be run on linux and will generate the needed images for a base image.
 
-Once you has created your images you will need to use a tool to burn these images to the uSD cards, we recommend [BalenaEtcher](https://www.balena.io/etcher/) a cross OS tool.
+Once you has created your images you will need to use a tool to burn these images to the uSD cards, we recommend [Balena Etcher](https://www.balena.io/etcher/) a cross OS tool.
 
 ### Step 1: Download the default skybian image
 

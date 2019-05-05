@@ -28,10 +28,6 @@ from skyflash.utils import *
 def app():
     '''Run the app'''
 
-    #  privilege elevation request in Windows.
-    if sys.platform in ["win32", "cygwin"]:
-        bootstrap()
-
     try:
         # app instance
         skyflash = Skyflash()
@@ -113,8 +109,10 @@ def app():
         # main GUI call
         sys.exit(app.exec_())
     except SystemExit:
+        skyflash.timerStop()
         sys.exit("By, see you soon.")
     except:
+        skyflash.timerStop()
         print("Unexpected error:", sys.exc_info()[0])
         raise
         sys.exit(-1)
