@@ -343,14 +343,9 @@ class Skyflash(QObject):
 
         self.setStatus.emit("Images build was a success, next step is flashing!")
         self.bData.emit("All images was built")
-        if "nt" not in os.name:
-            self.bFinished.emit()
-            # check for cards timer start
-            self.timerStart()
-        else:
-            # windows is not ready to flash
-            self.uiWarning.emit("Feature not implemented", "The flash part is not implemented for your operating system yet, nevertheless you can use any free flashing software (like Balena Etcher for example) to flash your uSD Cards with the created images in your Skybian local folder.")
-            return
+        self.bFinished.emit()
+        # check for cards timer start
+        self.timerStart()
 
 
     # flash ones

@@ -9,6 +9,7 @@ import traceback
 import subprocess
 import re
 import csv
+from pprint import pprint
 
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, pyqtSlot
 
@@ -175,19 +176,17 @@ def setPath(dir):
     dir is the app name folder "Skyflash" by default
     '''
 
+    # default path for the user
+    path = os.path.expanduser('~')
+
+    # where in the user's folder I need to put the  skybian folder:
+    # linux and macos right in the home folder, windows on the document folder
     if sys.platform in ["win32", "cygwin"]:
         # windows
-        path = os.path.expanduser('~')
         # path has the c:\Users\[username] so we need to add the Documents folder
-        # Windows has a trick for other langs beside English
+        # Windows has a trick for other langs beside English: Documents is the real
+        # folder and other lang folders just point to that
         path = os.path.join(path, "Documents")
-    elif sys.platform == "darwin":
-        # mac
-        # TODO reliable way to ident the users Documents folder
-        pass
-    else:
-        # linux
-        path = os.path.expanduser('~')
 
     # now adding the app dir
     path = os.path.join(path, dir)
@@ -286,8 +285,10 @@ def getLogicalDrive(phydrive):
                 record.append(logVol)
                 # get the drive letter associated with the logDrive
                 l = getLetter(logVol)
+                # get the guid
+                g = getWinGUID(l)
                 # adding the info to the return list
-                data.append([logVol, l, getLabel(l)])
+                data.append([logVol, l, getLabel(l), g])
 
     return data
 
@@ -313,6 +314,33 @@ def getLabel(d):
         volume_name = "[No Label]"
 
     return volume_name
+
+def getWinGUID(drive):
+    '''Windows Only
+    Get the capacity, deviceId, driveletter for all storage devices on the machine
+    then filter by drive and & return false or the string of the guid
+
+    Tip: if ithas no letter windows can't handle it, so no worry
+    '''
+
+    l = sysexec("wmic volume get DeviceID,DriveLetter /format:csv")
+    listd = csv.reader(l)
+    header = next(listd)
+
+    # extracted fields
+    guidh = header.index("DeviceID")
+    letter = header.index("DriveLetter")
+
+    guid = False
+    for r in listd:
+        if len(r) == 0:
+            continue
+
+        # if no drive letter match the size
+        if len(r[letter]) > 0 and r[letter] == drive:
+            guid = r[guidh]
+
+    return guid
 
 def getPHYDrives():
     '''
@@ -356,27 +384,22 @@ def getPHYDrives():
             data.append(d)
 
     # sample output
-    #
-    # >> Laptop internal card reader via PCI
-    # {'phydrive': '\\\\.\\PHYSICALDRIVE1',
-    #   'drives': [
-    #               ['Disk #1, Partition #0', 'F:, "[No Label]"],
-    #               ['Disk #1, Partition #1', 'G:, "Root"],
-    #            ]
-    #   'interface': '',
-    #   'desc': 'PCISTOR\\DISK&amp;VEN_RSPER&amp;PROD_RTS5208LUN0&amp;REV_1.00\\0000',
-    #   'size': '7739988480'
-    # }
-    #
-    # >> USB card reader
-    # {'phydrive': '\\\\.\\PHYSICALDRIVE2',
-    #   'drives': [
-    #               ['Disk #2, Partition #0', 'H:', "Ubuntu 18.04 LTS"]
-    #            ],
-    #   'interface': 'USB',
-    #   'desc': 'USBSTOR\\DISK&amp;VEN_MASS&amp;PROD_STORAGE_DEVICE&amp;REV_1.00\\121220160204&amp;0',
-    #   'size': '8052549120'
-    # }
+    # [{'desc': 'USBSTOR\\DISK&amp;VEN_VERBATIM&amp;PROD_STORE_N_GO&amp;REV_PMAP\\900067B77116E868&amp;0',
+    # 'drives': [['Disk #1, Partition #0',
+    #             'F:',
+    #             'MULTIBOOT',
+    #             '\\\\?\\Volume{62c491be-0ec2-11e9-a1ea-080027b4fa52}\\']],
+    # 'interface': 'USB',
+    # 'phydrive': '\\\\.\\PHYSICALDRIVE1',
+    # 'size': '7739988480'},
+    # {'desc': 'USBSTOR\\DISK&amp;VEN_MASS&amp;PROD_STORAGE_DEVICE&amp;REV_1.00\\121220160204&amp;0',
+    # 'drives': [['Disk #2, Partition #0',
+    #             'H:',
+    #             '[No Label]',
+    #             '\\\\?\\Volume{37189f6b-5e76-11e9-a1fd-0800275fd42d}\\']],
+    # 'interface': 'USB',
+    # 'phydrive': '\\\\.\\PHYSICALDRIVE2',
+    # 'size': '8052549120'}]
 
     return data
 
