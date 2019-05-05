@@ -1,0 +1,385 @@
+#!/bin/bash
+#
+# skyflash-cli: Linux & Mac CLI interface for skyflash.
+#
+# Linux initial version by stdevPavelmc@github.com
+#
+
+# DEFAULT vars:
+DGW='192.168.0.1'
+DMAN='192.168.0.2'
+DNOD='3-9'
+DDNS='1.0.0.1, 1.1.1.1'
+SCRIPVERSION=0.1.0
+CONFFILE=`mktemp`
+
+# img related vars
+DATASTART=3670016
+DATASIZE=256
+
+# play vars
+GW=''
+MAN=''
+NOD=''
+DNS="$DDNS"
+BNET=''
+IMG=''
+NODEIPS=''
+NAMOUNT=''
+ARGS=$@
+
+
+# show cli usage data
+function usage() {
+    # used when no arguments or explicit -h has been passed
+
+cat << EOF
+usage: $0 [options]
+
+Configure & create the skybian images.
+Please note that this tool is intended for developers and advanced users.
+
+OPTIONS:
+    -h: Show this help
+    -g: Gateway IP for the network
+    -m: Manager IP on the network
+    -d: DNS to use, can be more than one like this "1.0.0.1, 1.1.1.1"
+    -n: [A-B] the range of the IPs to use on the network for the minions
+    -a: All defaults: set networks by the defaults
+    -v: Version of the script
+    -i: Image file
+
+Network defaults:
+    Network:     192.168.0.0/24
+    Netmask:     Always will be: 255.255.255.0 (aka: /24)
+    Gateway:     192.168.0.1
+    DNS servers: 1.0.0.1, 1.1.1.1
+    Manager IP:  192.168.0.2
+    Minion IPs:    192.168.0.[3-9] (7 minions)
+
+Warnings:
+    * By now you need to provide the downloaded image to the script, no download
+      attempt is made yet (check -i switch).
+    * Options '-g', '-m' & '-n' are inclusive: if you set one of them then you
+      need to set them all
+    * Options '-g', '-m' & '-n' are exclusive against '-a': you need to choose
+      default or custom options, not both.
+    * Option '-d' is optional will use "1.0.0.1, 1.1.1.1" if not specified
+      if you need to pass more than one please surround it with double quotes
+      and separate them by coma and space like the example above 
+    * Option '-n' refers to the last digit of the IPv4 address, base is taken
+      from the manager. It´s a continuous range from A to B [A-B] both inclusive
+
+Configured images will be placed on the same directory of the base image and
+will be appened the suffixes: '-manager' and 'minionN' where N is a
+incremental number from 0
+
+Examples:
+    Configure a base image with defaults: 8 images, one manager and 7 minions,
+    gw is 192.168.0.1, 192.168.1.2 is the manager and 192.168.1.3..192.168.1.9
+    are minions
+
+    $0 -a skybian.img
+
+    Configure 1 manager and 10 minions, network 192.168.100.0/24, gw is
+    192.168.100.254 manager is 192.168.100.50 & minions are 192.168.100.90
+    - 192.168.100.99
+
+    $0 -g 192.168.100.254 -m 192.168.100.50 -n 90-100 -i skybian.img
+
+    The same of above but with custom DNS servers (using a local forwarder)
+    please note the use of the "" to glob both servers on one argument and
+    the ', ' separating the DNS servers IPs
+
+    $0 -g 192.168.100.254 -m 192.168.100.50 -n 90-100 \\
+      -d "192.168.100.254, 1.1.1.1" -i skybian.img
+
+EOF
+    exit 1
+}
+
+
+# process options
+function arg_process() {
+    while getopts ":h:g:m:n:a:v:i:d:" opt; do
+        case $opt in
+            h)  usage ;;
+            \?) usage ;;
+            v)
+                show_version
+                exit 1 ;;
+            g)  GW=$OPTARG ;;
+            m)  MAN=$OPTARG ;;
+            n)  NOD=$OPTARG ;;
+            a)
+                IMG=$OPTARG
+                set_defaults ;;
+            i)  IMG=$OPTARG ;;
+            d)  DNS=$OPTARG ;;
+            :)
+                echo "option -$OPTARG requires an argument"
+                usage
+            ;;
+        esac
+    done
+
+    # check for missing
+    blank_bad_args $GW $MAN $NOD $IMG $DNS
+
+    # validate and generate nodes IP
+    validate_generate_nodes $BNET $NOD
+}
+
+
+# show version
+function show_version() {
+    echo "Version is: $SCRIPVERSION"
+}
+
+
+# set default values
+function set_defaults() {
+    # Set play vars to the default
+    GW=$DGW
+    MAN=$DMAN
+    NOD=$DNOD
+}
+
+
+# check for blank/bad arguments.
+function blank_bad_args() {
+    # exits with an error if an arg is missing, else pass silent
+    local raw=`echo "Gateway:$1 Manager:$2 Minions:$3 Image:$4 DNS:$5" | xargs`
+
+    for arg in $raw ; do
+        # extract
+        local Name=`echo $arg | awk -F ':' '{print $1}'`
+        local Argument=`echo $arg | awk -F ':' '{print $2}'`
+
+        # check if empty
+        if [ -z "$Argument" ] ; then
+            echo "Error: Option '$Name' needs an argument, check usage: '$0 -h'"
+            exit 1
+        fi
+    done
+
+    # IP options are valid IPs?
+    check_valid_ips "Gateway:$1 Manager:$2"
+
+    # extract base network from gateway and check it on the manager
+    BNET=`echo $1 | rev | cut -d "." -f 2- | rev`"."
+
+    # check is manager has the same base network
+    local ISTHESAME=`echo $2 | grep "$BNET"`
+    if [ -z "$ISTHESAME" ] ; then
+        # base address for manager & gateway is not the same
+        echo "Error: Passed Gateway and Manager IPs are not in the same subnet"
+        echo "Gateway: $1, Manager: $2"
+        exit 1
+    fi
+}
+
+
+# check for valid IPs in passed string name:ip
+function check_valid_ips() {
+    # argument is passed in this format "Gateway:$1 Manager:$2" etc...
+    local raw=`echo "$1" | xargs`
+
+    for arg in $raw ; do
+        # extract
+        local Name=`echo $arg | awk -F ':' '{print $1}'`
+        local Argument=`echo $arg | awk -F ':' '{print $2}'`
+        # TODO improve the regular expression for IP detection
+        local IP=`echo $Argument | grep -E "([0-9]{1,3}\.){3}[0-9]{1,3}" `
+
+        # test for a valid IP
+        if [ -z "$IP" ] ; then
+            echo "The argument you passed to '$Name' ($Argument) is not a valid IP."
+            echo "Please fix that."
+            exit 1
+        fi
+    done
+
+}
+
+
+# validate and generate node IPS
+function validate_generate_nodes() {
+    # arguments are the base network IP and the range of ips
+    local bnet=$1
+    local start=`echo $2 | awk -F '-' '{print $1}'`
+    local stop=`echo $2 | awk -F '-' '{print $2}'`
+
+    # validate start </!= stop
+    if [ $start -eq $stop -o $start -gt $stop ] ; then
+        # not equal, nor backwards
+        echo "Error: Minion start number in range must be lower than end one [$2] is wrong"
+        echo "Please fix that"
+        exit 1
+    fi
+
+    # validate stop being less than 254
+    if [ $stop -gt 254 ] ; then
+        # can't fit on a subnet
+        echo "Error: last digit of a minions IP can be 255 or greater"
+        echo "Please fix that"
+        exit 1
+    fi
+
+    # calc the amount of nodes
+    NAMOUNT=`echo "$stop - $start +1" | bc`
+
+    # iterate and build the ip list
+    local ARGS=`shuf -i $start-$stop -n $NAMOUNT | sort -h | xargs`
+    NODEIPS=''
+    for i in $ARGS ; do
+        NODEIPS="$NODEIPS$bnet$i "
+    done
+
+    # check for gw or manager in node ranges
+    local isgwt=`echo $NODEIPS | grep "$GW "`
+    local ismgt=`echo $NODEIPS | grep "$MAN "`
+    if [ -n "$isgwt" -o -n "$ismgt" ] ; then
+        # manager or gateway in node range
+        echo "Error: manager and gateway IPs can be on the minion's ranges"
+        echo "Please fix that"
+        exit 1
+    fi
+}
+
+
+# display the ooperations we will made & ask if proceed
+function display_proceed() {
+    echo "Options parsing done successfuly:"
+    echo ""
+    echo "Base skybian image is: $IMG"
+    echo "Gateway is: $GW"
+    echo "DNS is: $DNS"
+    echo "Manager is: $MAN"
+    echo "Will build $NAMOUNT minions with the following IPs:"
+    echo "$NODEIPS" | tr ' ' '\n'
+    echo ""
+    echo "All looks good, take a time to review the info, will resume the work in"
+    echo "30 seconds if no answer, this is the last chance to quit."
+    echo "Press Ctrl+C to abort or any other key to continue"
+    read -t 30 -n 1 REPLY
+}
+
+
+# update conf file
+function conf_file_update() {
+    # takes some arguments:
+    # 1 - node IP
+    # 2 - gateway
+    # 3 - DNS as comma separated values [1.0.0.1, 1.1.1.1]
+    # 4 - kind of image literal all lowercase manager|node
+    # 5 - manager IP [needed even if we are manager]
+
+    # build the conf file
+    echo "IP=${1}" > ${CONFFILE}
+    echo "GW=${2}" >> ${CONFFILE}
+    echo 'DNS="'${3}'"' >> ${CONFFILE}
+    echo "MODE=${4}" >> ${CONFFILE}
+    echo "MIP=${5}" >> ${CONFFILE}
+}
+
+
+# create images with the data
+function create_images() {
+    # iterate over the IPs and create the images
+
+    local ALL=`echo "$MAN $NODEIPS" | xargs`
+    local count=0
+
+    # check for old files
+    local OLDMAN=`ls | grep manager | grep \.img`
+    local OLDNOD=`ls | grep minion | grep \.img`
+    if [ -n "$OLDMAN" -o -n "$OLDNOD" ] ; then
+        # yes, there is old files here
+        echo "Warning: there are old generated files on the FS, will erase them"
+        echo ""
+        rm -f *manager*img
+        rm -f *minion*img
+    fi
+
+    # iterate
+    for ip in $ALL ; do
+        # local vars
+        local type=`[[ "$ip" = "$MAN" ]] && echo "manager" || echo "node"`
+        local name=`echo $IMG | rev | cut -d '.' -f 2- | rev`
+        local IMAGE=''
+
+        # build propper name
+        if [ "$type" = "manager" ] ; then
+            IMAGE=$name-$type.img
+        else
+            IMAGE=$name-minion$count.img
+            count=`echo "$count + 1" | bc`
+        fi
+
+        # advice
+        echo "Creating image: $IMAGE"
+
+        # create the config file for this image
+        conf_file_update "${ip}" "${GW}" "${DNS}" "$type" "${MAN}"
+
+        # advice
+        echo "Updated conf to write to the image, creating the image..."
+
+        # copy the manager image
+        cp -f ${IMG} ${IMAGE}
+
+        # advice
+        echo "Updating new image with custom conf"
+
+        # erase the settings zone in the image, just to be sure
+        dd if=/dev/zero conv=notrunc seek=$DATASTART bs=1 count=$DATASIZE of="$IMAGE"
+
+        # copy the config file to the image
+        dd if=$CONFFILE conv=notrunc bs=1 seek=$DATASTART of="$IMAGE"
+
+        # advice
+        echo "Done with $IMAGE"
+        echo ""
+    done
+}
+
+
+# Main action goes here
+function main() {
+    # check for arguments to show usage/version
+    if [ $# -lt 2 ] ; then
+        # version & help switchs
+        if [ "$1" = "-v" ] ; then
+            show_version
+        else
+            usage
+        fi
+
+        # terminate
+        exit 1
+    fi
+
+    # process arguments
+    arg_process ${ARGS}
+
+    # check if the base image is there
+    if [ ! -f ${IMG} -o ! -r ${IMG} ] ; then
+        # file not there of not readable
+        echo "Error: image file: ${IMG} is not reachable or readable"
+        echo "Plase fix that and try again.."
+        exit 1
+    fi
+
+    # operational display.
+    display_proceed
+
+    # Create images
+    echo "Creating images, this may take a while depending on the amount of images you need to build"
+    echo ""
+    create_images
+}
+
+
+# run it
+main $ARGS
