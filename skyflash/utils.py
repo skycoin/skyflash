@@ -325,12 +325,11 @@ def getWinGUID(drive):
     Tip: if ithas no letter windows can't handle it, so no worry
     '''
 
-    l= sysexec("wmic volume get Capacity,DeviceID,DriveLetter /format:csv")
+    l = sysexec("wmic volume get DeviceID,DriveLetter /format:csv")
     listd = csv.reader(l)
     header = next(listd)
 
     # extracted fields
-    sizeh = header.index("Capacity")
     guidh = header.index("DeviceID")
     letter = header.index("DriveLetter")
 
