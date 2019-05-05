@@ -176,19 +176,17 @@ def setPath(dir):
     dir is the app name folder "Skyflash" by default
     '''
 
+    # default path for the user
+    path = os.path.expanduser('~')
+
+    # where in the user's folder I need to put the  skybian folder:
+    # linux and macos right in the home folder, windows on the document folder
     if sys.platform in ["win32", "cygwin"]:
         # windows
-        path = os.path.expanduser('~')
         # path has the c:\Users\[username] so we need to add the Documents folder
-        # Windows has a trick for other langs beside English
+        # Windows has a trick for other langs beside English: Documents is the real
+        # folder and other lang folders just point to that
         path = os.path.join(path, "Documents")
-    elif sys.platform == "darwin":
-        # mac
-        # TODO reliable way to ident the users Documents folder
-        pass
-    else:
-        # linux
-        path = os.path.expanduser('~')
 
     # now adding the app dir
     path = os.path.join(path, dir)
