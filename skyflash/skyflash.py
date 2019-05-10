@@ -59,6 +59,7 @@ class Skyflash(QObject):
     cksumOk = False
     cardList = []
     card = ""
+    drives = []
     builtImages = []
     flashingNow = []
     flashCount = 0
@@ -1109,14 +1110,17 @@ class Skyflash(QObject):
             for d in ds:
                 dletters = ""
                 volNames = ""
+                volGUIDs = ""
                 for i in d['drives']:
                     dletters += " {}".format(i[1])
                     volNames += " {}".format(i[2])
+                    volGUIDs += " {}".format(i[3])
 
                 dletters = dletters.strip()
                 driveSize = d['size']
+                driveID = d['phydrive']
 
-                drives.append((dletters, volNames, int(driveSize)))
+                drives.append((dletters, volNames, int(driveSize), driveID, volGUIDs))
 
             return drives
         else:
@@ -1274,13 +1278,78 @@ class Skyflash(QObject):
         #  start flashing thread
         self.threadpool.start(self.flash)
 
+    def lockWinDevice(self, physicalDevice, volumeGUID):
+
+        # The following enum/macros values were extracted from the winapi
+        '''
+        FILE_READ_DATA: 1
+        FILE_WRITE_DATA: 2
+        FILE_SHARE_READ: 1
+        FILE_SHARE_WRITE: 2
+        OPEN_EXISTING: 3
+        INVALID_HANDLE_VALUE: -1
+        FSCTL_LOCK_VOLUME: 589848
+        FSCTL_DISMOUNT_VOLUME: 589856
+        FORMAT_MESSAGE_FROM_SYSTEM: 4096
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT): 1024
+        '''
+        # Open the device
+        hDevice = CreateFile(physicalDevice, 1|2, 1|2, 0, 3, 0, None)
+        if hDevice == -1:
+            print("Cannot open the device {}. Error code: {}.".format(physicalDevice, GetLastError()))
+            return
+        else:
+            print("Device {} opened.".format(physicalDevice))
+
+        # Open the volume
+        hVolume = CreateFile(volumeGUID, 1|2, 1|2, 0, 3, 0, None)
+        if hDevice == -1:
+            print("Cannot open the volume {}. Error code: {}.".format(volumeGUID, GetLastError()))
+            return
+        else:
+            print("Volume {} opened.".format(volumeGUID))
+
+        # Lock the volume
+        if not DeviceIoControl(hVolume, 589848, None, 0, None, 0, None, None):
+            print("Cannot lock the volume {}. Error code: {}.".format(volumeGUID, GetLastError()))
+            return
+        else:
+            print("Volume {} locked.".format(volumeGUID))
+
+        # Dismount the volume
+        if not DeviceIoControl(hVolume, 589856, None, 0, None, 0, None, None):
+            print("Cannot dismount the volume {}. Error code: {}.".format(volumeGUID, GetLastError()))
+            return
+        else:
+            print("Volume {} dismounted.".format(volumeGUID))
+
+
+        # Lock the device
+        if not DeviceIoControl(hDevice, 589848, None, 0, None, 0, None, None):
+            print("Cannot lock the volume {}. Error code: {}.".format(volumeGUID, GetLastError()))
+            return
+        else:
+            print("Device {} locked.".format(physicalDevice))
+
+        # Dismount the device
+        if not DeviceIoControl(hDevice, 589856, None, 0, None, 0, None, None):
+            print("Cannot dismount the volume {}. Error code: {}.".format(volumeGUID, GetLastError()))
+            return
+        else:
+            print("Device {} dismounted.".format(physicalDevice))
+
+        # Close opened handlers:
+        # CloseHandle(hVolume)
+        # CloseHandle(hDevice)
+        return
+
     def flasher(self, data_callback, progress_callback):
         '''Flash the images
         The actual image to flash is on self.flashingNow [image, name]'''
 
         if sys.platform in ["win32", "cygwin"]:
             # windows
-            pass
+            self.linuxFlasher(data_callback, progress_callback)
         elif sys.platform == "darwin":
             # mac
             pass
@@ -1304,6 +1373,19 @@ class Skyflash(QObject):
         source = open(image, 'rb')
 
         # TODO: Need windows device lock to allow raw write
+        physicalDevice = ""
+        volumeGUID     = ""
+        # the label and size are not going no be used
+        for driv, lbl, sz, phyDev, volGUID in drives:
+            if driv == self.card:
+                physicalDevice = phyDev
+                volumeGUID = volGUID[1:-1] # skip the first character (a blank space ' ') and the last (a backslash '\\')
+
+        if physicalDevice == "" or volumeGUID == "":
+            print("Cannot find the physical device path or volume GUID path. Aborting...")
+            return "Failed"
+
+        lockWinDevice(physicalDevice, volumeGUID)
         dest = open(self.card, 'wb')
 
         actualPosition = 0
