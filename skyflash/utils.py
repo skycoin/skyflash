@@ -23,6 +23,9 @@ if 'nt' in os.name:
     getLogicalDrives = ctypes.windll.kernel32.GetLogicalDrives
     getVolumeInformation = ctypes.windll.kernel32.GetVolumeInformationW
     createUnicodeBuffer = ctypes.create_unicode_buffer
+    CreateFile = ctypes.windll.kernel32.CreateFileW
+    DeviceIoControl = ctypes.windll.kernel32.DeviceIoControl
+
 
 def shortenPath(fullpath, ccount):
     '''Shorten a passed FS path to a char count size'''
