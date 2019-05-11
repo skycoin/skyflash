@@ -1322,7 +1322,7 @@ class Skyflash(QObject):
             return "Failed"
 
         lockWinDevice(physicalDevice, volumeGUID)
-        dest = open(self.card, 'wb')
+        dest = open(physicalDevice, 'wb')
 
         actualPosition = 0
         # WARNING! imageConfigAddress must be divisible by 4 for this to work ok

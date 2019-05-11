@@ -25,6 +25,7 @@ if 'nt' in os.name:
     createUnicodeBuffer = ctypes.create_unicode_buffer
     CreateFile = ctypes.windll.kernel32.CreateFileW
     DeviceIoControl = ctypes.windll.kernel32.DeviceIoControl
+    GetLastError = ctypes.windll.kernel32.GetLastError
 
 
 def shortenPath(fullpath, ccount):
@@ -407,7 +408,7 @@ def getPHYDrives():
 
     return data
 
-def lockWinDevice(self, physicalDevice, volumeGUID):
+def lockWinDevice(physicalDevice, volumeGUID):
 
     # The following enum/macros values were extracted from the winapi
     '''
