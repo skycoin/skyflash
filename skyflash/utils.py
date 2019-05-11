@@ -232,8 +232,7 @@ def sysexec(cmd):
     return l
 
 def getLetter(logicaldrive):
-    '''
-    Windows Only:
+    '''Windows Only:
     It get the device ID in this format: "Disk #0, Partition #0"
     and answer back with an drive letter matching or a empty str
     if not mounted/used
@@ -260,7 +259,7 @@ def getLetter(logicaldrive):
         return ''
 
 def getLogicalDrive(phydrive):
-    '''
+    '''Windows only
     Get the physical drive (\\\\.\\PHYSICALDRIVE0) name and
     return the logical volumes in a list like this
         Disk #0, Partition #0
@@ -295,11 +294,10 @@ def getLogicalDrive(phydrive):
     return data
 
 def getLabel(d):
-    '''
-    Windows Only:
-
+    '''Windows Only:
     From a drive letter, get the label if proceed
     '''
+
     name_buffer = createUnicodeBuffer(1024)
     filesystem_buffer = createUnicodeBuffer(1024)
     volume_name = ""
@@ -405,6 +403,58 @@ def getPHYDrives():
     # 'size': '8052549120'}]
 
     return data
+
+def lockWinDevice(self, physicalDevice, volumeGUID):
+
+    # The following enum/macros values were extracted from the winapi
+    '''
+    FILE_READ_DATA: 1
+    FILE_WRITE_DATA: 2
+    FILE_SHARE_READ: 1
+    FILE_SHARE_WRITE: 2
+    OPEN_EXISTING: 3
+    INVALID_HANDLE_VALUE: -1
+    FSCTL_LOCK_VOLUME: 589848
+    FSCTL_DISMOUNT_VOLUME: 589856
+    FORMAT_MESSAGE_FROM_SYSTEM: 4096
+    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT): 1024
+    '''
+    # Open the device
+    hDevice = CreateFile(physicalDevice, 1|2, 1|2, 0, 3, 0, None)
+    if hDevice == -1:
+        print("Cannot open the device {}. Error code: {}.".format(physicalDevice, GetLastError()))
+        return
+    else:
+        print("Device {} opened.".format(physicalDevice))
+
+    # Open the volume
+    hVolume = CreateFile(volumeGUID, 1|2, 1|2, 0, 3, 0, None)
+    if hDevice == -1:
+        print("Cannot open the volume {}. Error code: {}.".format(volumeGUID,
+        ID, GetLastError()))
+        return
+    else:
+        print("Volume {} dismounted.".format(volumeGUID))
+
+
+    # Lock the device
+    if not DeviceIoControl(hDevice, 589848, None, 0, None, 0, None, None):
+        print("Cannot lock the volume {}. Error code: {}.".format(volumeGUID, GetLastError()))
+        return
+    else:
+        print("Device {} locked.".format(physicalDevice))
+
+    # Dismount the device
+    if not DeviceIoControl(hDevice, 589856, None, 0, None, 0, None, None):
+        print("Cannot dismount the volume {}. Error code: {}.".format(volumeGUID, GetLastError()))
+        return
+    else:
+        print("Device {} dismounted.".format(physicalDevice))
+
+    # Close opened handlers:
+    # CloseHandle(hVolume)
+    # CloseHandle(hDevice)
+    return
 
 # fileio overide class to get progress on tarfile extraction
 # TODO How to overide a class from a module
