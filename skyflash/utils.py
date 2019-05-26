@@ -408,58 +408,6 @@ def getPHYDrives():
 
     return data
 
-def lockWinDevice(physicalDevice, volumeGUID):
-
-    # The following enum/macros values were extracted from the winapi
-    '''
-    FILE_READ_DATA: 1
-    FILE_WRITE_DATA: 2
-    FILE_SHARE_READ: 1
-    FILE_SHARE_WRITE: 2
-    OPEN_EXISTING: 3
-    INVALID_HANDLE_VALUE: -1
-    FSCTL_LOCK_VOLUME: 589848
-    FSCTL_DISMOUNT_VOLUME: 589856
-    FORMAT_MESSAGE_FROM_SYSTEM: 4096
-    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT): 1024
-    '''
-    # Open the device
-    hDevice = CreateFile(physicalDevice, 1|2, 1|2, 0, 3, 0, None)
-    if hDevice == -1:
-        print("Cannot open the device {}. Error code: {}.".format(physicalDevice, GetLastError()))
-        return
-    else:
-        print("Device {} opened.".format(physicalDevice))
-
-    # Open the volume
-    hVolume = CreateFile(volumeGUID, 1|2, 1|2, 0, 3, 0, None)
-    if hDevice == -1:
-        print("Cannot open the volume {}. Error code: {}.".format(volumeGUID,
-        ID, GetLastError()))
-        return
-    else:
-        print("Volume {} dismounted.".format(volumeGUID))
-
-
-    # Lock the device
-    if not DeviceIoControl(hDevice, 589848, None, 0, None, 0, None, None):
-        print("Cannot lock the volume {}. Error code: {}.".format(volumeGUID, GetLastError()))
-        return
-    else:
-        print("Device {} locked.".format(physicalDevice))
-
-    # Dismount the device
-    if not DeviceIoControl(hDevice, 589856, None, 0, None, 0, None, None):
-        print("Cannot dismount the volume {}. Error code: {}.".format(volumeGUID, GetLastError()))
-        return
-    else:
-        print("Device {} dismounted.".format(physicalDevice))
-
-    # Close opened handlers:
-    # CloseHandle(hVolume)
-    # CloseHandle(hDevice)
-    return
-
 # fileio overide class to get progress on tarfile extraction
 # TODO How to overide a class from a module
 class ProgressFileObject(io.FileIO):
@@ -485,7 +433,6 @@ class ProgressFileObject(io.FileIO):
 
         return io.FileIO.read(self, size)
 
-
 # signals class, to be used on threads; for all major tasks
 class WorkerSignals(QObject):
     '''This class defines the signals to be emmited by the different threaded
@@ -499,7 +446,6 @@ class WorkerSignals(QObject):
 
     def __init__(self, parent=None):
         super(WorkerSignals, self).__init__(parent=parent)
-
 
 # Generic worker to use in threads
 class Worker(QRunnable):
