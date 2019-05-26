@@ -16,6 +16,7 @@ import subprocess
 import enum
 import string
 import json
+import tempfile
 from urllib.request import Request, urlopen
 
 # GUI imports
@@ -1308,49 +1309,69 @@ class Skyflash(QObject):
         # there are images left to burn, pick the first one
         image = self.builtImages[0]
         name = image.split(os.sep)[-1].split(".")[0]
-        size = os.path.getsize(image)
-        source = open(image, 'rb')
+        drive = self.card
+        logfile = os.path.join(tempfile.gettempdir(), "skfpl.log")
+        flasher = "flash.exe"
 
-        # TODO: Need windows device lock to allow raw write
-        for driv, lbl, sz, phyDev, volGUID in self.drives:
-            if driv == self.card:
-                physicalDevice = phyDev
-                volumeGUID = volGUID[1:-1] # skip the first character (a blank space ' ') and the last (a backslash '\\')
+        # touch (& truncate) the logfile
+        f = open(logfile, 'wt')
+        f.write("0.0%\n")
+        f.close()
 
-        if physicalDevice == "" or volumeGUID == "":
-            print("Cannot find the physical device path or volume GUID path. Aborting...")
-            return "Failed"
+        # user advice.
+        data_callback.emit("Flashing now {} image".format(name))
 
-        lockWinDevice(physicalDevice, volumeGUID)
-        dest = open(physicalDevice, 'wb')
+        # build the command to flash it
+        cmd = "{} \"{}\" \"{}\" \"{}\"".format(flasher, image, drive, logfile)
 
-        actualPosition = 0
-        # WARNING! imageConfigAddress must be divisible by 4 for this to work ok
-        portionSize = int(imageConfigAddress / 4)
+        # logging
+        logging.debug("Full cmd line is:\n{}".format(cmd))
 
-        # user feedback
-        data_callback.emit("Flashing {} image".format(name))
-        logging.debug("Flashing {} image".format(image))
+        try:
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True, text=True)
 
-        # build node loop
-        source.seek(actualPosition)
-        while actualPosition < size:
-            data = source.read(portionSize)
-            dest.write(data)
+            #  open the log file
+            lf = open(logfile, 'rt')
 
-            # progress and cycle update
-            actualPosition += portionSize
-            percent = actualPosition / fileSize
+            while p.poll() is None:
+                #  capturing progress via a file
+                l = lf.readline().strip("\n")
+                if len(l) != 0:
+                    # check for errors
+                    if l.startswith("ERROR"):
+                        print("Error detected:\n{}".format(l))
+                        return False
 
-            overAll = percent/self.flashCount + self.flashCountDone/self.flashCount
-            data = "Flashing {}, {}%|{}".format(name, percent, overAll * 100)
-            progress_callback.emit(percent * 100, data)
+                    if "%" in l:
+                        # we are on:
+                        pr = float(l.strip()[:-1])
+                        if pr > 0:
+                            overAll = pr/100/self.flashCount + self.flashCountDone/self.flashCount
+                            msg = "Flashing {}, {}%|{}".format(name, pr, overAll * 100)
+                            progress_callback.emit(pr, msg)
 
-        self.builtImages.pop(self.builtImages.index(image))
-        self.flashCountDone = self.flashCount - len(self.builtImages)
-        logging.debug("Removing {} image from the list of images to burn".format(image))
+            #  close the log file
+            if lf:
+                lf.close()
 
-        # TODO windows unlock device access
+            # logging
+            logging.debug("Return Code was {}".format(p.returncode))
+
+            # check for return code
+            if p.returncode == 0:
+                # All ok, pop the image from the list
+                self.builtImages.pop(self.builtImages.index(image))
+                self.flashCountDone = self.flashCount - len(self.builtImages)
+                logging.debug("Removing {} image from the list of images to burn".format(image))
+                return "Done"
+            else:
+                # different code
+                # TODO capture an error
+                return "Oops!"
+
+        except OSError as e:
+            logging.debug("Failed to execute program '%s': %s" % (cmd, str(e)))
+            raise
 
         return "Done"
 
@@ -1361,7 +1382,7 @@ class Skyflash(QObject):
         pkexec = getLinuxPath("pkexec")
         dd = getLinuxPath("dd")
         pv = getLinuxPath("pv")
-        logfile = "/tmp/skf"
+        logfile = os.path.join(tempfile.gettempdir(), "skfpl.log")
 
         # touch (& truncate) the logfile
         f = open(logfile, 'w')
