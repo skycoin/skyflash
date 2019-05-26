@@ -5,6 +5,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("file", help="The full path to the file you want to flash")
 parser.add_argument("drive", help="The drive name you will to write to, like F: (case is not relevant)")
+parser.add_argument("logfile", help="The file to log the activity")
 args = parser.parse_args()
 
 # advice
@@ -271,6 +272,8 @@ def lockWinDevice(physicalDevice, volumeGUID):
 
 # main action goes here
 image = args.file
+fsize = 0
+logfile = args.logfile
 
 # test if the file exist
 try:
@@ -284,6 +287,9 @@ ddata = getPHYDrives(args.drive)
 if len(ddata) == 0:
     print("ERROR: Can't find the specified drive '{}', please check that.".format(args.drive))
     sys.exit()
+
+# open the logfile
+lf = open(logfile, mode='wt', buffering=1)
 
 physicalDevice = ""
 volumeGUID = ""
@@ -350,7 +356,11 @@ while actualPosition < fsize:
     
     # progress and cycle update
     actualPosition += portionSize
-    print("{:.2%}".format(actualPosition / fsize))
+    per = actualPosition / fsize
+    if per > 100:
+        per = 100.0
+
+    lf.write("{:.1%}\n".format(per))
 
 # close input and output file handles
 CloseHandle(inputFileHandle)
