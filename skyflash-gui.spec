@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
 
+import os
+
 block_cipher = None
+
+# datas for windows/linux
+extrafiles = [
+                ('skyflash/data/skyflash.qml', '.'),
+                ('skyflash/data/skyflash.png', '.'),
+            ]
+if 'nt' in os.name:
+    extrafiles.append(('win-build/dist/windows/flash.exe', '.'))
 
 a = Analysis(['skyflash-gui.py'],
              binaries=[],
-             datas=[
-                 ('skyflash/data/skyflash.qml', '.'),
-                 ('skyflash/data/skyflash.png', '.'),
-            ],
+             datas=extrafiles,
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
@@ -19,8 +26,6 @@ a = Analysis(['skyflash-gui.py'],
 
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
-
-import os
 
 # Linux build
 if 'posix' in os.name:
