@@ -16,6 +16,7 @@ import subprocess
 import enum
 import string
 import json
+import tempfile
 from urllib.request import Request, urlopen
 
 # GUI imports
@@ -59,6 +60,7 @@ class Skyflash(QObject):
     cksumOk = False
     cardList = []
     card = ""
+    drives = []
     builtImages = []
     flashingNow = []
     flashCount = 0
@@ -1109,14 +1111,17 @@ class Skyflash(QObject):
             for d in ds:
                 dletters = ""
                 volNames = ""
+                volGUIDs = ""
                 for i in d['drives']:
                     dletters += " {}".format(i[1])
                     volNames += " {}".format(i[2])
+                    volGUIDs += " {}".format(i[3])
 
                 dletters = dletters.strip()
                 driveSize = d['size']
+                driveID = d['phydrive']
 
-                drives.append((dletters, volNames, int(driveSize)))
+                drives.append((dletters, volNames, int(driveSize), driveID, volGUIDs))
 
             return drives
         else:
@@ -1204,15 +1209,15 @@ class Skyflash(QObject):
         '''Detects and identify the uSD cards in the system OS agnostic'''
 
         # detected drives
-        drives = []
+        self.drives = []
 
         # OS specific listing
         if sys.platform in ["win32", "cygwin"]:
-            drives = self.drivesWin()
+            self.drives = self.drivesWin()
         elif sys.platform.startswith('linux'):
-            drives = self.drivesLinux()
+            self.drives = self.drivesLinux()
         elif sys.platform is "darwin":
-            # drives = self.drivesMac()
+            # self.drives = self.drivesMac()
             logging.debug("Flashing on MacOs is not working yet")
         else:
             # freebsd or others, not supported yet
@@ -1220,15 +1225,20 @@ class Skyflash(QObject):
             pass
 
         # build a user friendly string for the cards if there is a card
-        if drives:
+        if self.drives:
             driveList = []
-            for drive, label, size in drives:
+            for d in self.drives:
+                # conditional unpacking, windows will have 5 and others just 3 elements
+                if len(d) > 3:
+                    drive, label, size, phydrive, dguid = d
+                else:
+                    drive, label, size = d
+
+                # convert size from bytes to GB
                 if size > 0:
                     size = size / 2**30
-                if label == "":
-                    driveList.append("{} {:0.1f}GB".format(drive, size))
-                else:
-                    driveList.append("{} '{}' {:0.1f}GB".format(drive, label, size))
+
+                driveList.append("{} '{}' {:0.1f}GB".format(drive, label, size))
         else:
             driveList = ["Please insert a card"]
 
@@ -1253,7 +1263,6 @@ class Skyflash(QObject):
     def pickCard(self, text):
         '''Set the actual selected card in the combo box'''
         self.card = text.split(" ")[0]
-        print("Selected card is: {}".format(self.card))
 
     @pyqtSlot()
     def imageFlash(self):
@@ -1280,7 +1289,7 @@ class Skyflash(QObject):
 
         if sys.platform in ["win32", "cygwin"]:
             # windows
-            pass
+            self.windowsFlasher(data_callback, progress_callback)
         elif sys.platform == "darwin":
             # mac
             pass
@@ -1300,39 +1309,69 @@ class Skyflash(QObject):
         # there are images left to burn, pick the first one
         image = self.builtImages[0]
         name = image.split(os.sep)[-1].split(".")[0]
-        size = os.path.getsize(image)
-        source = open(image, 'rb')
+        drive = self.card
+        logfile = os.path.join(tempfile.gettempdir(), "skfpl.log")
+        flasher = "flash.exe"
 
-        # TODO: Need windows device lock to allow raw write
-        dest = open(self.card, 'wb')
+        # touch (& truncate) the logfile
+        f = open(logfile, 'wt')
+        f.write("0.0%\n")
+        f.close()
 
-        actualPosition = 0
-        # WARNING! imageConfigAddress must be divisible by 4 for this to work ok
-        portionSize = int(imageConfigAddress / 4)
+        # user advice.
+        data_callback.emit("Flashing now {} image".format(name))
 
-        # user feedback
-        data_callback.emit("Flashing {} image".format(name))
-        logging.debug("Flashing {} image".format(image))
+        # build the command to flash it
+        cmd = "{} \"{}\" \"{}\" \"{}\"".format(flasher, image, drive, logfile)
 
-        # build node loop
-        source.seek(actualPosition)
-        while actualPosition < size:
-            data = source.read(portionSize)
-            dest.write(data)
+        # logging
+        logging.debug("Full cmd line is:\n{}".format(cmd))
 
-            # progress and cycle update
-            actualPosition += portionSize
-            percent = actualPosition / fileSize
+        try:
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True, text=True)
 
-            overAll = percent/self.flashCount + self.flashCountDone/self.flashCount
-            data = "Flashing {}, {}%|{}".format(name, percent, overAll * 100)
-            progress_callback.emit(percent * 100, data)
+            #  open the log file
+            lf = open(logfile, 'rt')
 
-        self.builtImages.pop(self.builtImages.index(image))
-        self.flashCountDone = self.flashCount - len(self.builtImages)
-        logging.debug("Removing {} image from the list of images to burn".format(image))
+            while p.poll() is None:
+                #  capturing progress via a file
+                l = lf.readline().strip("\n")
+                if len(l) != 0:
+                    # check for errors
+                    if l.startswith("ERROR"):
+                        print("Error detected:\n{}".format(l))
+                        return False
 
-        # TODO windows unlock device access
+                    if "%" in l:
+                        # we are on:
+                        pr = float(l.strip()[:-1])
+                        if pr > 0:
+                            overAll = pr/100/self.flashCount + self.flashCountDone/self.flashCount
+                            msg = "Flashing {}, {}%|{}".format(name, pr, overAll * 100)
+                            progress_callback.emit(pr, msg)
+
+            #  close the log file
+            if lf:
+                lf.close()
+
+            # logging
+            logging.debug("Return Code was {}".format(p.returncode))
+
+            # check for return code
+            if p.returncode == 0:
+                # All ok, pop the image from the list
+                self.builtImages.pop(self.builtImages.index(image))
+                self.flashCountDone = self.flashCount - len(self.builtImages)
+                logging.debug("Removing {} image from the list of images to burn".format(image))
+                return "Done"
+            else:
+                # different code
+                # TODO capture an error
+                return "Oops!"
+
+        except OSError as e:
+            logging.debug("Failed to execute program '%s': %s" % (cmd, str(e)))
+            raise
 
         return "Done"
 
@@ -1343,7 +1382,7 @@ class Skyflash(QObject):
         pkexec = getLinuxPath("pkexec")
         dd = getLinuxPath("dd")
         pv = getLinuxPath("pv")
-        logfile = "/tmp/skf"
+        logfile = os.path.join(tempfile.gettempdir(), "skfpl.log")
 
         # touch (& truncate) the logfile
         f = open(logfile, 'w')
