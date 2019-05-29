@@ -2,12 +2,12 @@
 
 With this tool you will be able configure the default [skybian](https://github.com/simelo/skybian) image to your custom environment and create the needed images for it.
 
-The resulting images will only run on the official skyminer hardware, aka: Orange Pi Prime SBC.
+The resulting images will only run on the official skyminer hardware, aka: Orange Pi Prime SBC, for now.
 
 The tool has two variants:
 
-* A general use GUI tool (skyflash) that works on Linux/Windows (Mac soon)
-* A Linux only CLI tool (skyflash-cli) **_for developers and advanced users only_**.
+* A general use GUI tool (skyflash) that works on Linux & Windows _(Mac support is a work in progress)_
+* A Linux only CLI tool (skyflash-cli) **_for developers and advanced users only in Linux, see below_**.
 
 ## Skyflash GUI tool
 
@@ -19,66 +19,23 @@ To install this tool, go to the [Releases](https://github.com/skycoin/skyflash/r
 
 | Operating System | You must download the one... |
 |:----------------:|:--------------------------------:|
-| Windows | ...that ends with **.exe** |
-| Linux | ...that ends with **.deb** |
-| Linux static | ...that ends with **linux64-static.gz** |
-| MacOS | ...that ends with **.dmg** |
-| Python3 pkg | ...that ends with .tar.gz  _(advanced users)_| 
+| Windows app| **Skyflash.exe** |
+| Linux | **python3-skyflash_[version]_all.deb** |
+| Linux static app| **skyflash-gui_linux64-static.gz** |
+| MacOS | TBD |
+| Python3 pkg | **skyflash-[version].tar.gz**  _(advanced users)_| 
 
-Installing it and running is done by the default OS way.
+Installing it and running is done by the default OS way, google is your friend on this.
 
 ### Usage
 
 To see more detailed instructions on how to use the Skyflash GUI utility please visit the [User's Manual](USER_MANUAL.md)
 
-A note: on Windows the app will only build the images and will suggest to burn the image with a third party flashing tool like [Balena Etcher](https://www.balena.io/etcher/)
+## skyflash-cli tool (developer)
 
-## skyflash-cli tool
+The CLI interface for linux developers has [help & usage guide with examples](skyflash-cli_MANUAL.md) if you are interested on it
 
-The tool `skyflash-cli` is intended to be run on linux and will generate the needed images for a base image.
-
-Once you has created your images you will need to use a tool to burn these images to the uSD cards, we recommend [Balena Etcher](https://www.balena.io/etcher/) a cross OS tool.
-
-### Step 1: Download the default skybian image
-
-Go to [skybian](https://github.com/skycoin/skybian) releases and download the latest image, decompress it and put the base image on the folder where `skyflash-cli` resides; or copy the `skyflash-cli` tool to the folder where you have the skybian image.
-
-### Step 2: Run the tool
-
-`skyflash-cli` has a few options that you can see if you run it without arguments (`skyflash-cli`) or with '-h' switch (`skyflash-cli -h`)
-
-For a default configuration of skybian as a skyminer you just need to run it like this:
-
-```sh
-./skyflash-cli -a Skybian-0.1.0.img
-```
-
-This will generate 8 images, one for the manager and 7 minions. Network configuration is the skyminers default:
-
-* Network: 192.168.0.0/24
-* Netmask: 255.255.255.0 (aka: /24)
-* Gateway: 192.168.0.1
-* DNS servers: 1.0.0.1, 1.1.1.1
-* Manager IP: 192.168.0.2
-* Minions IPs: 192.168.0.[3-9] (7 minions)
-
-If you need a different setup just check the `skyflash-cli -h` to know more, for example for a manager and 22 minions with this details:
-
-* Network: 172.16.22.0/24
-* Gateway: 172.16.22.1
-* DNS servers: 172.16.22.1, 1.1.1.1
-* Manager: 172.16.22.10
-* Minions: 172.16.22.100 to 172.16.22.121
-
-**Tip:** If you don't care about the minions IP being contiguous you can declare a range that is greater than the minions count and the script will allocate the IPs in a scattered way inside the range you stated.
-
-```sh
-./skyflash-cli -g 172.16.22.1 -d "172.16.22.1, 1.1.1.1" -m 172.16.22.10 -n 100-121 -i Skybian-0.1.0.img
-```
-
-Please note that in the case of the DNS (option '-d') if you need to pass more than one IP you need to surround it with double quotes and separate it with a comma and a space, just like the example above.
-
-### Releases
+## Releases
 
 To do a release you must follow these steps:
 
