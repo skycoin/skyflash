@@ -1328,7 +1328,7 @@ class Skyflash(QObject):
         logging.debug("Full cmd line is:\n{}".format(cmd))
 
         try:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True, text=True)
+            p = subprocess.Popen(cmd)
 
             #  open the log file
             lf = open(logfile, 'rt')
