@@ -23,6 +23,10 @@ if 'nt' in os.name:
     getLogicalDrives = ctypes.windll.kernel32.GetLogicalDrives
     getVolumeInformation = ctypes.windll.kernel32.GetVolumeInformationW
     createUnicodeBuffer = ctypes.create_unicode_buffer
+    CreateFile = ctypes.windll.kernel32.CreateFileW
+    DeviceIoControl = ctypes.windll.kernel32.DeviceIoControl
+    GetLastError = ctypes.windll.kernel32.GetLastError
+
 
 def shortenPath(fullpath, ccount):
     '''Shorten a passed FS path to a char count size'''
@@ -230,8 +234,7 @@ def sysexec(cmd):
     return l
 
 def getLetter(logicaldrive):
-    '''
-    Windows Only:
+    '''Windows Only:
     It get the device ID in this format: "Disk #0, Partition #0"
     and answer back with an drive letter matching or a empty str
     if not mounted/used
@@ -258,7 +261,7 @@ def getLetter(logicaldrive):
         return ''
 
 def getLogicalDrive(phydrive):
-    '''
+    '''Windows only
     Get the physical drive (\\\\.\\PHYSICALDRIVE0) name and
     return the logical volumes in a list like this
         Disk #0, Partition #0
@@ -293,11 +296,10 @@ def getLogicalDrive(phydrive):
     return data
 
 def getLabel(d):
-    '''
-    Windows Only:
-
+    '''Windows Only:
     From a drive letter, get the label if proceed
     '''
+
     name_buffer = createUnicodeBuffer(1024)
     filesystem_buffer = createUnicodeBuffer(1024)
     volume_name = ""
@@ -428,7 +430,6 @@ class ProgressFileObject(io.FileIO):
 
         return io.FileIO.read(self, size)
 
-
 # signals class, to be used on threads; for all major tasks
 class WorkerSignals(QObject):
     '''This class defines the signals to be emmited by the different threaded
@@ -442,7 +443,6 @@ class WorkerSignals(QObject):
 
     def __init__(self, parent=None):
         super(WorkerSignals, self).__init__(parent=parent)
-
 
 # Generic worker to use in threads
 class Worker(QRunnable):
