@@ -28,3 +28,9 @@ docker build -t "pyinstaller-win64py3:pyqt_winapi" ./
 ```
 
 The name is tied to the specific targets on the Makefile, so ***Do not change it*, to know more about it run `make help` in the root project folder
+
+## Flash utility tool
+
+The flashing on windows was a real challenge, as created and tested python3 code works ok, but not in threads, and we used a thread to get the UI responsive during the flash process, then some other options was tested and validated, some was a fail, some was ok but unstable... until we decide to create our own flashing tool: flash.py
+
+The flash.py get compiled to a flash.exe CLI utility file in the deployment process and included in the portable app, it's main goal is to make the flash as a independent process thread and report back progress to the UI.
