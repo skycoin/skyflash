@@ -18,15 +18,20 @@ This is a note for developers about the recommended tags to keep track of the ch
 Dates must be YEAR-MONTH-DAY
 -->
 
-## [Unreleased] - 2019-02-28
+## [Unreleased] - 2019-05-29
 
 ### Added
 
 - Setuptools compatibility (structure and code changed)
 - Travis yml file for CI/CD
+- Developers now can create a local Docker image to generate the Windows .exe release file
+- Full flashing support in Windows & Linux
+- New flashing paradigm in the UI, to help the user and
 
 ### Changed
 
-- Disabled the flash part in Windows & Mac, as this is not done yet
+- Disabled the flash part in Mac, as this is not done yet
 - Structure changed to support python3 setutools
-- Versioning for Skyflash will match the Skywire ones, starting with 0.0.3
+- Versioning for Skyflash will match the Skywire ones, starting with 0.0.4
+- Separated user manual for the CLI utility
+- README and MANUALS updated to reflect recent changes

@@ -63,8 +63,7 @@ class Skyflash(QObject):
     drives = []
     builtImages = []
     flashingNow = []
-    flashCount = 0
-    flashCountDone = 0
+    flashingOnProgress = False
 
     #### registering Signals to emit to QML GUI
 
@@ -106,14 +105,12 @@ class Skyflash(QObject):
 
     ## Signals related to the flash process
 
-    # warnd the UI that the list of cards has been changed
+    # warn the UI that the list of cards has been changed
     cardsChanged = pyqtSignal()
-    # flash data, show a hint to the users
-    fData = pyqtSignal(str, arguments=["data"])
-    # flash single process show single file flash progress
+    # warn the UI that the list of images has been changed
+    builtImagesChanged = pyqtSignal()
+    # flash process show
     fsProg = pyqtSignal(float, arguments=["percent"])
-    # flash overall progress, show overall progress for the whole flash
-    fsProgOverall = pyqtSignal(float, arguments=["percent"])
 
     # download flags
     downloadActive = False
@@ -136,6 +133,9 @@ class Skyflash(QObject):
 
     # thread pool
     threadpool = QThreadPool()
+
+    # timer or card detection
+    timer = QTimer()
 
     # set the timeout for threads on done
     threadpool.setExpiryTimeout(500)
@@ -352,25 +352,15 @@ class Skyflash(QObject):
 
     # flash ones
 
-    def flashData(self, data):
-        '''Pass a test string to the label on the flash box'''
-
-        self.fData.emit(data)
-
     def flashProg(self, percent, data):
         '''Update two progressbar and a status bar in the UI
 
-        The data came as a percent of the single image, and the
-        data part carries the comment for the status bar and the
-        overall progress that we must cut out to pass to the
-        corresponding progress bar
+        The data is to update the status bar
         '''
 
         # split data
-        d = data.split("|")
         self.fsProg.emit(percent)
-        self.fsProgOverall.emit(float(d[1]))
-        self.setStatus.emit(d[0])
+        self.setStatus.emit(data)
 
     def flashResult(self, data):
         ''''''
@@ -392,17 +382,30 @@ class Skyflash(QObject):
         logging.debug("An error ocurred while flashing the images:\n{}".format(eval))
         self.uiError.emit("Flash failed!", "The flash process failed, please check the logs to see more details", str(eval))
 
+        # reset the fail safe trigger
+        self.flashingOnProgress = false
+
     def flashDone(self, data):
         '''Catch the end of the flash process'''
 
         # restart the timer
         self.timerStart()
 
-        if len(self.builtImages) > 0:
-            self.uiOk.emit("Image flashing succeeded!", "Congratulations, you have flashed it successfully!\n\nTo flash the next image just follow these steps:\n1. Unmount & remove the actual card from your PC\n2. Insert the next node card into the slot\n3. Select the proper device in the combo box\n4. Click the Flash button.")
+        # user feedback
+        msg = """Congratulations, you have flashed it successfully!
+To flash the next image just follow these steps:
+  1. Remove the actual card from your PC
+  2. Insert the next node card into the slot
+  3. Pick the proper device in the combo box
+  4. Pick the next desired image from the combo box 
+  5. Click the Flash button and wait until it finish"""  
+        self.uiOk.emit("Image flashing succeeded!", msg)
 
         self.setStatus.emit("Flash process was a success!")
         self.fData.emit("Flash process was a success!")
+
+        # reset the fail safe trigger
+        self.flashingOnProgress = false
 
     @pyqtSlot()
     def downloadSkybian(self):
@@ -593,11 +596,9 @@ class Skyflash(QObject):
         self.downloadFileDone("OK")
 
     def downloadProcess(self):
-        '''Process a downloaded/locally picked up file, it can be a .img or a
-        .tar.[gz|xz] one.
+        '''Process a downloaded/locally picked up file.
 
-        If a compressed must decompress and check sums to validate and/or
-        if a image must check for a fingerprint to validate
+        If a compressed must decompress and check sums to validate
 
         If error produce feedback, if ok, continue.
         '''
@@ -863,13 +864,12 @@ class Skyflash(QObject):
         '''Start the timer to check for SD cards'''
 
         try:
-            self.timer = QTimer(self)
             self.timer.timeout.connect(self.detectCards)
         except:
             pass
 
         # timer stopped, not started until step 4 is visible
-        self.timer.start(200)
+        self.timer.start(1000)
 
     def timerStop(self):
         '''Stop the timer to check for SD cards'''
@@ -1013,6 +1013,7 @@ class Skyflash(QObject):
         overallProgress = 0
         singleProgress = 0
         fileSize = os.path.getsize(self.skybianFile)
+        images = []
         file = open(self.skybianFile, "rb")
 
         # main iteration cycle
@@ -1041,7 +1042,7 @@ class Skyflash(QObject):
             if nip != self.netManager:
                 nodeNick = "minion-" + str(actual)
 
-            nodeName = "Skybian_your_" + nodeNick + ".img"
+            nodeName = "Skybian-" + nodeNick + ".img"
 
             nnfp = os.path.join(self.localPath, nodeName)
             newNode = open(nnfp, 'wb')
@@ -1087,8 +1088,10 @@ class Skyflash(QObject):
             newNode.close()
 
             # add the img path to the list of built images
-            self.builtImages.append(nnfp)
-            self.flashCount = len(self.builtImages)
+            images.append(nodeName)
+        
+        # update the image list 
+        self.images2flash = images
 
         # close the file
         file.close()
@@ -1264,9 +1267,41 @@ class Skyflash(QObject):
         '''Set the actual selected card in the combo box'''
         self.card = text.split(" ")[0]
 
+    @pyqtProperty(list, notify=builtImagesChanged)
+    def images2flash(self):
+        '''Return the images list for the QML UI interface integration'''
+        return self.builtImages
+
+    @images2flash.setter
+    def images2flash(self, val):
+        '''Setter of the images property for the combo box of the cards'''
+
+        if self.builtImages == val:
+            return
+
+        self.builtImages = val[:]
+        self.builtImagesChanged.emit()
+
+    @pyqtSlot(str)
+    def pickimages2flash(self, text):
+        '''Set the actual selected image in the combo box'''
+
+        self.flashingNow = os.path.join(self.localPath, text)
+        print("You selected the image: {} to be flashed next".format(text))
+
+    def dummy(self):
+        '''Dummy function, return, some workers need this to work'''
+        return
+
     @pyqtSlot()
     def imageFlash(self):
         '''Flash the images, one at a time, each one on a turn'''
+
+        # failsafe if we are already on a flashing process
+        if self.flashingOnProgress:
+            logging.debug("User pressed the Flashing button during a flash, aborting")
+            self.uiWarning("Ops!", "Please wait until the actual flashing process ends.")
+            return
 
         # stop the timer, it must not mess with the device on the copy process
         self.timerStop()
@@ -1274,7 +1309,7 @@ class Skyflash(QObject):
         # Preparing the flasher thread
         # thead start
         self.flash = Worker(self.flasher)
-        self.flash.signals.data.connect(self.flashData)
+        self.flash.signals.data.connect(self.dummy)
         self.flash.signals.progress.connect(self.flashProg)
         self.flash.signals.result.connect(self.flashResult)
         self.flash.signals.error.connect(self.flashError)
@@ -1282,6 +1317,7 @@ class Skyflash(QObject):
 
         #  start flashing thread
         self.threadpool.start(self.flash)
+        self.flashingOnProgress = True
 
     def flasher(self, data_callback, progress_callback):
         '''Flash the images
@@ -1300,14 +1336,8 @@ class Skyflash(QObject):
     def windowsFlasher(self, data_callback, progress_callback):
         '''Windows flasher'''
 
-        # there is a image left to burn?
-        if len(self.builtImages) == 0:
-            # nope, all done.
-            self.uiWarning.emit("Flasing Finished!", "Sorry, all built images was flashed already")
-            return "Done"
-
         # there are images left to burn, pick the first one
-        image = self.builtImages[0]
+        image = self.flashingNow
         name = image.split(os.sep)[-1].split(".")[0]
         drive = self.card
         logfile = os.path.join(tempfile.gettempdir(), "skfpl.log")
@@ -1328,7 +1358,7 @@ class Skyflash(QObject):
         logging.debug("Full cmd line is:\n{}".format(cmd))
 
         try:
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, universal_newlines=True, shell=True, text=True)
+            p = subprocess.Popen(cmd)
 
             #  open the log file
             lf = open(logfile, 'rt')
@@ -1346,9 +1376,7 @@ class Skyflash(QObject):
                         # we are on:
                         pr = float(l.strip()[:-1])
                         if pr > 0:
-                            overAll = pr/100/self.flashCount + self.flashCountDone/self.flashCount
-                            msg = "Flashing {}, {}%|{}".format(name, pr, overAll * 100)
-                            progress_callback.emit(pr, msg)
+                            progress_callback.emit(pr, "Flashing {}: {}%".format(name, pr))
 
             #  close the log file
             if lf:
@@ -1360,9 +1388,6 @@ class Skyflash(QObject):
             # check for return code
             if p.returncode == 0:
                 # All ok, pop the image from the list
-                self.builtImages.pop(self.builtImages.index(image))
-                self.flashCountDone = self.flashCount - len(self.builtImages)
-                logging.debug("Removing {} image from the list of images to burn".format(image))
                 return "Done"
             else:
                 # different code
@@ -1389,14 +1414,8 @@ class Skyflash(QObject):
         f.write("0")
         f.close()
 
-        # there is a image left to burn?
-        if len(self.builtImages) == 0:
-            # nope, all done.
-            self.uiWarning.emit("Flasing Finished!", "Sorry, all built images was flashed already")
-            return "Done"
-
         # there are images left to burn, pick the first one
-        image = self.builtImages[0]
+        image = self.flashingNow
         name = image.split(os.sep)[-1].split(".")[0]
         destination = self.card
         size = os.path.getsize(image)
@@ -1427,9 +1446,7 @@ class Skyflash(QObject):
                     if l != '':
                         pr = int(l)
                         if pr > 0:
-                            overAll = pr/100/self.flashCount + self.flashCountDone/self.flashCount
-                            msg = "Flashing {}, {}%|{}".format(name, pr, overAll * 100)
-                            progress_callback.emit(pr, msg)
+                            progress_callback.emit(pr, "Flashing {}: {}%".format(name, pr))
 
                 #  close the log file
                 if lf:
@@ -1440,9 +1457,6 @@ class Skyflash(QObject):
                 # check for return code
                 if p.returncode == 0:
                     # All ok, pop the image from the list
-                    self.builtImages.pop(self.builtImages.index(image))
-                    self.flashCountDone = self.flashCount - len(self.builtImages)
-                    logging.debug("Removing {} image from the list of images to burn".format(image))
                     return "Done"
                 else:
                     # different code
@@ -1454,6 +1468,17 @@ class Skyflash(QObject):
                 raise
         else:
             logging.debug("Error getting one of the dependencies")
+
+            # user warning
+            self.uiWarning("Ops!", """Your OS is not ready to flash, you need to install some tools
+to complete the flashing process. Use your OS package manager
+to install this two utilities: 'dd' and 'pv'
+
+It's as simple as typing this on a console:
+- On a Debian like distros: sudo apt install pv dd
+- On a RedHat like distros: sudo yum install pv dd
+
+And so on for other distros.""")
 
     def loadPrevious(self):
         '''Check for a already downloaded and checksum tested image in the

@@ -54,10 +54,10 @@ win-flasher: ## Create the flasher tool for windows (needs internet)
 	cd win-build && docker run --rm -v "$(PWDWIN):/src/" cdrx/pyinstaller-windows
 
 win-flasher-dev: ## Create the flasher tool for windows (no internet deed if you create the docker machine locally)
-	cd win-build && docker run --rm -v "$(PWDWIN):/src/" pyinstaller-win64py3:pyqt
+	cd win-build && docker run --rm -v "$(PWDWIN):/src/" pyinstaller-win64py3:pyqt_winapi
 
 win-dev: clean win-flasher-dev ## Create a windows static app using local dev tools (no internet deed if you create the docker machine locally)
-	docker run --rm -v "$(PWD):/src/" pyinstaller-win64py3:pyqt
+	docker run --rm -v "$(PWD):/src/" pyinstaller-win64py3:pyqt_winapi
 	cd dist/windows && 7z a skyfwi.7z skyflash-gui/
 	cp win-build/7zSD.sfx dist/windows/
 	cp win-build/sfx_config.txt dist/windows/
