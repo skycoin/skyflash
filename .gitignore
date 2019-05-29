@@ -8,3 +8,6 @@ build/*
 *.code-workspace
 deb_dist/*
 *.tar.gz
+final/*
+win-build/dist/*
+win-build/build/*

@@ -410,10 +410,10 @@ ApplicationWindow {
 
             // flash tools
             RowLayout {
-                // pick your uSD
+                // pick your uSD device
                 Label {
                     id: lbSdCard
-                    text: "SD card:"
+                    text: "Device to flash:"
                 }
 
                 // ComboBox uSD
@@ -425,7 +425,6 @@ ApplicationWindow {
                     Layout.preferredWidth: 200
 
                     onCurrentTextChanged: {
-                        console.debug("Actual Text is " + currentText)
                         if (currentText != "Please insert a card") {
                             skf.selectedCard = currentText
                             btFlash.enabled = true
@@ -435,6 +434,28 @@ ApplicationWindow {
                         }
                         // call to update the selected text
                         skf.pickCard(currentText)
+                    }
+                }
+            }
+
+            // image to flash
+            RowLayout {
+                // pick your uSD
+                Label {
+                    id: lbImage2Flash
+                    text: "Image to flash: "
+                }
+
+                // ComboBox uSD
+                ComboBox {
+                    id: cbImage2flash
+                    currentIndex: 0
+                    model: skf.images2flash
+                    Layout.preferredHeight: 30
+                    Layout.preferredWidth: 200
+                    onCurrentTextChanged: {
+                        // call to update the selected text
+                        skf.pickimages2flash(currentText)
                     }
                 }
 
@@ -460,11 +481,6 @@ ApplicationWindow {
                 id: flashProgressBox
                 visible: false
 
-                Label {
-                    id: lbFlash
-                    text: "Select a card from the list and click on Start Flashing button"
-                }
-
                 // flash ProgressBar
                 RowLayout{
                     Label {
@@ -473,22 +489,6 @@ ApplicationWindow {
                     }
                     ProgressBar {
                         id: pbFlash
-                        Layout.fillWidth: true
-                        visible: true
-                        maximumValue: 100
-                        minimumValue: 0
-                        value: 0
-                    }
-                }
-
-                // flash ProgressBar
-                RowLayout{
-                    Label {
-                        text: "Overall:"
-                        color: "black"
-                    }
-                    ProgressBar {
-                        id: pbFlashOverall
                         Layout.fillWidth: true
                         visible: true
                         maximumValue: 100
@@ -640,19 +640,9 @@ ApplicationWindow {
             btBuild.enabled = false
         }
 
-        // flash data passing, hints to the user
-        onFData: {
-            lbFlash.text = data
-        }
-
         // flash data percent
         onFsProg: {
             pbFlash.value = percent
-        }
-
-        // flash overal data percent
-        onFsProgOverall: {
-            pbFlashOverall.value = percent
         }
     }
 }
