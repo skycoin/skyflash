@@ -869,7 +869,7 @@ class Skyflash(QObject):
             pass
 
         # timer stopped, not started until step 4 is visible
-        self.timer.start(200)
+        self.timer.start(1000)
 
     def timerStop(self):
         '''Stop the timer to check for SD cards'''
