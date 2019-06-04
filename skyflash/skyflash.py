@@ -63,6 +63,8 @@ class Skyflash(QObject):
     builtImages = []
     flashingNow = []
     flashingOnProgress = False
+    appFolder = ""
+    bundle = False
 
     #### registering Signals to emit to QML GUI
 
@@ -374,8 +376,6 @@ class Skyflash(QObject):
 
         # restart the timer
         self.timerStart()
-
-        self.fData.emit("Flash process error...")
         self.setStatus.emit("An error ocurred while flashing the images")
         etype, eval, etrace = error
         logging.debug("An error ocurred while flashing the images:\n{}".format(eval))
@@ -401,7 +401,6 @@ To flash the next image just follow these steps:
         self.uiOk.emit("Image flashing succeeded!", msg)
 
         self.setStatus.emit("Flash process was a success!")
-        self.fData.emit("Flash process was a success!")
 
         # reset the fail safe trigger
         self.flashingOnProgress = false
@@ -1292,13 +1291,21 @@ To flash the next image just follow these steps:
         #  command to run
         pkexec = getLinuxPath("pkexec")
         dd = getLinuxPath("dd")
-        pv = getLinuxPath("pv")
-        logfile = os.path.join(tempfile.gettempdir(), "skfpl.log")
+        python = getLinuxPath("python3")
+        logfile = os.path.join(tempfile.gettempdir(), "skf.log")
 
-        # touch (& truncate) the logfile
-        f = open(logfile, 'w')
-        f.write("0")
+        # touch the logfile
+        f = open(logfile, mode='wt')
+        f.write("0.0%")
         f.close()
+
+        # detect the streamer syntax
+        if self.bundle:
+            # I'm in a static pre compiled env
+            streamer = os.path.join(self.appFolder, "pypv")
+        else:
+            # just a python call to the code
+            streamer = python + " " + os.path.join(self.appFolder, "../posix-build/pypv.py")
 
         # there are images left to burn, pick the first one
         image = self.flashingNow
@@ -1308,31 +1315,32 @@ To flash the next image just follow these steps:
 
         data_callback.emit("Flashing now {} image".format(name))
 
-        if pkexec and dd and pv:
-            cmd = "{} if={} | {} -s {} -n -f 2>{} | {} {} of={}".format(dd, image, pv, size, logfile, pkexec, dd, destination)
+        if pkexec and dd and (python or streamer):
+            cmd = "{} {} {} | {} {} of={}".format(streamer, image, logfile, pkexec, dd, destination)
             logging.debug("Full cmd line is:\n{}".format(cmd))
 
             # TODO Test if the destination file in in there
 
             try:
-                p = subprocess.Popen(cmd,
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    bufsize=0, universal_newlines=True, shell=True)
+                p = subprocess.Popen(cmd, shell=True)
 
                 #  open the log file
                 lf = open(logfile, 'r')
 
-                while True:
-                    # exit condition for the endless loop
-                    if p.poll() is not None:
-                        break
-
+                while p.poll() is None:
                     #  capturing progress via a file
                     l = lf.readline().strip("\n")
-                    if l != '':
-                        pr = int(l)
-                        if pr > 0:
-                            progress_callback.emit(pr, "Flashing {}: {}%".format(name, pr))
+                    if len(l) != 0:
+                        # check for errors
+                        if l.startswith("ERROR"):
+                            print("Error detected:\n{}".format(l))
+                            return False
+
+                        if "%" in l:
+                            # we are on:
+                            pr = float(l.strip()[:-1])
+                            if pr > 0:
+                                progress_callback.emit(pr, "Flashing {}: {}%".format(name, pr))
 
                 #  close the log file
                 if lf:
