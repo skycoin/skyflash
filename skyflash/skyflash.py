@@ -15,7 +15,6 @@ import shutil
 import subprocess
 import enum
 import string
-import json
 import tempfile
 from urllib.request import Request, urlopen
 
@@ -1096,118 +1095,6 @@ To flash the next image just follow these steps:
         # close the file
         file.close()
 
-    def drivesWin(self):
-        '''Return a list of available drives in windows
-        if possible with a drive label and size in bytes:
-
-        [
-            ('E:/', '[unlabeled drive]', 2369536),
-            ('F:/', 'CO7WT4G', 3995639808)
-        ]
-        '''
-
-        # return list
-        drives = []
-
-        ds = getPHYDrives()
-        if len(ds) > 0:
-            for d in ds:
-                dletters = ""
-                volNames = ""
-                volGUIDs = ""
-                for i in d['drives']:
-                    dletters += " {}".format(i[1])
-                    volNames += " {}".format(i[2])
-                    volGUIDs += " {}".format(i[3])
-
-                dletters = dletters.strip()
-                driveSize = d['size']
-                driveID = d['phydrive']
-
-                drives.append((dletters, volNames, int(driveSize), driveID, volGUIDs))
-
-            return drives
-        else:
-            # TODO: warn the user
-            logging.debug("Error, no storage drive detected...")
-            return False
-
-    def drivesLinux(self):
-        '''Return a list of available drives in linux
-        if possible with a drive label and sizes on bytes:
-
-        On some linux the SD cards take /dev/sdb and on
-
-        [
-            ('/dev/mmcblk0', '', 2369536),
-            ('/dev/mmcblk1', '', 3995639808),
-            ('/dev/sda', '', 8300555)
-        ]
-        '''
-
-        drives = []
-
-        # create a pool of possible drives
-        for i in range(0, 5):
-            drives.append("/dev/mmcblk{}".format(i))
-
-        # add sdb-f as possible mmc drives
-        for i in "abcdef":
-            drives.append("/dev/sd{}".format(i))
-
-        # check if the drive is there
-        for drive in drives[:]:
-            try:
-                # if this work we detected a drive and is readable, see else statement
-                disk = open(drive,'rb')
-            except FileNotFoundError:
-                # there is no such drive
-                drives.pop(drives.index(drive))
-                pass
-            except PermissionError:
-                pass
-            else:
-                # well it can open the disk, we must close it
-                disk.close()
-
-        # if we detected a drive, gather the details via lsblk
-        if drives:
-            d = " ".join(drives)
-            js = getDataFromCLI("lsblk -JpbI 8 {}".format(d))
-        else:
-            # TODO: warn the user
-            logging.debug("Error, no storage drive detected, WTF!")
-            return False
-
-        # is no usefull data exit
-        if js is False:
-            logging.debug("Storage drive detected, but none is removable WTF!")
-            return False
-
-        # usefull data beyond this point
-        finalDrives = []
-        data = json.loads(js)
-
-        # getting data, output format is: [(drive, "LABEL", total),]
-        for device in data['blockdevices']:
-            if device['rm'] == '1':
-                cap = int(device['size'])
-                mounted = ""
-                for c in device['children']:
-                    if c['mountpoint']:
-                        mounted += " ".join([c['mountpoint'].split("/")[-1]])
-
-                if len(mounted) <= 0:
-                    mounted += "Not in use"
-
-                finalDrives.append((device['name'], mounted, cap))
-
-        return finalDrives
-
-    def drivesMac(self):
-        ''''''
-        pass
-
     def detectCards(self):
         '''Detects and identify the uSD cards in the system OS agnostic'''
 
@@ -1216,12 +1103,12 @@ To flash the next image just follow these steps:
 
         # OS specific listing
         if sys.platform in ["win32", "cygwin"]:
-            self.drives = self.drivesWin()
+            self.drives = getWinDrivesInfo()
         elif sys.platform.startswith('linux'):
-            self.drives = self.drivesLinux()
+            self.drives = getLinDrivesInfo()
         elif sys.platform is "darwin":
             # self.drives = self.drivesMac()
-            logging.debug("Flashing on MacOs is not working yet")
+            self.drives = getMacDriveInfo()
         else:
             # freebsd or others, not supported yet
             # TODO warning about not supported OS
