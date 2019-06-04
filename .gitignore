@@ -11,3 +11,7 @@ deb_dist/*
 final/*
 win-build/dist/*
 win-build/build/*
+posix-build/dist/*
+posix-build/build/*
+posix-build/*.spec
+
