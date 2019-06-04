@@ -1102,17 +1102,16 @@ To flash the next image just follow these steps:
         self.drives = []
 
         # OS specific listing
-        if sys.platform in ["win32", "cygwin"]:
+        aos = sys.platform.strip()
+        if aos in ["win32", "cygwin"]:
+            logging.debug("Detecting Windows Drives")
             self.drives = getWinDrivesInfo()
-        elif sys.platform.startswith('linux'):
+        elif aos.startswith('linux'):
+            logging.debug("Detecting Linux Drives")
             self.drives = getLinDrivesInfo()
-        elif sys.platform is "darwin":
-            # self.drives = self.drivesMac()
-            self.drives = getMacDriveInfo()
         else:
-            # freebsd or others, not supported yet
-            # TODO warning about not supported OS
-            pass
+            logging.debug("Detecting MacOS Drives")
+            self.drives = getMacDriveInfo()
 
         # build a user friendly string for the cards if there is a card
         if self.drives:
