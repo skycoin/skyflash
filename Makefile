@@ -35,7 +35,7 @@ deb: build ## Create a .deb file ready to use in debian like systems
 	cp deb_dist/*all.deb final/
 	ls -lh final/
 
-linux-static: clean linux-streamer ## Create a linux amd64 compatible static (portable) app
+linux-static: clean posix-streamer ## Create a linux amd64 compatible static (portable) app
 	python3 -m PyInstaller skyflash-gui.spec
 	cd dist && gzip skyflash-gui
 	mv dist/skyflash-gui.gz final/skyflash-gui_linux64-static.gz
@@ -65,11 +65,15 @@ win-dev: clean win-flasher-dev ## Create a windows static app using local dev to
 	mv dist/windows/*.exe final/
 	ls -lh final/
 
-linux-streamer: ## Create the linux streamer to help with the flashing
+posix-streamer: ## Create the linux streamer to help with the flashing
 	cd posix-build && python3 -m PyInstaller -F pypv.py
+	chmod +x posix-build/dist/pypv
 
-macos-streamer: ## Create the macos streamer to help with the flashing
-	cd posix-build && python3 -m PyInstaller -F pypv.py
+macos-app: clean posix-streamer ## Create the macos standalone app
+	python3 -m PyInstaller skyflash-gui.spec
+	cd dist && tar -cvzf skyflash-gui.app skyflash-app.tgz
+	mv dist/skyflash-app.tgz final/skyflash-macos-app.tgz
+	ls -lh final/
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
