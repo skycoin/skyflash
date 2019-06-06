@@ -2,15 +2,7 @@
 
 ## Installation
 
-To install Skyflash, go to the [Releases](https://github.com/skycoin/skyflash/releases) link on this page and grab the file corresponding file to your OS, use the following table to figure it out:
-
-| Operating System | You must download the one... |
-|:----------------:|:--------------------------------:|
-| Windows | ...that ends with **.exe** |
-| Linux | ...that ends with **.deb** |
-| MacOS | ...that ends with **.dmg** |
-
-Installing it and running is done by the default OS way and that is out of the scope of this user's manual, use the internet to search for the answer if in doubt.
+Please refer to the [README](README.md) for install instructions.
 
 ## Workflow explained
 
@@ -33,24 +25,26 @@ In this windows you are presented with two choices, download or select a local S
 
 ### Downloading
 
-A word of caution: if your internet is unstable, limited or slow don't try this option, the download process will pull down about 600 MB of data and has no resume option; if your download get interrupted at 99% it will start over from 0% again!
+A word of caution: if your internet is unstable, limited or slow don't try this option, read the section below; the download process will pull down about 600 MB of data and has no resume option _(Blame Github on that)_; if your download get interrupted at 99% it will start over from 0% again!
 
-In the other hand if you have a fast and steady internet connection like more than 4 MBit/sec you are set, select this option and the app will download the image for you.
+In the other hand if you have a fast and steady internet connection like more than 4 MBit/sec you are set, select this option and the app will download the image for you, as usual YMMV.
 
 ### Selecting a local copy
 
-This is the alternative if the download option is not the best choice for you because the above mentioned issues.
+This is the alternative option if the download option is not the best choice for you because the above mentioned speed/stability issues in your internet link.
 
-Go to a place with a steady and fast internet connection and use whatever device you have (Cell, tablet, laptops, etc) to download the latest Skybian base image. Go to the [Skybian release page](https://github.com/skycoin/skybian/releases/) pick the latest available release (it's the file ending on .tar.xz) once you get it move it to your PC and click on the "Browse" button to select the file.
+Go to a place with a steady and fast internet connection and use whatever device you have (Cell, tablet, laptops, etc) to download the latest Skybian base image. Go to the [Skybian release page](https://github.com/skycoin/skybian/releases/) pick the latest available release (it's the big file ending on .tar.xz) once you get it move it to your PC and click on the "Browse" button to select the file.
 
 Either downloading or selecting a local copy, the app will extract the compressed file and then check the integrity of the data inside, all this with feedback of the process for you:
 
 ![Extracting the Skybian base image release file](/images/extract.png)
 ![Verifying the Skybian base image](/images/verify.png)
 
+### About corrupt files
+
 If the app finds any problem on any of this two operations (mainly due to corrupt files) it will let you know with a error/warning dialog box. In that case the solution is to download again the Skybian release file (by the app itself of using an alternative way) and start over.
 
-### A word about folders and magic
+### About folders and magic
 
 We incorporated a magic effect into Skyflash to ease your life, go & close the app at this point and re-open it... you will see it knows that it has already a Skybian base image and it will show ready for steps #2 & #3
 
@@ -74,7 +68,7 @@ Once you reach this point the app's window looks like this:
 
 ![Network configuration defaults](/images/net-default.png)
 
-If you plan to run a Skyminer with the default network configuration you are set, you can jump to step #3 (if you are curious about the default network config, just un-tick the `Use Skyminer's defaults` box to see it on details, but remember to tick it again)
+If you plan to run a Skyminer with the default network configuration for the testnet you are set, you can jump to step #3 (if you are curious about the default network config, just un-tick the `Use Skyminer's defaults` box to see it on details, but remember to tick it again)
 
 If you plan to run it on an already existent network and you need to tweak the network parameters then un-tick the `Use Skyminer's defaults` box to see and edit the network details. If you do that it will show it like this:
 
@@ -101,7 +95,7 @@ During the image generation you may see a windows like this to show you the proc
 
 ![Building images](/images/images.png)
 
-When this process finish you will have the images in your Skybian folder, they will have names like `Skybian_your_manager.img` & `Skybian_your_minion-1.img` and so on.
+When this process finish you will have the images in your Skybian folder, they will have names like `Skybian-manager.img` & `Skybian-minion-1.img` and so on.
 
 ## Step #4: Flashing the images
 
@@ -111,15 +105,15 @@ You may want to flash the image now or later, if you want to do it now then you 
 
 **A word of warning:** once you generate the images and close Skyflash you will not be able to use Skyflash to burn the same images unless you re-generate the images. For this reason we recommend to have a copy of BalenaEtcher at hand to burn the previously generated images.
 
-*The flashing process is working only on Linux OS by now, we intend to cover Windows and MacOS soon.*
+*The flashing process is working only on Linux & Windows by now, we intend to cover MacOS soon.*
 
-To start the flashing process you need to select the proper device in the combo box, but first a needed warning:
+To start the flashing process you need to select the proper device, and image in the combo boxes, but first a needed warning:
 
 ### WARNING!
 
-The flashing process **is not reversible**, please double check that the device selected on the combo box is the correct one or you may flash the Skybian Image to one of your HDDs rendering it unusable and will loss the data on it.
+The flashing process **is not reversible**, please double check that the device selected on the combo box is the correct one or you may flash the Skybian Image to one of your USB Flash drives rendering it unusable and will loss the data on it.
 
-The process to detect the correct uSDCard device is tricky (specially on Linux with recent kernels) and we have to extend it to a few common devices, that may lead into false detection of flash thumb drives and even partitions of the HDD.
+The process to detect the correct uSDCard device is tricky (specially on Linux with recent kernels) and we have to extend it to a few common devices, that may lead into false detection of flash thumb drives.
 
 We recommend to double and triple check that the device selected is the real uSDCard on the slot.
 
@@ -127,4 +121,14 @@ A sample flashing in progress looks like this:
 
 ![Flashing the images](/images/flashing-in-progress.png)
 
-Of curse, it will ask for admin/root privileges to do the task on every burn, and will let you know how to proceed and each uSDCard is flashed in a multiple flash process.
+### uSD Card and flash process duration
+
+The flash process depends on the speed of your uSD card, using Class 10 or higher class cards is mandatory or you will risk your data with an failed card due to wear out or experience low performance.
+
+But yes, flashing one card can take about 3 to 5 minutes depending on flash class & specs.
+
+## Why skyflash ask for credentials or privileged operations?
+
+Flashing to a uSD Card is a privileged operation and Skyflash has built a mechanism to get that privileges at some point.
+
+Depending on your operating system you will see a credential asking box sooner or later, in Windows the privilege asking happens at the start of the app, on Linux on the start of each flash operation.
