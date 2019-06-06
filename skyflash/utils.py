@@ -226,7 +226,12 @@ def sysexec(cmd):
     '''
 
     l = subprocess.check_output(cmd, shell=True)
-    l = l.decode(encoding='oem').splitlines()
+
+    # processing line endings
+    if 'nt' in os.name:
+        l = l.decode(encoding='oem').splitlines()
+    else:
+        l = l.decode().splitlines()
 
     # cleans empty lines
     for i in l:
