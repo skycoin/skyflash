@@ -403,7 +403,7 @@ To flash the next image just follow these steps:
         self.setStatus.emit("Flash process was a success!")
 
         # reset the fail safe trigger
-        self.flashingOnProgress = false
+        self.flashingOnProgress = False
 
     @pyqtSlot()
     def downloadSkybian(self):
@@ -1213,7 +1213,7 @@ To flash the next image just follow these steps:
             self.windowsFlasher(data_callback, progress_callback)
         elif sys.platform == "darwin":
             # mac
-            pass
+            self.macosFlasher(data_callback, progress_callback)
         else:
             # linux
             self.linuxFlasher(data_callback, progress_callback)
@@ -1364,15 +1364,95 @@ To flash the next image just follow these steps:
             logging.debug("Error getting one of the dependencies")
 
             # user warning
-            self.uiWarning("Ops!", """Your OS is not ready to flash, you need to install some tools
-to complete the flashing process. Use your OS package manager
-to install this two utilities: 'dd' and 'pv'
+            self.uiWarning("Ops!", "There was an utility missing in your system!")
 
-It's as simple as typing this on a console:
-- On a Debian like distros: sudo apt install pv dd
-- On a RedHat like distros: sudo yum install pv dd
+    def macosFlasher(self, data_callback, progress_callback):
+        '''Macos flasher'''
 
-And so on for other distros.""")
+        #  command to run
+        dd = getLinuxPath("dd")
+        python = getLinuxPath("python3")
+        logfile = os.path.join(tempfile.gettempdir(), "skf.log")
+
+        # touch the logfile
+        f = open(logfile, mode='wt')
+        f.write("0.0%")
+        f.close()
+
+        # detect the streamer syntax
+        if self.bundle:
+            # I'm in a static pre compiled env
+            streamer = os.path.join(self.appFolder, "pypv")
+        else:
+            # just a python call to the code
+            streamer = python + " " + os.path.join(self.appFolder, "../posix-build/pypv.py")
+
+        print("Streamer tool is at: {}".format(streamer))
+
+        # there are images left to burn, pick the first one
+        image = self.flashingNow
+        name = image.split(os.sep)[-1].split(".")[0]
+        destination = self.card
+        size = os.path.getsize(image)
+
+        data_callback.emit("Flashing now {} image".format(name))
+
+        # umount the drive
+        sysexec("diskutil unmountDisk {}".format(destination))
+
+        if dd and (python or streamer):
+            cmd = "{} {} {} | {} of={}".format(streamer, image, logfile, dd, destination)
+            logging.debug("Basic cmd line is:\n{}".format(cmd))
+
+            # pack the cmd in the long sentence to ask for permissions
+            realcmd = "osascript -e 'do shell script \"{}\" with administrator privileges'".format(cmd)
+            print("Full command is like this:\n")
+            print(realcmd)
+
+            try:
+                p = subprocess.Popen(realcmd, shell=True)
+
+                #  open the log file
+                lf = open(logfile, 'r')
+
+                while p.poll() is None:
+                    #  capturing progress via a file
+                    l = lf.readline().strip("\n")
+                    if len(l) != 0:
+                        # check for errors
+                        if l.startswith("ERROR"):
+                            print("Error detected:\n{}".format(l))
+                            return False
+
+                        if "%" in l:
+                            # we are on:
+                            pr = float(l.strip()[:-1])
+                            if pr > 0:
+                                progress_callback.emit(pr, "Flashing {}: {}%".format(name, pr))
+
+                #  close the log file
+                if lf:
+                    lf.close()
+
+                logging.debug("Return Code was {}".format(p.returncode))
+
+                # check for return code
+                if p.returncode == 0:
+                    # All ok, pop the image from the list
+                    return "Done"
+                else:
+                    # different code
+                    # TODO capture an error
+                    return "Oops!"
+
+            except OSError as e:
+                logging.debug("Failed to execute program '%s': %s" % (cmd, str(e)))
+                raise
+        else:
+            logging.debug("Error getting one of the dependencies")
+
+            # user warning
+            self.uiWarning("Ops!", "There was an utility missing in your system!")
 
     def loadPrevious(self):
         '''Check for a already downloaded and checksum tested image in the
