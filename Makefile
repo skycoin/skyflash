@@ -13,13 +13,16 @@ clean: ## Clean the environment to have a fresh start
 	-sudo rm -rdf __pycache__
 	-sudo rm -rdf skyflash/__pycache__
 	-sudo rm skyflash-*.tar.gz
+	-sudo rm -rdf win-build/dist
+	-sudo rm -rdf win-build/build
+	-sudo rm -rdf win-build/__pycache__
+	-sudo rm -rdf posix-build/dist
+	-sudo rm -rdf posix-build/build
+	-sudo rm -rdf posix-build/__pycache__
 
 init: clean ## Initial cleanup, erase even the final app dir
 	-rm -rdf final
 	-mkdir final
-	-cd win-build && sudo rm -rdf dist
-	-cd win-build && sudo rm -rdf build
-	-cd win-build && sudo rm -rdf __pycache__
 
 build: clean ## Build the pip compatible install file
 	python3 setup.py build
