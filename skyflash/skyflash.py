@@ -15,7 +15,6 @@ import shutil
 import subprocess
 import enum
 import string
-import json
 import tempfile
 from urllib.request import Request, urlopen
 
@@ -64,6 +63,8 @@ class Skyflash(QObject):
     builtImages = []
     flashingNow = []
     flashingOnProgress = False
+    appFolder = ""
+    bundle = False
 
     #### registering Signals to emit to QML GUI
 
@@ -375,8 +376,6 @@ class Skyflash(QObject):
 
         # restart the timer
         self.timerStart()
-
-        self.fData.emit("Flash process error...")
         self.setStatus.emit("An error ocurred while flashing the images")
         etype, eval, etrace = error
         logging.debug("An error ocurred while flashing the images:\n{}".format(eval))
@@ -402,10 +401,9 @@ To flash the next image just follow these steps:
         self.uiOk.emit("Image flashing succeeded!", msg)
 
         self.setStatus.emit("Flash process was a success!")
-        self.fData.emit("Flash process was a success!")
 
         # reset the fail safe trigger
-        self.flashingOnProgress = false
+        self.flashingOnProgress = False
 
     @pyqtSlot()
     def downloadSkybian(self):
@@ -1096,118 +1094,6 @@ To flash the next image just follow these steps:
         # close the file
         file.close()
 
-    def drivesWin(self):
-        '''Return a list of available drives in windows
-        if possible with a drive label and size in bytes:
-
-        [
-            ('E:/', '[unlabeled drive]', 2369536),
-            ('F:/', 'CO7WT4G', 3995639808)
-        ]
-        '''
-
-        # return list
-        drives = []
-
-        ds = getPHYDrives()
-        if len(ds) > 0:
-            for d in ds:
-                dletters = ""
-                volNames = ""
-                volGUIDs = ""
-                for i in d['drives']:
-                    dletters += " {}".format(i[1])
-                    volNames += " {}".format(i[2])
-                    volGUIDs += " {}".format(i[3])
-
-                dletters = dletters.strip()
-                driveSize = d['size']
-                driveID = d['phydrive']
-
-                drives.append((dletters, volNames, int(driveSize), driveID, volGUIDs))
-
-            return drives
-        else:
-            # TODO: warn the user
-            logging.debug("Error, no storage drive detected...")
-            return False
-
-    def drivesLinux(self):
-        '''Return a list of available drives in linux
-        if possible with a drive label and sizes on bytes:
-
-        On some linux the SD cards take /dev/sdb and on
-
-        [
-            ('/dev/mmcblk0', '', 2369536),
-            ('/dev/mmcblk1', '', 3995639808),
-            ('/dev/sda', '', 8300555)
-        ]
-        '''
-
-        drives = []
-
-        # create a pool of possible drives
-        for i in range(0, 5):
-            drives.append("/dev/mmcblk{}".format(i))
-
-        # add sdb-f as possible mmc drives
-        for i in "abcdef":
-            drives.append("/dev/sd{}".format(i))
-
-        # check if the drive is there
-        for drive in drives[:]:
-            try:
-                # if this work we detected a drive and is readable, see else statement
-                disk = open(drive,'rb')
-            except FileNotFoundError:
-                # there is no such drive
-                drives.pop(drives.index(drive))
-                pass
-            except PermissionError:
-                pass
-            else:
-                # well it can open the disk, we must close it
-                disk.close()
-
-        # if we detected a drive, gather the details via lsblk
-        if drives:
-            d = " ".join(drives)
-            js = getDataFromCLI("lsblk -JpbI 8 {}".format(d))
-        else:
-            # TODO: warn the user
-            logging.debug("Error, no storage drive detected, WTF!")
-            return False
-
-        # is no usefull data exit
-        if js is False:
-            logging.debug("Storage drive detected, but none is removable WTF!")
-            return False
-
-        # usefull data beyond this point
-        finalDrives = []
-        data = json.loads(js)
-
-        # getting data, output format is: [(drive, "LABEL", total),]
-        for device in data['blockdevices']:
-            if device['rm'] == '1':
-                cap = int(device['size'])
-                mounted = ""
-                for c in device['children']:
-                    if c['mountpoint']:
-                        mounted += " ".join([c['mountpoint'].split("/")[-1]])
-
-                if len(mounted) <= 0:
-                    mounted += "Not in use"
-
-                finalDrives.append((device['name'], mounted, cap))
-
-        return finalDrives
-
-    def drivesMac(self):
-        ''''''
-        pass
-
     def detectCards(self):
         '''Detects and identify the uSD cards in the system OS agnostic'''
 
@@ -1215,17 +1101,16 @@ To flash the next image just follow these steps:
         self.drives = []
 
         # OS specific listing
-        if sys.platform in ["win32", "cygwin"]:
-            self.drives = self.drivesWin()
-        elif sys.platform.startswith('linux'):
-            self.drives = self.drivesLinux()
-        elif sys.platform is "darwin":
-            # self.drives = self.drivesMac()
-            logging.debug("Flashing on MacOs is not working yet")
+        aos = sys.platform.strip()
+        if aos in ["win32", "cygwin"]:
+            logging.debug("Detecting Windows Drives")
+            self.drives = getWinDrivesInfo()
+        elif aos.startswith('linux'):
+            logging.debug("Detecting Linux Drives")
+            self.drives = getLinDrivesInfo()
         else:
-            # freebsd or others, not supported yet
-            # TODO warning about not supported OS
-            pass
+            logging.debug("Detecting MacOS Drives")
+            self.drives = getMacDriveInfo()
 
         # build a user friendly string for the cards if there is a card
         if self.drives:
@@ -1328,7 +1213,7 @@ To flash the next image just follow these steps:
             self.windowsFlasher(data_callback, progress_callback)
         elif sys.platform == "darwin":
             # mac
-            pass
+            self.macosFlasher(data_callback, progress_callback)
         else:
             # linux
             self.linuxFlasher(data_callback, progress_callback)
@@ -1406,13 +1291,21 @@ To flash the next image just follow these steps:
         #  command to run
         pkexec = getLinuxPath("pkexec")
         dd = getLinuxPath("dd")
-        pv = getLinuxPath("pv")
-        logfile = os.path.join(tempfile.gettempdir(), "skfpl.log")
+        python = getLinuxPath("python3")
+        logfile = os.path.join(tempfile.gettempdir(), "skf.log")
 
-        # touch (& truncate) the logfile
-        f = open(logfile, 'w')
-        f.write("0")
+        # touch the logfile
+        f = open(logfile, mode='wt')
+        f.write("0.0%")
         f.close()
+
+        # detect the streamer syntax
+        if self.bundle:
+            # I'm in a static pre compiled env
+            streamer = os.path.join(self.appFolder, "pypv")
+        else:
+            # just a python call to the code
+            streamer = python + " " + os.path.join(self.appFolder, "../posix-build/pypv.py")
 
         # there are images left to burn, pick the first one
         image = self.flashingNow
@@ -1422,31 +1315,32 @@ To flash the next image just follow these steps:
 
         data_callback.emit("Flashing now {} image".format(name))
 
-        if pkexec and dd and pv:
-            cmd = "{} if={} | {} -s {} -n -f 2>{} | {} {} of={}".format(dd, image, pv, size, logfile, pkexec, dd, destination)
+        if pkexec and dd and (python or streamer):
+            cmd = "{} {} {} | {} {} of={}".format(streamer, image, logfile, pkexec, dd, destination)
             logging.debug("Full cmd line is:\n{}".format(cmd))
 
             # TODO Test if the destination file in in there
 
             try:
-                p = subprocess.Popen(cmd,
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    bufsize=0, universal_newlines=True, shell=True)
+                p = subprocess.Popen(cmd, shell=True)
 
                 #  open the log file
                 lf = open(logfile, 'r')
 
-                while True:
-                    # exit condition for the endless loop
-                    if p.poll() is not None:
-                        break
-
+                while p.poll() is None:
                     #  capturing progress via a file
                     l = lf.readline().strip("\n")
-                    if l != '':
-                        pr = int(l)
-                        if pr > 0:
-                            progress_callback.emit(pr, "Flashing {}: {}%".format(name, pr))
+                    if len(l) != 0:
+                        # check for errors
+                        if l.startswith("ERROR"):
+                            print("Error detected:\n{}".format(l))
+                            return False
+
+                        if "%" in l:
+                            # we are on:
+                            pr = float(l.strip()[:-1])
+                            if pr > 0:
+                                progress_callback.emit(pr, "Flashing {}: {}%".format(name, pr))
 
                 #  close the log file
                 if lf:
@@ -1470,15 +1364,95 @@ To flash the next image just follow these steps:
             logging.debug("Error getting one of the dependencies")
 
             # user warning
-            self.uiWarning("Ops!", """Your OS is not ready to flash, you need to install some tools
-to complete the flashing process. Use your OS package manager
-to install this two utilities: 'dd' and 'pv'
+            self.uiWarning("Ops!", "There was an utility missing in your system!")
 
-It's as simple as typing this on a console:
-- On a Debian like distros: sudo apt install pv dd
-- On a RedHat like distros: sudo yum install pv dd
+    def macosFlasher(self, data_callback, progress_callback):
+        '''Macos flasher'''
 
-And so on for other distros.""")
+        #  command to run
+        dd = getLinuxPath("dd")
+        python = getLinuxPath("python3")
+        logfile = os.path.join(tempfile.gettempdir(), "skf.log")
+
+        # touch the logfile
+        f = open(logfile, mode='wt')
+        f.write("0.0%")
+        f.close()
+
+        # detect the streamer syntax
+        if self.bundle:
+            # I'm in a static pre compiled env
+            streamer = os.path.join(self.appFolder, "pypv")
+        else:
+            # just a python call to the code
+            streamer = python + " " + os.path.join(self.appFolder, "../posix-build/pypv.py")
+
+        print("Streamer tool is at: {}".format(streamer))
+
+        # there are images left to burn, pick the first one
+        image = self.flashingNow
+        name = image.split(os.sep)[-1].split(".")[0]
+        destination = self.card
+        size = os.path.getsize(image)
+
+        data_callback.emit("Flashing now {} image".format(name))
+
+        # umount the drive
+        sysexec("diskutil unmountDisk {}".format(destination))
+
+        if dd and (python or streamer):
+            cmd = "{} {} {} | {} of={}".format(streamer, image, logfile, dd, destination)
+            logging.debug("Basic cmd line is:\n{}".format(cmd))
+
+            # pack the cmd in the long sentence to ask for permissions
+            realcmd = "osascript -e 'do shell script \"{}\" with administrator privileges'".format(cmd)
+            print("Full command is like this:\n")
+            print(realcmd)
+
+            try:
+                p = subprocess.Popen(realcmd, shell=True)
+
+                #  open the log file
+                lf = open(logfile, 'r')
+
+                while p.poll() is None:
+                    #  capturing progress via a file
+                    l = lf.readline().strip("\n")
+                    if len(l) != 0:
+                        # check for errors
+                        if l.startswith("ERROR"):
+                            print("Error detected:\n{}".format(l))
+                            return False
+
+                        if "%" in l:
+                            # we are on:
+                            pr = float(l.strip()[:-1])
+                            if pr > 0:
+                                progress_callback.emit(pr, "Flashing {}: {}%".format(name, pr))
+
+                #  close the log file
+                if lf:
+                    lf.close()
+
+                logging.debug("Return Code was {}".format(p.returncode))
+
+                # check for return code
+                if p.returncode == 0:
+                    # All ok, pop the image from the list
+                    return "Done"
+                else:
+                    # different code
+                    # TODO capture an error
+                    return "Oops!"
+
+            except OSError as e:
+                logging.debug("Failed to execute program '%s': %s" % (cmd, str(e)))
+                raise
+        else:
+            logging.debug("Error getting one of the dependencies")
+
+            # user warning
+            self.uiWarning("Ops!", "There was an utility missing in your system!")
 
     def loadPrevious(self):
         '''Check for a already downloaded and checksum tested image in the

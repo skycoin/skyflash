@@ -9,6 +9,7 @@ import traceback
 import subprocess
 import re
 import csv
+import json
 from pprint import pprint
 
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, pyqtSlot
@@ -225,7 +226,12 @@ def sysexec(cmd):
     '''
 
     l = subprocess.check_output(cmd, shell=True)
-    l = l.decode(encoding='oem').splitlines()
+
+    # processing line endings
+    if 'nt' in os.name:
+        l = l.decode(encoding='oem').splitlines()
+    else:
+        l = l.decode().splitlines()
 
     # cleans empty lines
     for i in l:
@@ -404,6 +410,187 @@ def getPHYDrives():
     # 'size': '8052549120'}]
 
     return data
+
+def getMacDriveInfo():
+    '''Get drives info in MacOS
+
+    Must return this: [(dev, label, size)]
+
+    [
+        ('/dev/disk2', '', 2369536),
+        ('/dev/disk3', 'uD', 3995639808),
+        ('/dev/disk4', 'MULTIBOOT', 8300555)
+    ]
+    '''
+
+    # load the plistlib
+    import plistlib
+
+    # get the info
+    cmd = ("diskutil list -plist external")
+    rx = subprocess.check_output(cmd, shell=True)
+    d = plistlib.loads(rx)
+
+    # usdcard and flash drive example
+    #
+    # {'AllDisks': ['disk1', 'disk1s1', 'disk2', 'disk2s1'],
+    # 'AllDisksAndPartitions': [{'Content': 'FDisk_partition_scheme',
+    #                             'DeviceIdentifier': 'disk1',
+    #                             'Partitions': [{'Content': 'DOS_FAT_32',
+    #                                             'DeviceIdentifier': 'disk1s1',
+    #                                             'MountPoint': '/Volumes/USD CARD',
+    #                                             'Size': 7948205056,
+    #                                             'VolumeName': 'USD CARD',
+    #                                             'VolumeUUID': '9FEFF8C2-E394-391B-9921-F0E5DD38D522'}],
+    #                             'Size': 7948206080},
+    #                         {'Content': 'FDisk_partition_scheme',
+    #                             'DeviceIdentifier': 'disk2',
+    #                             'Partitions': [{'Content': 'Windows_FAT_32',
+    #                                             'DeviceIdentifier': 'disk2s1',
+    #                                             'MountPoint': '/Volumes/PAVEL',
+    #                                             'Size': 7745830912,
+    #                                             'VolumeName': 'PAVEL',
+    #                                             'VolumeUUID': 'DC01B9FE-840D-346C-99AF-E4C961D2E441'}],
+    #                             'Size': 7746879488}],
+    # 'VolumesFromDisks': ['USD CARD', 'PAVEL'],
+    # 'WholeDisks': ['disk1', 'disk2']}
+
+    data = False
+
+    if len(d["AllDisks"]) > 0:
+        # we have suspects
+        data = []
+
+        for devs in d["AllDisksAndPartitions"]:
+            # direct attributes
+            device = "/dev/{}".format(devs["DeviceIdentifier"])
+            size = int(devs["Size"])
+
+            # indirect attributes: volume list (mounted partitions)
+            parts = ""
+            for p in devs["Partitions"]:
+                try:
+                    parts += " '" + p["VolumeName"] + "'"
+                except KeyError:
+                    pass
+
+            # clkean extra spaces around
+            vols = parts.strip()
+
+            data.append((device, vols, size))
+
+    # return
+    return data
+
+def getWinDrivesInfo():
+    '''Return a list of available drives in windows
+    if possible with a drive label and size in bytes:
+
+    [
+        ('E:/', '', 2369536),
+        ('F:/', 'CO7WT4G', 3995639808)
+    ]
+    '''
+
+    # return list
+    drives = False
+
+    ds = getPHYDrives()
+    if len(ds) > 0:
+        # have drives
+        drives = []
+
+        for d in ds:
+            dletters = ""
+            volNames = ""
+            volGUIDs = ""
+            for i in d['drives']:
+                dletters += " {}".format(i[1])
+                volNames += " {}".format(i[2])
+                volGUIDs += " {}".format(i[3])
+
+            dletters = dletters.strip()
+            driveSize = d['size']
+            driveID = d['phydrive']
+
+            drives.append((dletters, volNames, int(driveSize), driveID, volGUIDs))
+
+    # return result
+    return drives
+
+def getLinDrivesInfo():
+    '''Return a list of available drives in linux
+    if possible with a drive label and sizes on bytes:
+
+    On some linux the SD cards take /dev/sdb and on
+
+    [
+        ('/dev/mmcblk0', '', 2369536),
+        ('/dev/mmcblk1', 'uSD cars 16GB', 3995639808),
+        ('/dev/sda', '', 8300555)
+    ]
+    '''
+
+    drives = []
+
+    # create a pool of possible drives
+    for i in range(0, 5):
+        drives.append("/dev/mmcblk{}".format(i))
+
+    # add sdb-f as possible mmc drives
+    for i in "abcdef":
+        drives.append("/dev/sd{}".format(i))
+
+    # check if the drive is there
+    for drive in drives[:]:
+        try:
+            # if this work we detected a drive and is readable, see else statement
+            disk = open(drive,'rb')
+        except FileNotFoundError:
+            # there is no such drive
+            drives.pop(drives.index(drive))
+            pass
+        except PermissionError:
+            pass
+        else:
+            # well it can open the disk, we must close it
+            disk.close()
+
+    # if we detected a drive, gather the details via lsblk
+    if drives:
+        d = " ".join(drives)
+        js = getDataFromCLI("lsblk -JpbI 8 {}".format(d))
+    else:
+        # TODO: warn the user
+        return False
+
+    # is no usefull data exit
+    if js is False:
+        return False
+
+    # usefull data beyond this point
+    finalDrives = []
+    data = json.loads(js)
+
+    # getting data, output format is: [(drive, "LABEL", total),]
+    for device in data['blockdevices']:
+        if device['rm'] == '1':
+            cap = int(device['size'])
+            mounted = ""
+            for c in device['children']:
+                if c['mountpoint']:
+                    mounted += " ".join([c['mountpoint'].split("/")[-1]])
+
+            if len(mounted) <= 0:
+                mounted += "Not in use"
+
+            finalDrives.append((device['name'], mounted, cap))
+
+    # final test
+    if len(finalDrives) > 0:
+        return finalDrives
+    else:
+        return False
 
 # fileio overide class to get progress on tarfile extraction
 # TODO How to overide a class from a module

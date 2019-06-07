@@ -13,13 +13,16 @@ clean: ## Clean the environment to have a fresh start
 	-sudo rm -rdf __pycache__
 	-sudo rm -rdf skyflash/__pycache__
 	-sudo rm skyflash-*.tar.gz
+	-sudo rm -rdf win-build/dist
+	-sudo rm -rdf win-build/build
+	-sudo rm -rdf win-build/__pycache__
+	-sudo rm -rdf posix-build/dist
+	-sudo rm -rdf posix-build/build
+	-sudo rm -rdf posix-build/__pycache__
 
 init: clean ## Initial cleanup, erase even the final app dir
 	-rm -rdf final
 	-mkdir final
-	-cd win-build && sudo rm -rdf dist
-	-cd win-build && sudo rm -rdf build
-	-cd win-build && sudo rm -rdf __pycache__
 
 build: clean ## Build the pip compatible install file
 	python3 setup.py build
@@ -35,7 +38,7 @@ deb: build ## Create a .deb file ready to use in debian like systems
 	cp deb_dist/*all.deb final/
 	ls -lh final/
 
-linux-static: clean ## Create a linux amd64 compatible static (portable) app
+linux-static: clean posix-streamer ## Create a linux amd64 compatible static (portable) app
 	python3 -m PyInstaller skyflash-gui.spec
 	cd dist && gzip skyflash-gui
 	mv dist/skyflash-gui.gz final/skyflash-gui_linux64-static.gz
@@ -63,6 +66,29 @@ win-dev: clean win-flasher-dev ## Create a windows static app using local dev to
 	cp win-build/sfx_config.txt dist/windows/
 	cd dist/windows && cat 7zSD.sfx sfx_config.txt skyfwi.7z > Skyflash.exe
 	mv dist/windows/*.exe final/
+	ls -lh final/
+
+win-travis: clean win-flasher-travis ## Create the windows static app via travis windows machine
+	python -m PyInstaller skyflash-gui.spec
+	-cd dist && 7z a skyfwi.7z skyflash-gui/
+	-cd dist && 7zip a skyfwi.7z skyflash-gui/
+	cp win-build/7zSD.sfx dist
+	cp win-build/sfx_config.txt dist
+	cd dist && cat 7zSD.sfx sfx_config.txt skyfwi.7z > Skyflash.exe
+	mv dist/*.exe final/
+	ls -lh final/
+
+win-flasher-travis: ## Create the windows flasher utility inside travis windows machine
+	cd win-build && python -m PyInstaller -F flash.spec
+
+posix-streamer: ## Create the linux streamer to help with the flashing
+	cd posix-build && python3 -m PyInstaller -F pypv.py
+	chmod +x posix-build/dist/pypv
+
+macos-app: clean posix-streamer ## Create the macos standalone app
+	python3 -m PyInstaller skyflash-gui.spec
+	cd dist && tar -cvzf skyflash-app.tgz skyflash-gui.app
+	mv dist/skyflash-app.tgz final/skyflash-macos-app.tgz
 	ls -lh final/
 
 help:

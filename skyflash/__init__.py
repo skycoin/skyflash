@@ -37,11 +37,13 @@ def app():
         if getattr( sys, 'frozen', False ) :
             # running in a pyinstaller bundle
             appFolder = sys._MEIPASS
+            skyflash.bundle = True
             print("NOTICE! running from a pyinstaller bundle")
         else :
             # running live
             appFolder = QFileInfo(__file__).path()
 
+        skyflash.appFolder = appFolder
         print("App run folder is: {}".format(appFolder))
 
         # app icon
