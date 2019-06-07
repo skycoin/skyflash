@@ -1,40 +1,78 @@
-os: linux
-dist: bionic
-sudo: required
-language: bash
+matrix:
+  include:
+    - name: "Xenial Linux with Python 3.7.1 "
+      python: 3.7
+      os: linux
+      dist: xenial
+      language: shell
+    - name: "macOS with Python 3.7.2"
+      os: osx
+      osx_image: xcode10.2
+      language: shell
+      before_install: 
+        - python3 --version ; pip3 --version ; sw_vers
+    - name: "Windows with Python 3.7.3 "
+      os: windows
+      language: shell
+      before_install:
+        - choco install python  # slow at least 1 min 30 sec
+        - python3 -m pip install --upgrade pip
+      env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
 
-services:
-  - docker
-
-before_script:
-- sudo apt-get update -q
-- sudo apt install -y python3 python3-all python3-pip python3-pyqt5 python3-pyqt5.qtquick qml-module-qtquick2 qml-module-qtquick-window2 qml-module-qtquick-layouts qml-module-qtquick-extras qml-module-qtquick-dialogs qml-module-qtquick-controls qml-module-qt-labs-folderlistmodel qml-module-qt-labs-settings fakeroot python3-stdeb p7zip-full make
-- pip3 install setuptools pyqt5 PyInstaller
-- docker pull cdrx/pyinstaller-windows
+install: 
+  # 'python' points to Python 2.7 on macOS but points to Python 3.7 on Linux and Windows
+  # 'python3' is a 'command not found' error on Windows but 'py' works on Windows only
+  - pip3 install --upgrade pip  # all three OSes agree about 'pip3'
+  - ./travis/install.sh
 
 script:
 - make init
 - make install
 
 notifications:
-  email:
-    - pavelmc@gmail.com
-  webhooks: https://fathomless-fjord-24024.herokuapp.com/notify
+  - email: false
+  - webhooks: https://fathomless-fjord-24024.herokuapp.com/notify
 
-before_deploy:
-  - make deb
-  - make linux-static
-  - make win-static
-
+# deploy on linux
 deploy:
   provider: releases
   api_key:
     secure: otyfBiezSZgvexnUY7c3lOVlPe1tBNswPMi7n7zuUsfmBJl+gRrhkliXgVBShyqrZ5y7/pG2mQKB5kU6GvUv6ljciIXxeRsTD6+b06hSW1Xl1oFqu3xjGCyXvQrLYW8jgp5dGfoOoldkMG0zcB53X+zqYlX41VS8pMGEMrh5Un9yWkCMTHDc4qGv58aVLyh246Rti2ewqeET5HW/S+NSyTdUhfMMd6YTXWuQC7uoXGI5Dln62V9qOxEfY0UT1jfarSoDY8XVN3kVQCND/KQG5cr/aap9Sg/qBwPOi3O3W5tMn6WljwKoxdc+ZtzR4BxL4Qak6FPe9X4HDDa4/bD4yezT27ipGn5gYVXRGuXfIvyE6tyZWWWIq5c1OU2xyMVK1RTV8G0y74QRL1hrbyVh0BaldgbfcPf3uutjjuX/4DJTEjXBpmat/CsCAl0v8ji1QV5GuegnKlW+rA2l9Yhvdq2SRPT5Dy0yn0mA4Nt/sGrvColsFuVuLSwqiMqxx8BLk4aB4l5layT2RF9cv+vT4towxHEfz8fLm/pD72HPohLy1DYR/ZDqXB0nCqiLQdDhG7KnXsa4kUBFLTf8LdsAu/tTu2T2Sc6ykmTBVnxT4+ZDK0N64UpDJR4ky+47BQQeu10gXbbPD6fF6whG7Xoa/PbfPyHk39C6HL2qKNuXF5k=
   file_glob: true
   file:
-    - "final/*"
+    - "final/*all.deb"
+    - "final/*linux64-static.gz"
   draft: true
   skip_cleanup: true
   on:
-    all_branches: true
-    condition: "$TRAVIS_BRANCH =~ ^master|release-*$"
+    branch: master
+    condition: os = linux
+  
+# deploy on macos
+deploy:
+  provider: releases
+  api_key:
+    secure: otyfBiezSZgvexnUY7c3lOVlPe1tBNswPMi7n7zuUsfmBJl+gRrhkliXgVBShyqrZ5y7/pG2mQKB5kU6GvUv6ljciIXxeRsTD6+b06hSW1Xl1oFqu3xjGCyXvQrLYW8jgp5dGfoOoldkMG0zcB53X+zqYlX41VS8pMGEMrh5Un9yWkCMTHDc4qGv58aVLyh246Rti2ewqeET5HW/S+NSyTdUhfMMd6YTXWuQC7uoXGI5Dln62V9qOxEfY0UT1jfarSoDY8XVN3kVQCND/KQG5cr/aap9Sg/qBwPOi3O3W5tMn6WljwKoxdc+ZtzR4BxL4Qak6FPe9X4HDDa4/bD4yezT27ipGn5gYVXRGuXfIvyE6tyZWWWIq5c1OU2xyMVK1RTV8G0y74QRL1hrbyVh0BaldgbfcPf3uutjjuX/4DJTEjXBpmat/CsCAl0v8ji1QV5GuegnKlW+rA2l9Yhvdq2SRPT5Dy0yn0mA4Nt/sGrvColsFuVuLSwqiMqxx8BLk4aB4l5layT2RF9cv+vT4towxHEfz8fLm/pD72HPohLy1DYR/ZDqXB0nCqiLQdDhG7KnXsa4kUBFLTf8LdsAu/tTu2T2Sc6ykmTBVnxT4+ZDK0N64UpDJR4ky+47BQQeu10gXbbPD6fF6whG7Xoa/PbfPyHk39C6HL2qKNuXF5k=
+  file_glob: true
+  file:
+    - "final/*-app.tgz"
+  draft: true
+  skip_cleanup: true
+  on:
+    branch: master
+    condition: os = osx
+  
+# deploy on linux
+deploy:
+  provider: releases
+  api_key:
+    secure: otyfBiezSZgvexnUY7c3lOVlPe1tBNswPMi7n7zuUsfmBJl+gRrhkliXgVBShyqrZ5y7/pG2mQKB5kU6GvUv6ljciIXxeRsTD6+b06hSW1Xl1oFqu3xjGCyXvQrLYW8jgp5dGfoOoldkMG0zcB53X+zqYlX41VS8pMGEMrh5Un9yWkCMTHDc4qGv58aVLyh246Rti2ewqeET5HW/S+NSyTdUhfMMd6YTXWuQC7uoXGI5Dln62V9qOxEfY0UT1jfarSoDY8XVN3kVQCND/KQG5cr/aap9Sg/qBwPOi3O3W5tMn6WljwKoxdc+ZtzR4BxL4Qak6FPe9X4HDDa4/bD4yezT27ipGn5gYVXRGuXfIvyE6tyZWWWIq5c1OU2xyMVK1RTV8G0y74QRL1hrbyVh0BaldgbfcPf3uutjjuX/4DJTEjXBpmat/CsCAl0v8ji1QV5GuegnKlW+rA2l9Yhvdq2SRPT5Dy0yn0mA4Nt/sGrvColsFuVuLSwqiMqxx8BLk4aB4l5layT2RF9cv+vT4towxHEfz8fLm/pD72HPohLy1DYR/ZDqXB0nCqiLQdDhG7KnXsa4kUBFLTf8LdsAu/tTu2T2Sc6ykmTBVnxT4+ZDK0N64UpDJR4ky+47BQQeu10gXbbPD6fF6whG7Xoa/PbfPyHk39C6HL2qKNuXF5k=
+  file_glob: true
+  file:
+    - "final/*.exe"
+  draft: true
+  skip_cleanup: true
+  on:
+    branch: master
+    condition: os = windows
+
