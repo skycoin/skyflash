@@ -23,9 +23,8 @@ if [ $TRAVIS_OS_NAME = 'windows' ]; then
     pip3 install --upgrade pip  # all three OSes agree about 'pip3'
     choco install make
     choco install sudo
-    ls -lh
-    echo "Working path is:"
-    pwd
+    # tell the windows shell to update the PATH with new software installed
+    refreshenv
 fi
 
 # all 3 oses are agree about pip3, so direct here: install pyinstaller & pyqt5
