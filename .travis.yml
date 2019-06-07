@@ -29,6 +29,9 @@ notifications:
   - email: false
   - webhooks: https://fathomless-fjord-24024.herokuapp.com/notify
 
+before_deploy:
+  - ./travis/before_deploy.sh
+
 # deploy step
 deploy:
   # deploy on linux
