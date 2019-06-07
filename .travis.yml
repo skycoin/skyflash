@@ -46,7 +46,7 @@ deploy:
   skip_cleanup: true
   on:
     branch: master
-    condition: os = linux
+    condition: $TRAVIS_OS_NAME = 'linux'
   
   # deploy on macos
   provider: releases
@@ -59,7 +59,7 @@ deploy:
   skip_cleanup: true
   on:
     branch: master
-    condition: os = osx
+    condition: $TRAVIS_OS_NAME = 'osx'
   
   # deploy on windows
   provider: releases
@@ -72,5 +72,5 @@ deploy:
   skip_cleanup: true
   on:
     branch: master
-    condition: os = windows
+    condition: $TRAVIS_OS_NAME = 'windows'
 
