@@ -23,6 +23,7 @@ install:
   - ./travis/install.sh
 
 script:
+- make init
 - make install
 
 notifications:
