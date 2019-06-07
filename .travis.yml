@@ -45,8 +45,7 @@ deploy:
   draft: true
   skip_cleanup: true
   on:
-    all_branches: true
-    condition: $TRAVIS_OS_NAME = linux && $TRAVIS_BRANCH = master
+    condition: $TRAVIS_OS_NAME = linux
   
   # deploy on macos
   provider: releases
@@ -58,8 +57,7 @@ deploy:
   draft: true
   skip_cleanup: true
   on:
-    all_branches: true
-    condition: $TRAVIS_OS_NAME = osx && $TRAVIS_BRANCH = master
+    condition: $TRAVIS_OS_NAME = osx
   
   # deploy on windows
   provider: releases
@@ -71,6 +69,5 @@ deploy:
   draft: true
   skip_cleanup: true
   on:
-    all_branches: true
-    condition: $TRAVIS_OS_NAME = windows && $TRAVIS_BRANCH = master
+    condition: $TRAVIS_OS_NAME = windows
 
