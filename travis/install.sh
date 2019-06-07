@@ -21,6 +21,7 @@ fi
 if [ $TRAVIS_OS_NAME = 'windows' ]; then
     # windows
     pip3 install --upgrade pip  # all three OSes agree about 'pip3'
+    choco install make
 fi
 
 # all 3 oses are agree about pip3, so direct here: install pyinstaller & pyqt5
