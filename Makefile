@@ -74,7 +74,7 @@ posix-streamer: ## Create the linux streamer to help with the flashing
 
 macos-app: clean posix-streamer ## Create the macos standalone app
 	python3 -m PyInstaller skyflash-gui.spec
-	cd dist && tar -cvzf skyflash-gui.app skyflash-app.tgz
+	cd dist && tar -cvzf skyflash-app.tgz skyflash-gui.app
 	mv dist/skyflash-app.tgz final/skyflash-macos-app.tgz
 	ls -lh final/
 
