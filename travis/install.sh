@@ -20,7 +20,7 @@ fi
 
 if [ $TRAVIS_OS_NAME = 'windows' ]; then
     # windows
-    pip install --upgrade pip  # all three OSes agree about 'pip3'
+    pip3 install --upgrade pip  # all three OSes agree about 'pip3'
 fi
 
 # all 3 oses are agree about pip3, so direct here: install pyinstaller & pyqt5
