@@ -3,7 +3,7 @@
 
 if [ $1 = 'linux' ]; then
     # linux
-    make deb
+    make linux-deb
     make linux-static
 fi
 
@@ -16,5 +16,5 @@ fi
 
 if [ $1 = 'windows' ]; then
     # windows
-    make win-static
+    make win
 fi
