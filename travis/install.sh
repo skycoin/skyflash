@@ -25,8 +25,6 @@ if [ $TRAVIS_OS_NAME = 'windows' ]; then
     choco install sudo
     choco install vcredist-all # ms-vc++ dlls
     choco install vcredist2017 # for some reason this one is not covered in the above.
-    # tell the windows shell to update the PATH with new software installed
-    refreshenv
 fi
 
 # all 3 oses are agree about pip3, so direct here: install pyinstaller & pyqt5
