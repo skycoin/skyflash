@@ -24,7 +24,7 @@ if [ $TRAVIS_OS_NAME = 'windows' ]; then
     choco install make
     choco install sudo
     choco install vcredist-all # ms-vc++ dlls
-    choco install kb2999226 # ms-crt-dlls
+    choco install vcredist2017 # for some reason this one is not covered in the above.
     # tell the windows shell to update the PATH with new software installed
     refreshenv
 fi
