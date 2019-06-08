@@ -51,8 +51,8 @@ deploy:
     draft: true
     skip_cleanup: true
     on:
-      branch: master
-      condition: "$TARGETOS = linux"
+      all_branches: true
+      condition: "$TARGETOS = linux && $TRAVIS_BRANCH =~ ^master$|^release-.*$"
   
   # deploy on macos
   - provider: releases
@@ -64,8 +64,8 @@ deploy:
     draft: true
     skip_cleanup: true
     on:
-      branch: master
-      condition: "$TARGETOS = osx"
+      all_branches: true
+      condition: "$TARGETOS = osx && $TRAVIS_BRANCH =~ ^master$|^release-.*$"
   
   # deploy on windows
   - provider: releases
@@ -77,6 +77,6 @@ deploy:
     draft: true
     skip_cleanup: true
     on:
-      branch: master
-      condition: "$TARGETOS = windows"
+      all_branches: true
+      condition: "$TARGETOS = windows && $TRAVIS_BRANCH =~ ^master$|^release-.*$"
 
