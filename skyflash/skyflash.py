@@ -31,7 +31,7 @@ imageConfigAddress = 12582912
 imageConfigDataSize = 256
 
 # skybian URL
-skybianUrl = "https://github.com/skycoin/skybian/releases/download/Skybian-v0.0.3/Skybian-v0.0.3.tar.xz"
+skybianUrl = "https://github.com/skycoin/skybian/releases/download/Skybian-v0.0.4/Skybian-v0.0.4.tar.xz"
 manualUrl = "https://github.com/skycoin/skyflash/blob/develop/USER_MANUAL.md"
 
 
