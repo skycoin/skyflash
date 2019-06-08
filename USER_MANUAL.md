@@ -105,8 +105,6 @@ You may want to flash the image now or later, if you want to do it now then you 
 
 **A word of warning:** once you generate the images and close Skyflash you will not be able to use Skyflash to burn the same images unless you re-generate the images. For this reason we recommend to have a copy of BalenaEtcher at hand to burn the previously generated images.
 
-*The flashing process is working only on Linux & Windows by now, we intend to cover MacOS soon.*
-
 To start the flashing process you need to select the proper device, and image in the combo boxes, but first a needed warning:
 
 ### WARNING!
