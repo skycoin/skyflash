@@ -1,36 +1,42 @@
 matrix:
   include:
-    - name: "Xenial Linux with Python 3.7.1 "
+    - name: "Xenial Linux with Python 3.7.1"
       python: 3.7
       os: linux
       dist: xenial
       language: shell
+      env: TARGETOS=linux
+
     - name: "macOS with Python 3.7.2"
       os: osx
       osx_image: xcode10.2
       language: shell
       before_install: 
         - python3 --version ; pip3 --version ; sw_vers
-    - name: "Windows with Python 3.7.3 "
-      os: windows
+      env: TARGETOS=osx
+
+    - name: "Windows (Wine) over Xenial Linux with Python 3.7.1"
+      os: linux
+      dist: xenial
       language: shell
-      before_install:
-        - choco install python  # slow at least 1 min 30 sec
-      env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
+      services:
+        - docker
+      env: TARGETOS=windows
 
 # install dependencies depending on the OS
 install: 
-  - ./travis/install.sh
+  - ./travis/install.sh $TARGETOS
 
 script:
-  - ./travis/script.sh
+  - make init
+  - make install
 
 notifications:
   email: false
   webhooks: https://fathomless-fjord-24024.herokuapp.com/notify
 
 before_deploy:
-  - ./travis/before_deploy.sh
+  - ./travis/before_deploy.sh $TARGETOS
 
 # deploy step
 deploy:
@@ -46,7 +52,7 @@ deploy:
     skip_cleanup: true
     on:
       branch: master
-      condition: "$TRAVIS_OS_NAME = linux"
+      condition: "$TARGETOS = linux"
   
   # deploy on macos
   - provider: releases
@@ -59,7 +65,7 @@ deploy:
     skip_cleanup: true
     on:
       branch: master
-      condition: "$TRAVIS_OS_NAME = osx"
+      condition: "$TARGETOS = osx"
   
   # deploy on windows
   - provider: releases
@@ -72,5 +78,5 @@ deploy:
     skip_cleanup: true
     on:
       branch: master
-      condition: "$TRAVIS_OS_NAME = windows"
+      condition: "$TARGETOS = windows"
 

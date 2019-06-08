@@ -68,19 +68,6 @@ win-dev: clean win-flasher-dev ## Create a windows static app using local dev to
 	mv dist/windows/*.exe final/
 	ls -lh final/
 
-win-travis: clean win-flasher-travis ## Create the windows static app via travis windows machine
-	python -m PyInstaller skyflash-gui.spec
-	-cd dist && 7z a skyfwi.7z skyflash-gui/
-	-cd dist && 7zip a skyfwi.7z skyflash-gui/
-	cp win-build/7zSD.sfx dist
-	cp win-build/sfx_config.txt dist
-	cd dist && cat 7zSD.sfx sfx_config.txt skyfwi.7z > Skyflash.exe
-	mv dist/*.exe final/
-	ls -lh final/
-
-win-flasher-travis: ## Create the windows flasher utility inside travis windows machine
-	cd win-build && python -m PyInstaller -F flash.spec
-
 posix-streamer: ## Create the linux streamer to help with the flashing
 	cd posix-build && python3 -m PyInstaller -F pypv.py
 	chmod +x posix-build/dist/pypv
