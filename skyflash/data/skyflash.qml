@@ -458,7 +458,10 @@ ApplicationWindow {
                         skf.pickimages2flash(currentText)
                     }
                 }
+            }
 
+            // Flash Button, alone in a row
+            RowLayout {
                 // Start Flashing!
                 Button {
                     id: btFlash
@@ -473,6 +476,13 @@ ApplicationWindow {
                         flashProgressBox.visible = true
                         skf.imageFlash()
                     }
+                }
+
+                // Please Review
+                Label {
+                    id: lbPleaseReview
+                    text: " Please double check before start!"
+                    color: "red"
                 }
             }
 
