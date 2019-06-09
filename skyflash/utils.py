@@ -531,30 +531,7 @@ def getLinDrivesInfo():
     ]
     '''
 
-    drives = []
-
-    # create a pool of possible drives
-    for i in range(0, 5):
-        drives.append("/dev/mmcblk{}".format(i))
-
-    # add sdb-f as possible mmc drives
-    for i in "abcdef":
-        drives.append("/dev/sd{}".format(i))
-
-    # check if the drive is there
-    for drive in drives[:]:
-        try:
-            # if this work we detected a drive and is readable, see else statement
-            disk = open(drive,'rb')
-        except FileNotFoundError:
-            # there is no such drive
-            drives.pop(drives.index(drive))
-            pass
-        except PermissionError:
-            pass
-        else:
-            # well it can open the disk, we must close it
-            disk.close()
+    drives = listMediaDevices()
 
     # if we detected a drive, gather the details via lsblk
     if drives:
@@ -562,10 +539,12 @@ def getLinDrivesInfo():
         js = getDataFromCLI("lsblk -JpbI 8 {}".format(d))
     else:
         # TODO: warn the user
+        print("No drives found, detection procedure returned no drive")
         return False
 
     # is no usefull data exit
     if js is False:
+        print("lsblk did not offered info about the drive requested, weird!")
         return False
 
     # usefull data beyond this point
@@ -630,6 +609,38 @@ class WorkerSignals(QObject):
 
     def __init__(self, parent=None):
         super(WorkerSignals, self).__init__(parent=parent)
+
+def listMediaDevices():
+    ''' List the media devices that are removable
+
+    If the major number is 8, that indicates it to be a disk device.
+
+    The minor number is the partitions on the same device:
+    - 0 means the entire disk
+    - 1 is the primary
+    - 2 is extended
+    - 5 is logical partitions
+    The maximum number of partitions is 15.
+
+    Use `$ sudo fdisk -l` and `$ sudo sfdisk -l /dev/sda` for more information.
+    '''
+
+    with open("/proc/partitions", "r") as f:
+        devices = []
+
+        for line in f.readlines()[2:]:
+            words = [ word.strip() for word in line.split() ]
+            minor_number = int(words[1])
+            device_name = words[3]
+
+            if (minor_number % 16) == 0:
+                path = "/sys/class/block/" + device_name
+
+                if os.path.islink(path):
+                    if os.path.realpath(path).find("/usb") > 0:
+                        devices.append("/dev/" + device_name)
+
+        return devices
 
 # Generic worker to use in threads
 class Worker(QRunnable):
