@@ -10,7 +10,7 @@ Before looking into it you must know the workflow of the software, Skyflash will
 
 1. Select and verify a Skybian base image, either from a local file or downloading a copy from the internet.
 2. Setting your particular network configuration (default Skycoin's Skyminers config is suggested)
-3. Build the images for a manager and how many minions you like (in actual skywire testnet only a manager and 7 minions are allowed)
+3. Build the images for a manager and how many nodes you like (in actual skywire testnet only a manager and 7 nodes are allowed)
 4. [Optionally] Burn the images to uSDCards to insert into your Orange Pi Prime SBC.
 
 Now we will explore each option in depth
@@ -79,7 +79,7 @@ The app has some logic rules you need to obey when modifying the network setting
 * We use a `/24` network segment (255.255.255.0 netmask if you prefer it on this format)
 * Because of that the `Manager IP` address must need to be in the same network segment of the `Gateway`.
 * We use CloudFlare/OpenDNS DNS servers instead of Google ones, if you want to use a local one put it first and keep a CloudFlare/OpenDNS DNS servers in second place.
-* The minion's count refers to the minions only (7 minions + one manager), we assume you want to always config a managers node; because of this you can also specify a count of 0 minions and the app will only create a manager node image with no minions (useful for a quick test of the overall work flow)
+* The node count refers to the nodes only (7 nodes + one manager), we assume you want to always config a managers node; because of this you can also specify a count of 0 nodes and the app will only create a manager node image with no nodes (useful for a quick test of the overall work flow)
 
 If you manage to break some of this rules (and other trivial ones) the app will complain suggesting where the trouble is.
 
@@ -95,7 +95,7 @@ During the image generation you may see a windows like this to show you the proc
 
 ![Building images](/images/images.png)
 
-When this process finish you will have the images in your Skybian folder, they will have names like `Skybian-manager.img` & `Skybian-minion-1.img` and so on.
+When this process finish you will have the images in your Skybian folder, they will have names like `Skybian-manager.img` & `Skybian-node-1.img` and so on.
 
 ## Step #4: Flashing the images
 
