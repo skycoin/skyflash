@@ -303,7 +303,7 @@ ApplicationWindow {
                 }
 
                 // node count
-                Label { text: "Minions count:" }
+                Label { text: "Node count:" }
 
                 TextField  {
                     id: txtNodes
@@ -313,7 +313,7 @@ ApplicationWindow {
                     maximumLength: 5
                     enabled: false
                     inputMask: "000"
-                    // ToolTip.text: "How many minions we must build images for, not counting the manager node"
+                    // ToolTip.text: "How many nodes we must build images for, not counting the manager node"
                 }
             }
         }

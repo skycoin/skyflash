@@ -934,15 +934,15 @@ To flash the next image just follow these steps:
         endip = int(manager[manager.rfind('.') + 1:]) + int(nodes)
         if endip > 255:
             self.uiError.emit("Validation error", "The nodes IP distribution is beyond 255, please lower your manager ip",
-                "The IP of the minions are distributed from the manager IP and up, if you set the manager node IP so high the minion count may not fit")
-            logging.debug("Manager IP to high, last minion will be {} and that's not possible".format(endip))
+                "The IP of the nodes are distributed from the manager IP and up, if you set the manager node IP so high the node count may not fit")
+            logging.debug("Manager IP to high, last node will be {} and that's not possible".format(endip))
             return False
 
         # validation #5, gw not in manager & nodes range
         if int(gw[gw.rfind('.') + 1:]) in range(int(manager[manager.rfind('.') + 1:]), endip):
-            self.uiError.emit("Validation error", "Please check your GW, Manager & Minion selection, the GW is one of the Minions or Manager IPs",
-                "When we distribute the manager & Minions IP we found that the GW is one of that IP and that's wrong")
-            logging.debug("GW ip is on generated Minions range.")
+            self.uiError.emit("Validation error", "Please check your GW, Manager & Nodes selection, the GW is one of the Nodes or Manager IPs",
+                "When we distribute the manager & nodes IP we found that the GW is one of that IP and that's wrong")
+            logging.debug("GW ip is on generated nodes range.")
             return False
 
         # If you reached this point then all is ok
@@ -1038,7 +1038,7 @@ To flash the next image just follow these steps:
             # new file and it's name
             nodeNick = "manager"
             if nip != self.netManager:
-                nodeNick = "minion-" + str(actual)
+                nodeNick = "node-" + str(actual)
 
             nodeName = "Skybian-" + nodeNick + ".img"
 
