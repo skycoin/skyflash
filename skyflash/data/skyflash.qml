@@ -13,7 +13,7 @@ ApplicationWindow {
     MessageDialog {
         id: aboutDiag
         title: "About Skyflash"
-        text: "Skyflash is the official tool to configure & create the Skyminers images from Skybian.\n\nActual version is: v0.0.3-rc"
+        text: "Skyflash is the official tool to configure & create the Skyminers images from Skybian.\n\nActual version is: v0.0.4-beta"
         onAccepted: visible = false
     }
 
@@ -458,7 +458,10 @@ ApplicationWindow {
                         skf.pickimages2flash(currentText)
                     }
                 }
+            }
 
+            // Flash Button, alone in a row
+            RowLayout {
                 // Start Flashing!
                 Button {
                     id: btFlash
@@ -473,6 +476,13 @@ ApplicationWindow {
                         flashProgressBox.visible = true
                         skf.imageFlash()
                     }
+                }
+
+                // Please Review
+                Label {
+                    id: lbPleaseReview
+                    text: " Please double check before start!"
+                    color: "red"
                 }
             }
 

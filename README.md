@@ -1,13 +1,13 @@
-# skyflash is a tool to configure & flash skybian base images for the official skycoin skyminers
+# GUI tool to flash Skybian for Skyminer on SD card images of any kind
 
-With this tool you will be able configure the default [skybian](https://github.com/simelo/skybian) image to your custom environment and create the needed images for it.
+With this tool you will download, configure, create and flash the default [skybian](https://github.com/simelo/skybian) image to your custom environment.
 
-The resulting images will only run on the official skyminer hardware, aka: Orange Pi Prime SBC.
+The resulting images will only run on the official skyminer hardware so far, aka: Orange Pi Prime SBC.
 
 The tool has two variants:
 
-* A general use GUI tool (skyflash) that works on Linux/Windows (Mac soon)
-* A Linux only CLI tool (skyflash-cli) **_for developers and advanced users only_**.
+* A general use GUI tool (skyflash) that works on Linux & Windows _(Mac support is a work in progress)_
+* A Linux only CLI tool (skyflash-cli) **_for developers and advanced users only in Linux, see below_**.
 
 ## Skyflash GUI tool
 
@@ -19,83 +19,74 @@ To install this tool, go to the [Releases](https://github.com/skycoin/skyflash/r
 
 | Operating System | You must download the one... |
 |:----------------:|:--------------------------------:|
-| Windows | ...that ends with **.exe** |
-| Linux | ...that ends with **.deb** |
-| Linux static | ...that ends with **linux64-static.gz** |
-| MacOS | ...that ends with **.dmg** |
-| Python3 pkg | ...that ends with .tar.gz  _(advanced users)_| 
+| Windows app| **Skyflash.exe** |
+| Linux (deb based ditro) | **python3-skyflash_[version]_all.deb** |
+| Linux static app| **skyflash-gui_linux64-static.gz** |
+| MacOS | **skyflash-macos-app.tgz** |
 
-Installing it and running is done by the default OS way.
+Installing it and running is done by the default OS way, google is your friend on this.
 
 ### Usage
 
 To see more detailed instructions on how to use the Skyflash GUI utility please visit the [User's Manual](USER_MANUAL.md)
 
-A note: on Windows the app will only build the images and will suggest to burn the image with a third party flashing tool like [Balena Etcher](https://www.balena.io/etcher/)
+## skyflash-cli tool (developer)
 
-## skyflash-cli tool
+The CLI interface for linux developers has [help & usage guide with examples](skyflash-cli_MANUAL.md) if you are interested on it
 
-The tool `skyflash-cli` is intended to be run on linux and will generate the needed images for a base image.
+## Developers & testers
 
-Once you has created your images you will need to use a tool to burn these images to the uSD cards, we recommend [Balena Etcher](https://www.balena.io/etcher/) a cross OS tool.
+If you are eager to build it yourself take into account that tha base OS for dev is Ubuntu 18.04 LTS, but most of them works on OSX also.
 
-### Step 1: Download the default skybian image
+The project use the GNU Make to test and build so you can as for help like this `make help`:
 
-Go to [skybian](https://github.com/skycoin/skybian) releases and download the latest image, decompress it and put the base image on the folder where `skyflash-cli` resides; or copy the `skyflash-cli` tool to the folder where you have the skybian image.
-
-### Step 2: Run the tool
-
-`skyflash-cli` has a few options that you can see if you run it without arguments (`skyflash-cli`) or with '-h' switch (`skyflash-cli -h`)
-
-For a default configuration of skybian as a skyminer you just need to run it like this:
-
-```sh
-./skyflash-cli -a Skybian-0.1.0.img
 ```
-
-This will generate 8 images, one for the manager and 7 minions. Network configuration is the skyminers default:
-
-* Network: 192.168.0.0/24
-* Netmask: 255.255.255.0 (aka: /24)
-* Gateway: 192.168.0.1
-* DNS servers: 1.0.0.1, 1.1.1.1
-* Manager IP: 192.168.0.2
-* Minions IPs: 192.168.0.[3-9] (7 minions)
-
-If you need a different setup just check the `skyflash-cli -h` to know more, for example for a manager and 22 minions with this details:
-
-* Network: 172.16.22.0/24
-* Gateway: 172.16.22.1
-* DNS servers: 172.16.22.1, 1.1.1.1
-* Manager: 172.16.22.10
-* Minions: 172.16.22.100 to 172.16.22.121
-
-**Tip:** If you don't care about the minions IP being contiguous you can declare a range that is greater than the minions count and the script will allocate the IPs in a scattered way inside the range you stated.
-
-```sh
-./skyflash-cli -g 172.16.22.1 -d "172.16.22.1, 1.1.1.1" -m 172.16.22.10 -n 100-121 -i Skybian-0.1.0.img
+$ make
+deps                           Install all the needed deps to build it in Ubuntu 18.04 LTS and alike
+deps-windows                   Installs docker from zero and build a image to build the windows .exe from linux
+init                           Initial cleanup, erase even the final app dir
+clean                          Clean the environment to have a fresh start
+build                          Build the pip compatible install file
+install                        Install the built pip file
+win-flasher                    Create the flasher tool for windows (for travis only)
+win-flasher-dev                Create the flasher tool for windows (no internet needed if you run "make deps-windows" already)
+win                            Create a windows static app (for travis only)
+win-dev                        Create a windows static app using local dev tools (no internet needed if you run "make deps-windows" already)
+posix-streamer                 Create the linux/macos streamer to help with the flashing
+linux-deb                      Create a .deb file ready to use in debian like systems
+linux-static                   Create a linux amd64 compatible static (portable) app
+macos-app                      Create the macos standalone app
 ```
+As you can see the options are self explanatory, just a few must know notes:
 
-Please note that in the case of the DNS (option '-d') if you need to pass more than one IP you need to surround it with double quotes and separate it with a comma and a space, just like the example above.
+* Option deps works only on Linux, on OSX you will need to install a few packages to get the environment ready to work:
+  * xcode, brew, python3, pyqt5 & pyinstaller
+* Use the `init` option to deep clean the working environment, this will also erase the pre-built apps.
+* Use the `clean` option to soft clean the working environment, this will not erase the pre-built apps in the final folder.
+* Options ending on `-dev` are meant to be used on local environments and will not pull any data from the internet if you run the `deps` & `deps-windows` while connected
+* Option `deps-windows` is for linux only and has a trick if you don't have docker installed already: you must run it, reboot or logout/login and run it again to finish the install
+* Once you run any of the release related options _(win-dev, linux-deb, linux-static, macos-app)_ your app will be sitting on a folder named `final`
 
 ### Releases
 
 To do a release you must follow these steps:
 
-0. Check if there are commits on the master branch that must be applied to develop (hot fixes or security ones), apply them and fix any merge issues.
-0. On develop branch, check any pending issues in order to close them if possible on this release and close them is possible.
-0. Check the latest release of Skybian and if the URL of the latest image is different rise a issue and solve it by the default way.
-0. Merge the develop branch into the release one and fix any conflicts if any.
+0. Clone the repository in a personal or org repository (default develop one is at [Simelo org](https://github.com/simelo/skyflash)) and check travis has take over it and is functional
+0. Check if there are commits on the master branch that must be applied to your develop (hot fixes or security ones), apply them and fix any merge issues
+0. Create a release-v#.#.# branch in your repository, this will be the work playground, the numbers are the next logical release, see [CHANGELOG](CHANGELOG.md) file to see what's next
+0. Check any pending issues in order to close them if possible on this release cycle
+0. Check the latest release of Skybian and if the URL of the latest image is different update it
+0. Merge your release branch into the master of your repo and check for travis results, if al goes well you will see 3 new draft releases in your repository (you may need to update the deploy credentials)
 0. Update the new version number in the `setup.py` & `skyflash/data/skyflash.qml` files.
 0. Update the `CHANGELOG.md` file with any needed info and move the `Unreleased` part to the new release version.
 0. Review & update the `README.md` file for any needed updates or changes that need attention in the front page.
-0. Wait for travis to validate all the changes.
+0. Push changs and wait for travis to validate all the changes.
 0. On success, check the draft release is published on the repository, improve it and keep it as a draft.
 0. Download the releases files and test them.
 0. If problems are found with raise issues where needed (skyflash/skybian) and fix them before continue with the next step.
 0. Download the releases files after the fix in the previous step (if needed) and test them.
 0. Fix any issues if found (work in the release branch)
-0. After all problems are solved and work as expected, tag it as `Skyflash-X.Y.Z` & raise a PR against master branch, solve any issues and merge it.
+0. After all problems are solved and work as expected, raise a PR against master branch in the skycoin repository, solve any issues and merge it (or wait for a privileged user to do it)
 0. Wait for travis completion and check the release files are published on the Github repository under releases.
 0. Edit & comment the release with the changes in CHANGELOG.md that match this release, change status from Draft to Official release.
 0. Merge master into develop.
