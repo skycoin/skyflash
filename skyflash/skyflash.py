@@ -32,7 +32,7 @@ imageConfigDataSize = 256
 
 # skybian URL
 skybianUrl = "https://github.com/skycoin/skybian/releases/download/Skybian-v0.0.4/Skybian-v0.0.4.tar.xz"
-manualUrl = "https://github.com/skycoin/skyflash/blob/develop/USER_MANUAL.md"
+manualUrl = "https://github.com/skycoin/skyflash/blob/master/USER_MANUAL.md"
 
 
 class Skyflash(QObject):
