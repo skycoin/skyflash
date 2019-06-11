@@ -11,7 +11,7 @@ import json
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, pyqtSlot
 
 if 'nt' in os.name:
-    import win32api
+    import wmi
     import win32file
 
 def shortenPath(fullpath, ccount):
@@ -202,6 +202,43 @@ def setPath(dir):
     # return it
     return (path, downloads, checked)
 
+def windowsDevices():
+    '''This one is to get all the info about windows removable devices in
+    a big array, the format is as follows:
+
+    [
+        ['\\\\.\\PHYSICALDRIVE1', 'Mass Storage Device USB Device', '8052549120',
+            [('F:\\', 'MSDOS', '\\\\?\\Volume{23e2ba26-8a62-11e9-afa4-080027673c27}\\')]
+        ],
+        ['\\\\.\\PHYSICALDRIVE2', 'Verbatim STORE N GO USB Device', '7739988480',
+            [('G:\\', 'PAVEL', '\\\\?\\Volume{23e2ba2b-8a62-11e9-afa4-080027673c27}\\')],
+            [('H:\\', 'RAPUT', '\\\\?\\Volume{23e2bcfb-8112-11e9-afa4-080276524590}\\')]
+        ]
+    ]
+
+    '''
+
+    c = wmi.WMI ()
+    data = []
+
+    for physical_disk in c.Win32_DiskDrive():
+        if 7 in physical_disk.Capabilities:
+            # is a removable media
+            phy = physical_disk.DeviceID
+            size = int(physical_disk.Size)
+            desc = physical_disk.Caption
+            drives = []
+            for partition in physical_disk.associators ("Win32_DiskDriveToDiskPartition"):
+                for logical_disk in partition.associators ("Win32_LogicalDiskToPartition"):
+                    name = logical_disk.Name + "\\"
+                    label = logical_disk.VolumeName
+                    guid = win32file.GetVolumeNameForVolumeMountPoint(name)
+                    drives.append((name, label, guid))
+
+            data.append([phy, desc, size, drives])
+
+    return data
+
 def getMacDriveInfo():
     '''Get drives info in MacOS
 
@@ -283,29 +320,18 @@ def getWinDrivesInfo():
     ]
     '''
 
-    # getting the info of the drives on the system
-    drives = win32api.GetLogicalDriveStrings()
-    drives = drives.split('\000')[:-1]
-
+    # get the data
+    data = windowsDevices()
     phydrives = []
+    for phy in data:
+        size = phy[2]
+        letter = []
+        label = []
+        for d in phy[3]:
+            letter.append(d[0])
+            label.append(d[1])
 
-    for d in drives:
-        # Check to see if it's removable
-        dtype = win32file.GetDriveType(d)   ##### type
-        if dtype == 2:
-            # letter
-            letter = d ## letter
-
-            # get label of the drive
-            dinfo = win32api.GetVolumeInformation(d)
-            label = dinfo[0]   #### Label
-
-            # sixe of the drive
-            s = win32api.GetDiskFreeSpace(d)
-            size = s[0] * s[1] * s[3]  ######## size        
-
-            # add data
-            phydrives.append((letter, label, size))
+        phydrives.append((', '.join(letter), ', '.join(label), size))
 
     # return result
     return phydrives
