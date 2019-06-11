@@ -22,216 +22,21 @@ red = re.compile('Disk \#\d\, Partition \#\d')
 rel = re.compile(' [A-Z]: ')
 
 if 'nt' in os.name:
-    import ctypes
-    import win32api
     import win32file
+    import wmi
 
     # some aliases
     CreateFile = win32file.CreateFile
     CloseHandle = win32file.CloseHandle
     DeviceIoControl = win32file.DeviceIoControl
-    #getLogicalDrives = win32file.GetLogicalDrives
-    getLogicalDrives = ctypes.windll.kernel32.GetLogicalDrives
-    #getVolumeInformation = win32api.GetVolumeInformation
-    getVolumeInformation = ctypes.windll.kernel32.GetVolumeInformationW
     ReadFile  = win32file.ReadFile
     WriteFile = win32file.WriteFile
-    createUnicodeBuffer = ctypes.create_unicode_buffer
-    sizeof = ctypes.sizeof
     w32GenericRead = win32file.GENERIC_READ
-    w32FileShareRead = win32file.FILE_SHARE_READ
+    # w32FileShareRead = win32file.FILE_SHARE_READ
     w32OpenExisting = win32file.OPEN_EXISTING
 else:
     print("This script is not intended for this OS")
     sys.exit()
-
-def sysexec(cmd):
-    '''
-    Execute a command in the console of the base os, this one is intended
-    for windows only.
-
-    It parses the output into a list (by line endings) and cleans empty ones
-    '''
-
-    l = subprocess.check_output(cmd, shell=True)
-    l = l.decode(encoding='oem').splitlines()
-
-    # cleans empty lines
-    for i in l:
-        if i == '': l.remove('')
-
-    return l
-
-def getLetter(logicaldrive):
-    '''Windows Only:
-    It get the device ID in this format: "Disk #0, Partition #0"
-    and answer back with an drive letter matching or a empty str
-    if not mounted/used
-    '''
-
-    l = sysexec("wmic partition where (DeviceID='{}') assoc /assocclass:Win32_LogicalDiskToPartition".format(logicaldrive))
-
-    r = []
-    # filter for " G: "
-    # if not matching need to return ""
-
-    for e in l:
-        fe = rel.findall(e)
-        for ee in fe:
-            nee = ee.strip()
-            if not nee in r:
-                r.append(nee)
-
-    if len(r) > 0:
-        # DEBUG
-        d = r[0].strip()
-        return d
-    else:
-        return ''
-
-def getLogicalDrive(phydrive, letter):
-    '''Windows only
-    Get the physical drive (\\\\.\\PHYSICALDRIVE0) name and
-    return the logical volumes in a list like this
-        Disk #0, Partition #0
-        Disk #0, Partition #1
-        etc...
-
-    associated with it
-    '''
-
-    # scape the \'s in the name of the device
-    phydrive = phydrive.replace('\\\\.\\', '\\\\\\\\.\\\\')
-    l = sysexec("wmic DiskDrive where \"DeviceID='" + "{}".format(phydrive) + "'\" Assoc /assocclass:Win32_DiskDriveToDiskPartition")
-
-    record = []
-    data = []
-
-    # the list has many times the same info, pick unique names
-    # dive into results
-    for element in l:
-        # matching it via regular expressions
-        for logVol in red.findall(element):
-            # already present?
-            if not logVol in record:
-                # just add the one with the drive letter name as the passed one
-                # get the drive letter associated with the logDrive
-                l = getLetter(logVol)
-                if l.lower() == letter.lower():
-                    record.append(logVol)
-                    # get the guid
-                    g = getWinGUID(l)
-                    # adding the info to the return list
-                    data.append([logVol, l, getLabel(l), g])
-
-    return data
-
-def getLabel(d):
-    '''Windows Only:
-    From a drive letter, get the label if proceed
-    '''
-
-    name_buffer = createUnicodeBuffer(1024)
-    filesystem_buffer = createUnicodeBuffer(1024)
-    volume_name = ""
-    drive = u"{}/".format(d)
-    # drive = drive.encode("ascii")
-    error = getVolumeInformation(ctypes.c_wchar_p(drive), name_buffer,
-            ctypes.sizeof(name_buffer), None, None, None,
-            filesystem_buffer, ctypes.sizeof(filesystem_buffer))
-
-    if error != 0:
-        volume_name = name_buffer.value
-
-    if not volume_name:
-        volume_name = "[No Label]"
-
-    return volume_name
-
-def getWinGUID(drive):
-    '''Windows Only
-    Get the capacity, deviceId, driveletter for all storage devices on the machine
-    then filter by drive and & return false or the string of the guid
-
-    Tip: if ithas no letter windows can't handle it, so no worry
-    '''
-
-    l= sysexec("wmic volume get Capacity,DeviceID,DriveLetter /format:csv")
-    listd = csv.reader(l)
-    header = next(listd)
-
-    # extracted fields
-    sizeh = header.index("Capacity")
-    guidh = header.index("DeviceID")
-    letter = header.index("DriveLetter")
-
-    guid = False
-    for r in listd:
-        if len(r) == 0:
-            continue
-
-        # if no drive letter match the size
-        if len(r[letter]) > 0 and r[letter] == drive:
-            guid = r[guidh]
-
-    return guid
-
-def getPHYDrives(letter):
-    '''
-    List all physical drives, filter for the ones with the removable
-    media flag (most likely card readers & USB thumb drives) and
-    retrieve the logical drive name and it's letter if proceed
-
-    Returns an array with physical & logical names for drives, it's
-    associated letter, size and the interface type.
-    '''
-
-    l = sysexec("wmic diskdrive list full /format:csv")
-
-    # get the headers
-    listd = csv.reader(l)
-    header = next(listd)
-
-    # extracted fields
-    capa = header.index("Capabilities") # {3;4;7} we are looking for '7' aka removable media
-    phydrive = header.index("DeviceID")
-    interface = header.index("InterfaceType")
-    descDirty = header.index("PNPDeviceID")
-    size = header.index("Size")
-
-    # output dict
-    d = dict()
-
-    for r in listd:
-        if len(r) == 0:
-            continue
-
-        # check if the media is removable (cap has #7)
-        capas = r[capa].strip('{}').split(';')
-        if '7' in capas:
-            # get logical drive data
-            drive = getLogicalDrive(r[phydrive], letter)
-
-            # just add the ones for the drive we want
-            if len(drive) > 0:
-                d['drives'] = drive
-                d["phydrive"] = r[phydrive]
-                d["interface"] = r[interface]
-                d["desc"] = r[descDirty]
-                d["size"] = r[size]
-
-    # sample output & watch out: we on ly return data for the drive we are asked for
-    #
-    # [{'desc': 'USBSTOR\\DISK&amp;VEN_MASS&amp;PROD_STORAGE_DEVICE&amp;REV_1.00\\121220160204&amp;0',
-    # 'drives': [['Disk #2, Partition #0',
-    #             'H:',
-    #             '[No Label]',
-    #             '\\\\?\\Volume{37189f6b-5e76-11e9-a1fd-0800275fd42d}\\']],
-    # 'interface': 'USB',
-    # 'phydrive': '\\\\.\\PHYSICALDRIVE2',
-    # 'size': '8052549120'}]
-
-    return d
 
 def lockWinDevice(physicalDevice, volumeGUID):
 
@@ -249,31 +54,94 @@ def lockWinDevice(physicalDevice, volumeGUID):
     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT): 1024
     '''
 
-    # Open the device
+    # a single devoice can have multiple drives opened, dismount it all
+    hVolumes = []
+    for vguid in volumeGUID:   
+        # Open the volume
+        hVolume = CreateFile(vguid, 1|2, 1|2, None, 3, 0, None)
+        # Lock the volume
+        DeviceIoControl(hVolume, 589848, None, None, None)
+        # Dismount the volume
+        DeviceIoControl(hVolume, 589856, None, None, None)
+        # append the hvolume to the array
+        hVolumes.append(hVolume)
+
+
+    # the device is unique: Open the device
     hDevice = CreateFile(physicalDevice, 1|2, 1|2, None, 3, 0, None)
-
-    # Open the volume
-    hVolume = CreateFile(volumeGUID, 1|2, 1|2, None, 3, 0, None)
-
-    # Lock the volume
-    DeviceIoControl(hVolume, 589848, None, None, None)
-
-    # Dismount the volume
-    DeviceIoControl(hVolume, 589856, None, None, None)
-
     # Lock the device
     DeviceIoControl(hDevice, 589848, None, None, None)
-
     # Dismount the device
     DeviceIoControl(hDevice, 589856, None, None, None)
 
-    return hDevice, hVolume
+    return hDevice, hVolumes
+
+def windowsDevices():
+    '''This one is to get all the info about windows removable devices in
+    a big array, the format is as follows:
+
+    [
+        ['\\\\.\\PHYSICALDRIVE1', 'Mass Storage Device USB Device', '8052549120',
+            [('F:\\', 'MSDOS', '\\\\?\\Volume{23e2ba26-8a62-11e9-afa4-080027673c27}\\')]
+        ],
+        ['\\\\.\\PHYSICALDRIVE2', 'Verbatim STORE N GO USB Device', '7739988480',
+            [('G:\\', 'PAVEL', '\\\\?\\Volume{23e2ba2b-8a62-11e9-afa4-080027673c27}\\')],
+            [('H:\\', 'RAPUT', '\\\\?\\Volume{23e2bcfb-8112-11e9-afa4-080276524590}\\')]
+        ]
+    ]
+
+    '''
+
+    c = wmi.WMI ()
+    data = []
+
+    for physical_disk in c.Win32_DiskDrive():
+        if 7 in physical_disk.Capabilities:
+            # is a removable media
+            phy = physical_disk.DeviceID
+            size = int(physical_disk.Size)
+            desc = physical_disk.Caption
+            drives = []
+            for partition in physical_disk.associators ("Win32_DiskDriveToDiskPartition"):
+                for logical_disk in partition.associators ("Win32_LogicalDiskToPartition"):
+                    name = logical_disk.Name + "\\"
+                    label = logical_disk.VolumeName
+                    guid = win32file.GetVolumeNameForVolumeMountPoint(name)
+                    drives.append((name, label, guid))
+
+            data.append([phy, desc, size, drives])
+
+    return data
+
+def getphyguid(letter, phydata):
+    '''Get the phy and guids of the drive that has the drive letter you passed'''
+
+    if not "\\" in letter:
+        letter = letter + "\\"
+
+    for phyd in phydata:
+        phy = phyd[0]
+        size = int(phyd[2])
+        guids = []
+        isit = False
+        for d in phyd[3]:
+            guids.append(d[2])
+            if d[0].lower() == letter.lower():
+                isit = True
+        
+        if isit:
+            return (phy, guids, size)
+
+    return (False, False, False)
 
 
 # main action goes here
 image = args.file
 fsize = 0
 logfile = args.logfile
+
+# get the removable drive data
+data = windowsDevices()
 
 # test if the file exist
 try:
@@ -283,37 +151,23 @@ except FileNotFoundError:
     sys.exit()
 
 # test if drive exist
-ddata = getPHYDrives(args.drive)
-if len(ddata) == 0:
+# pick the phy & guids os the partitions useds
+(physicalDevice, volumeGUID, dsize) = getphyguid(args.drive, data)
+if physicalDevice == False:
     print("ERROR: Can't find the specified drive '{}', please check that.".format(args.drive))
     sys.exit()
 
 # open the logfile
 lf = open(logfile, mode='wt', buffering=1)
 
-physicalDevice = ""
-volumeGUID = ""
-
-# TODO: Need windows device lock to allow raw write
-desc = ddata['desc']
-driv = ddata['drives'][0][3]
-dsize = int(ddata['size'])
-physicalDevice = str(ddata['phydrive'])
-volumeGUID = str(driv[:-1])
-
 # check sizes mismatch
 if fsize > dsize:
     print("ERROR: File '{}' is bigger than drive {}, aborting.".format(args.file, args.drive))
     sys.exit()
 
-if physicalDevice == "" or volumeGUID == "":
-    print("ERROR: Cannot find the physical device path or volume GUID path. Aborting...")
-    sys.exit()
-
-
 # Receive the paths to the physical device device and logical volume and return a handler to each one
 try:
-    hDevice, hVolume = lockWinDevice(physicalDevice, volumeGUID)
+    hDevice, hVolumes = lockWinDevice(physicalDevice, volumeGUID)
 except:
     print("ERROR: You have not proper privileges to do the operation requested. Aborting...")
     sys.exit()
