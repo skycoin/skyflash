@@ -56,23 +56,33 @@ def lockWinDevice(physicalDevice, volumeGUID):
 
     # a single devoice can have multiple drives opened, dismount it all
     hVolumes = []
-    for vguid in volumeGUID:   
-        # Open the volume
-        hVolume = CreateFile(vguid, 1|2, 1|2, None, 3, 0, None)
-        # Lock the volume
-        DeviceIoControl(hVolume, 589848, None, None, None)
-        # Dismount the volume
-        DeviceIoControl(hVolume, 589856, None, None, None)
-        # append the hvolume to the array
-        hVolumes.append(hVolume)
+    for vguid in volumeGUID:
+        # vguid need the last \ removed
+        vguidc = vguid[:-1]
+        try :
+            # Open the volume
+            hVolume = CreateFile(vguidc, 1|2, 1|2, None, 3, 0, None)
+            # Lock the volume
+            out = DeviceIoControl(hVolume, 589848, None, None, None)
+            # Dismount the volume
+            out = DeviceIoControl(hVolume, 589856, None, None, None)
+            # append the hvolume to the array
+            hVolumes.append(hVolume)
+        except:
+            # error
+            print("Error Opening, locking or dismounting {}".format(vguidc))
+            raise
 
-
-    # the device is unique: Open the device
-    hDevice = CreateFile(physicalDevice, 1|2, 1|2, None, 3, 0, None)
-    # Lock the device
-    DeviceIoControl(hDevice, 589848, None, None, None)
-    # Dismount the device
-    DeviceIoControl(hDevice, 589856, None, None, None)
+    try:
+        # the device is unique: Open the device
+        hDevice = CreateFile(physicalDevice, 1|2, 1|2, None, 3, 0, None)
+        # Lock the device
+        DeviceIoControl(hDevice, 589848, None, None, None)
+        # Dismount the device
+        DeviceIoControl(hDevice, 589856, None, None, None)
+    except:
+        # error
+        print("Error Opening, locking or dismounting {}".format(physicalDevice))
 
     return hDevice, hVolumes
 
@@ -166,11 +176,7 @@ if fsize > dsize:
     sys.exit()
 
 # Receive the paths to the physical device device and logical volume and return a handler to each one
-try:
-    hDevice, hVolumes = lockWinDevice(physicalDevice, volumeGUID)
-except:
-    print("ERROR: You have not proper privileges to do the operation requested. Aborting...")
-    sys.exit()
+hDevice, hVolumes = lockWinDevice(physicalDevice, volumeGUID)
 
 # Open the Skybian file using a PyHANDLE (a wrapper to a standard Win32 HANDLE)
 inputFileHandle = CreateFile(image, w32GenericRead, 0, None, w32OpenExisting, 0, None)
