@@ -1230,6 +1230,10 @@ To flash the next image just follow these steps:
         # user advice.
         data_callback.emit("Flashing now {} image".format(name))
 
+        # remove the trailing \ on the drive name
+        if "\\" in drive:
+            drive = drive[:-1]
+
         # build the command to flash it
         cmd = "{} \"{}\" \"{}\" \"{}\"".format(flasher, image, drive, logfile)
 

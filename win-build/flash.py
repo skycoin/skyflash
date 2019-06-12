@@ -54,6 +54,9 @@ def lockWinDevice(physicalDevice, volumeGUID):
     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT): 1024
     '''
 
+    hDevice = ""
+    hVolumes = ""
+
     # a single devoice can have multiple drives opened, dismount it all
     hVolumes = []
     for vguid in volumeGUID:
@@ -84,7 +87,10 @@ def lockWinDevice(physicalDevice, volumeGUID):
         # error
         print("Error Opening, locking or dismounting {}".format(physicalDevice))
 
-    return hDevice, hVolumes
+    if hDevice and hVolume:
+        return hDevice, hVolumes
+    else:
+        return False, False
 
 def windowsDevices():
     '''This one is to get all the info about windows removable devices in
