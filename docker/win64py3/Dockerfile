@@ -78,6 +78,7 @@ RUN mkdir -p /wine/drive_c/tmp
 RUN pip install pyinstaller==$PYINSTALLER_VERSION
 RUN pip install pyqt5
 RUN pip install pypiwin32
+RUN pip install wmi
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
