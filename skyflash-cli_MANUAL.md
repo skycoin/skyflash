@@ -28,24 +28,24 @@ For a default configuration of skybian as a skyminer you just need to run it lik
 
 Where "Skybian-0.1.0.img" is the skybian base image you have downloaded.
 
-This will generate 8 images, one for the manager and 7 minions. Network configuration is the skyminers default:
+This will generate 8 images, one for the manager and 7 nodes. Network configuration is the skyminers default:
 
 * Network: 192.168.0.0/24
 * Netmask: 255.255.255.0 (aka: /24)
 * Gateway: 192.168.0.1
 * DNS servers: 1.0.0.1, 1.1.1.1
 * Manager IP: 192.168.0.2
-* Minions IPs: 192.168.0.[3-9] (7 minions)
+* nodes IPs: 192.168.0.[3-9] (7 nodes)
 
-If you need a different setup just check the `skyflash-cli -h` to know more, for example for a manager and 22 minions with this details:
+If you need a different setup just check the `skyflash-cli -h` to know more, for example for a manager and 22 nodes with this details:
 
 * Network: 172.16.22.0/24
 * Gateway: 172.16.22.1
 * DNS servers: 172.16.22.1, 1.1.1.1
 * Manager: 172.16.22.10
-* Minions: 172.16.22.100 to 172.16.22.121
+* nodes: 172.16.22.100 to 172.16.22.121
 
-**Tip:** If you don't care about the minions IP being contiguous you can declare a range that is greater than the minions count and the script will allocate the IPs in a scattered way inside the range you stated.
+**Tip:** If you don't care about the nodes IP being contiguous you can declare a range that is greater than the nodes count and the script will allocate the IPs in a scattered way inside the range you stated.
 
 ```sh
 ./skyflash-cli -g 172.16.22.1 -d "172.16.22.1, 1.1.1.1" -m 172.16.22.10 -n 100-121 -i Skybian-0.1.0.img

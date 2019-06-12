@@ -32,7 +32,7 @@ imageConfigDataSize = 256
 
 # skybian URL
 skybianUrl = "https://github.com/skycoin/skybian/releases/download/Skybian-v0.0.4/Skybian-v0.0.4.tar.xz"
-manualUrl = "https://github.com/skycoin/skyflash/blob/develop/USER_MANUAL.md"
+manualUrl = "https://github.com/skycoin/skyflash/blob/master/USER_MANUAL.md"
 
 
 class Skyflash(QObject):
@@ -382,7 +382,7 @@ class Skyflash(QObject):
         self.uiError.emit("Flash failed!", "The flash process failed, please check the logs to see more details", str(eval))
 
         # reset the fail safe trigger
-        self.flashingOnProgress = false
+        self.flashingOnProgress = False
 
     def flashDone(self, data):
         '''Catch the end of the flash process'''
@@ -934,15 +934,15 @@ To flash the next image just follow these steps:
         endip = int(manager[manager.rfind('.') + 1:]) + int(nodes)
         if endip > 255:
             self.uiError.emit("Validation error", "The nodes IP distribution is beyond 255, please lower your manager ip",
-                "The IP of the minions are distributed from the manager IP and up, if you set the manager node IP so high the minion count may not fit")
-            logging.debug("Manager IP to high, last minion will be {} and that's not possible".format(endip))
+                "The IP of the nodes are distributed from the manager IP and up, if you set the manager node IP so high the node count may not fit")
+            logging.debug("Manager IP to high, last node will be {} and that's not possible".format(endip))
             return False
 
         # validation #5, gw not in manager & nodes range
         if int(gw[gw.rfind('.') + 1:]) in range(int(manager[manager.rfind('.') + 1:]), endip):
-            self.uiError.emit("Validation error", "Please check your GW, Manager & Minion selection, the GW is one of the Minions or Manager IPs",
-                "When we distribute the manager & Minions IP we found that the GW is one of that IP and that's wrong")
-            logging.debug("GW ip is on generated Minions range.")
+            self.uiError.emit("Validation error", "Please check your GW, Manager & Nodes selection, the GW is one of the Nodes or Manager IPs",
+                "When we distribute the manager & nodes IP we found that the GW is one of that IP and that's wrong")
+            logging.debug("GW ip is on generated nodes range.")
             return False
 
         # If you reached this point then all is ok
@@ -1038,7 +1038,7 @@ To flash the next image just follow these steps:
             # new file and it's name
             nodeNick = "manager"
             if nip != self.netManager:
-                nodeNick = "minion-" + str(actual)
+                nodeNick = "node-" + str(actual)
 
             nodeName = "Skybian-" + nodeNick + ".img"
 
@@ -1115,15 +1115,9 @@ To flash the next image just follow these steps:
         # build a user friendly string for the cards if there is a card
         if self.drives:
             driveList = []
-            for d in self.drives:
-                # conditional unpacking, windows will have 5 and others just 3 elements
-                if len(d) > 3:
-                    drive, label, size, phydrive, dguid = d
-                else:
-                    drive, label, size = d
-
+            for (drive, label, size) in self.drives:
                 # convert size from bytes to GB
-                if size > 0:
+                if int(size) > 0:
                     size = size / 2**30
 
                 driveList.append("{} '{}' {:0.1f}GB".format(drive, label, size))
@@ -1235,6 +1229,10 @@ To flash the next image just follow these steps:
 
         # user advice.
         data_callback.emit("Flashing now {} image".format(name))
+
+        # remove the trailing \ on the drive name
+        if "\\" in drive:
+            drive = drive[:-1]
 
         # build the command to flash it
         cmd = "{} \"{}\" \"{}\" \"{}\"".format(flasher, image, drive, logfile)

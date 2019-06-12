@@ -13,7 +13,18 @@ ApplicationWindow {
     MessageDialog {
         id: aboutDiag
         title: "About Skyflash"
-        text: "Skyflash is the official tool to configure & create the Skyminers images from Skybian.\n\nActual version is: v0.0.3-rc"
+        Text {
+            textFormat: Text.RichText
+            onLinkActivated: Qt.openUrlExternally(link)
+            padding: 10
+            text: "<p><a href='http://github.com/skycoin/skyflash'>Skyflash</a> is the official tool to configure, build and flash the Skyminer images based on <a href='http://github.com/skycoin/skybian'>Skybian</a>.<br></p><p>Current version: v0.0.4-beta</p>"
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.NoButton
+                cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+            }
+        }
         onAccepted: visible = false
     }
 
@@ -292,7 +303,7 @@ ApplicationWindow {
                 }
 
                 // node count
-                Label { text: "Minions count:" }
+                Label { text: "Node count:" }
 
                 TextField  {
                     id: txtNodes
@@ -302,7 +313,7 @@ ApplicationWindow {
                     maximumLength: 5
                     enabled: false
                     inputMask: "000"
-                    // ToolTip.text: "How many minions we must build images for, not counting the manager node"
+                    // ToolTip.text: "How many nodes we must build images for, not counting the manager node"
                 }
             }
         }
