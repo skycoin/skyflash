@@ -4,7 +4,6 @@ block_cipher = None
 
 
 a = Analysis(['flash.py'],
-             pathex=['Z:\\Documentos\\Software\\Simelo\\Github\\skyflash\\win-build'],
              binaries=[],
              datas=[],
              hiddenimports=[],
@@ -29,4 +28,4 @@ exe = EXE(pyz,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
-          console=True )
+          console=False)
