@@ -329,7 +329,12 @@ def getWinDrivesInfo():
         label = []
         for d in phy[3]:
             letter.append(d[0])
-            label.append(d[1])
+
+            # catching an NoneType as the label
+            if d[1] != None:
+                label.append(d[1])
+            else:
+                label.append('No-Label')
 
         phydrives.append((', '.join(letter), ', '.join(label), size))
 
