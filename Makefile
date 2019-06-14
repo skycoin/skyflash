@@ -10,16 +10,23 @@ deps: ## Install all the needed deps to build it in Ubuntu 18.04 LTS and alike
 	sudo apt install -y python3 python3-all python3-pip python3-pyqt5 python3-pyqt5.qtquick qml-module-qtquick2 qml-module-qtquick-window2 qml-module-qtquick-layouts qml-module-qtquick-extras qml-module-qtquick-dialogs qml-module-qtquick-controls qml-module-qt-labs-folderlistmodel qml-module-qt-labs-settings fakeroot python3-stdeb p7zip-full make
 	pip3 install setuptools pyqt5 PyInstaller
 
-deps-windows: deps ## Installs docker from zero and build a image to build the windows .exe from linux
+deps-windows: deps ## Installs a docker image to build the windows .exe from inside linux
+	# remove the old image from past dev envs
+	-sudo docker image rm pyinstaller-win64py3:pyqt_winapi
+	# install docker
 	sudo apt install apt-transport-https ca-certificates curl software-properties-common
 	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 	sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
 	sudo apt update -q
 	apt-cache policy docker-ce
 	sudo apt install docker-ce
+	# add your user to docker group
 	sudo usermod -aG docker ${USER}
-	cd docker/win64py3 && docker build -t "pyinstaller-win64py3:pyqt_winapi" ./
-	echo "If this last step failed, please logout/login and try again, it must work this time"
+	# build the docker image
+	cd docker/win64py3 && docker build -t "pyinstaller-win64py3:skyflash" ./
+	###############################################################################################
+	##### If this last step failed, please logout/login and try again, it must work this time" ####
+	###############################################################################################
 
 init: clean ## Initial cleanup, erase even the final app dir
 	-rm -rdf final
@@ -53,7 +60,7 @@ win-flasher: ## Create the flasher tool for windows (for travis only)
 	cd win-build && docker run --rm -v "$(PWDWIN):/src/" cdrx/pyinstaller-windows
 
 win-flasher-dev: ## Create the flasher tool for windows (no internet needed if you run "make deps-windows" already)
-	cd win-build && docker run --rm -v "$(PWDWIN):/src/" pyinstaller-win64py3:pyqt_winapi
+	cd win-build && docker run --rm -v "$(PWDWIN):/src/" pyinstaller-win64py3:skyflash
 
 win: clean win-flasher ## Create a windows static app (for travis only)
 	docker run --rm -v "$(PWD):/src/" cdrx/pyinstaller-windows 
@@ -65,7 +72,7 @@ win: clean win-flasher ## Create a windows static app (for travis only)
 	ls -lh final/
 
 win-dev: clean win-flasher-dev ## Create a windows static app using local dev tools (no internet needed if you run "make deps-windows" already)
-	docker run --rm -v "$(PWD):/src/" pyinstaller-win64py3:pyqt_winapi
+	docker run --rm -v "$(PWD):/src/" pyinstaller-win64py3:skyflash
 	cd dist/windows && 7z a skyfwi.7z skyflash-gui/
 	cp win-build/7zSD.sfx dist/windows/
 	cp win-build/sfx_config.txt dist/windows/

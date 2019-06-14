@@ -43,7 +43,7 @@ The project use the GNU Make to test and build so you can as for help like this 
 ```
 $ make
 deps                           Install all the needed deps to build it in Ubuntu 18.04 LTS and alike
-deps-windows                   Installs docker from zero and build a image to build the windows .exe from linux
+deps-windows                   Installs a docker image to build the windows .exe from inside linux
 init                           Initial cleanup, erase even the final app dir
 clean                          Clean the environment to have a fresh start
 build                          Build the pip compatible install file
@@ -59,12 +59,13 @@ macos-app                      Create the macos standalone app
 ```
 As you can see the options are self explanatory, just a few must know notes:
 
-* Option deps works only on Linux, on OSX you will need to install a few packages to get the environment ready to work:
+* Option starting with `deps` works only on Linux, on OSX you will need to install a few packages to get the environment ready to work:
   * xcode, brew, python3, pyqt5 & pyinstaller
-* Use the `init` option to deep clean the working environment, this will also erase the pre-built apps.
-* Use the `clean` option to soft clean the working environment, this will not erase the pre-built apps in the final folder.
-* Options ending on `-dev` are meant to be used on local environments and will not pull any data from the internet if you run the `deps` & `deps-windows` while connected
-* Option `deps-windows` is for linux only and has a trick if you don't have docker installed already: you must run it, reboot or logout/login and run it again to finish the install
+* Use the `init` option to deep clean the working environment, this **will also erase** the pre-built apps.
+* Use the `clean` option to soft clean the working environment, this **will not erase** the pre-built apps in the final folder.
+* Options ending on `-dev` are meant to be used on linux local environments and will not pull any data from the internet if you run the `deps` & `deps-windows` before while connected to the internet.
+* Option `deps-windows` installs docker for your distribution, this target is meant to build the needed toolchain in linux to build the windows app and has a trick: 
+  * If you don't have docker installed already you must run it, reboot or logout/login and run it again to finish the install.
 * Once you run any of the release related options _(win-dev, linux-deb, linux-static, macos-app)_ your app will be sitting on a folder named `final`
 
 ### Releases
