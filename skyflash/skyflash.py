@@ -254,15 +254,18 @@ class Skyflash(QObject):
         # debug
         logging.debug("Checksum verification result: {}".format(result))
 
+        # name of the downloaded file
+        filename = self.skybianFile.split(os.path.sep)[-1]
+
         if result:
             self.cksumOk = True
-            self.dData.emit("Skybian image verified!")
+            self.dData.emit("{} base image verified!".format(filename))
             logging.debug("Checksum verification result is ok")
         else:
             self.cksumOk = False
-            self.dData.emit("Skybian image can't be verified!")
+            self.dData.emit("Flash file {} can't be verified!".format(filename))
             logging.debug("Checksum verification failed: hash differs!")
-            self.uiError.emit("Skybian image can't be verified!", "The Skybian image integrity check ended with a different fingerprint or a soft error, this image is corrupted or a soft error happened, please start again.", "Downloaded & computed Hash differs")
+            self.uiError.emit("Flash file {} can't be verified!", "The Skybian image integrity check ended with a different fingerprint or a soft error, this image is corrupted or a soft error happened, please start again.", "Downloaded & computed Hash differs".format(filename))
 
     def cksumDone(self):
         '''Callback that is flagged once the checkum was ended.'''
@@ -272,7 +275,7 @@ class Skyflash(QObject):
 
         if self.cksumOk:
             # success must call for a sha1sum check
-            logging.debug("Checksum verification is a success!")
+            logging.debug("Checksum verification success!")
             # next step
             self.netConfig.emit()
             self.buildImages.emit()
@@ -407,7 +410,7 @@ To flash the next image just follow these steps:
 
     @pyqtSlot()
     def downloadSkybian(self):
-        '''Slot that receives the stat download signal from the UI'''
+        '''Slot that receives the start download signal from the UI'''
 
         # check if there is a thread already working there
         downCount = self.threadpool.activeThreadCount()
@@ -479,9 +482,9 @@ To flash the next image just follow these steps:
 
         # emit data of the download
         if self.downloadSize > 0:
-            data_callback.emit("Downloading {:04.1f} MB".format(self.downloadSize/1000/1000))
+            data_callback.emit("{}, {:04.1f} MB".format(fileName, self.downloadSize/1000/1000))
         else:
-            data_callback.emit("Downloading size is unknown")
+            data_callback.emit("Downloading {}...".format(fileName))
 
         # start download
         downloadedChunk = 0
@@ -651,7 +654,8 @@ To flash the next image just follow these steps:
                 progress_callback.emit(percent * 100, data)
 
         # update status
-        data_callback.emit("Extracting the file, please wait...")
+        filename = skybianUrl.split(os.path.sep)[-1]
+        data_callback.emit("Extracting the file {}, please wait...".format(filename))
         tar = tarfile.open(fileobj=ProgressFileObject(self.downloadedFile, progressfn=tarExtractionProgress))
         tar.extractall()
         tar.close()
@@ -1465,22 +1469,28 @@ To flash the next image just follow these steps:
         #  check if a file named .checked is on the downloads path
         baseImage = ""
         if os.path.exists(self.checked):
+            logging.debug("Found a checked file, loading it to process")
             f = open(self.checked)
             baseImage = f.readline().strip("\n")
-            logging.debug("Found a checked file, loading it to process")
+            baseImageFile = baseImage.split(os.path.sep)[-1]
         else:
             logging.debug("No previous work found.")
 
-        if baseImage != "" and os.path.exists(baseImage):
-            # we have a checked image in the file
-            logging.debug("You have an already checked image, loading it")
+        if baseImage != "":
+            if os.path.exists(baseImage):
+                # we have a checked image in the file
+                logging.debug("You have an already checked image, loading it")
+                logging.debug("Loading....{}".format(baseImageFile))
 
-            self.skybianFile = baseImage
-            self.extractionOK = True
-            self.setStatus.emit("Found an already downloaded file, loading it")
-            self.dData.emit("Local image loaded")
-            self.netConfig.emit()
-            self.buildImages.emit()
+                self.skybianFile = baseImage
+                self.extractionOK = True
+                self.setStatus.emit("Using local file: {}".format(baseImageFile))
+                self.dData.emit("Using file {}".format(baseImageFile))
+                self.netConfig.emit()
+                self.buildImages.emit()
+            else:
+                # checkd file exist but image don't, erasing it
+                os.unlink(self.checked)
         else:
             logging.debug("Checked file not valid or corrupt, erasing it")
             if os.path.exists(self.checked): 
