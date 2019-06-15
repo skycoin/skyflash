@@ -1183,7 +1183,7 @@ To flash the next image just follow these steps:
         # failsafe if we are already on a flashing process
         if self.flashingOnProgress:
             logging.debug("User pressed the Flashing button during a flash, aborting")
-            self.uiWarning("Ops!", "Please wait until the actual flashing process ends.")
+            self.uiWarning.emit("Ops!", "Please wait until the actual flashing process ends.")
             return
 
         # stop the timer, it must not mess with the device on the copy process
@@ -1366,7 +1366,7 @@ To flash the next image just follow these steps:
             logging.debug("Error getting one of the dependencies")
 
             # user warning
-            self.uiWarning("Ops!", "There was an utility missing in your system!")
+            self.uiWarning.emit("Ops!", "There was an utility missing in your system!")
 
     def macosFlasher(self, data_callback, progress_callback):
         '''Macos flasher'''
@@ -1454,7 +1454,7 @@ To flash the next image just follow these steps:
             logging.debug("Error getting one of the dependencies")
 
             # user warning
-            self.uiWarning("Ops!", "There was an utility missing in your system!")
+            self.uiWarning.emit("Ops!", "There was an utility missing in your system!")
 
     def loadPrevious(self):
         '''Check for a already downloaded and checksum tested image in the
