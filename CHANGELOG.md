@@ -31,6 +31,7 @@ Dates must be YEAR-MONTH-DAY
 - Full generation of release files via Travis
 - Make now can take care of dependencies in linux
 - Doc update with latest changes
+- UI now shows the name and version of the base image being processed.
 
 ### Changed
 
