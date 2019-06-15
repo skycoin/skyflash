@@ -239,6 +239,40 @@ def windowsDevices():
 
     return data
 
+def linuxMediaDevices():
+    ''' List the media devices that are removable in liunux
+
+    If the major number is 8, that indicates it to be a disk device.
+
+    The minor number is the partitions on the same device:
+    - 0 means the entire disk
+    - 1 is the primary
+    - 2 is extended
+    - 5 is logical partitions
+    The maximum number of partitions is 15.
+
+    Use `$ sudo fdisk -l` and `$ sudo sfdisk -l /dev/sda` for more information.
+    '''
+
+    with open("/proc/partitions", "r") as f:
+        devices = []
+
+        for line in f.readlines()[2:]:
+            words = [ word.strip() for word in line.split() ]
+            major_number = int(words[0])
+            minor_number = int(words[1])
+            device_name = words[3]
+
+            # disk devices by device name, not partitions
+            if (major_number == 8) and not (minor_number % 16):
+                devices.append("/dev/" + device_name)
+
+        # data return
+        return devices
+
+    # default return if devices are not found
+    return False
+
 def getMacDriveInfo():
     '''Get drives info in MacOS
 
@@ -345,16 +379,15 @@ def getLinDrivesInfo():
     '''Return a list of available drives in linux
     if possible with a drive label and sizes on bytes:
 
-    On some linux the SD cards take /dev/sdb and on
-
     [
-        ('/dev/mmcblk0', '', 2369536),
-        ('/dev/mmcblk1', 'uSD cars 16GB', 3995639808),
-        ('/dev/sda', '', 8300555)
+        ('/dev/mmcblk0', '', 8388608),
+        ('/dev/mmcblk1', 'BIG uSD Card', 16777216),
+        ('/dev/sda', 'MULTIBOOT', 8300555)
     ]
     '''
 
-    drives = listMediaDevices()
+    # get all removable media devices in the system
+    drives = linuxMediaDevices()
 
     # if we detected a drive, gather the details via lsblk
     if drives:
@@ -377,16 +410,17 @@ def getLinDrivesInfo():
     # getting data, output format is: [(drive, "LABEL", total),]
     for device in data['blockdevices']:
         if device['rm'] == '1':
+            name = device['name']
             cap = int(device['size'])
             mounted = ""
             for c in device['children']:
-                if c['mountpoint']:
-                    mounted += " ".join([c['mountpoint'].split("/")[-1]])
+                nn = 'No Label'
+                if c['mountpoint'] is not None:
+                    nn = c['mountpoint'].split("/")[-1]
 
-            if len(mounted) <= 0:
-                mounted += "Not in use"
+                mounted += "{}, ".format(nn)
 
-            finalDrives.append((device['name'], mounted, cap))
+            finalDrives.append((name, mounted.strip(" ,"), cap))
 
     # final test
     if len(finalDrives) > 0:
@@ -432,38 +466,6 @@ class WorkerSignals(QObject):
 
     def __init__(self, parent=None):
         super(WorkerSignals, self).__init__(parent=parent)
-
-def listMediaDevices():
-    ''' List the media devices that are removable
-
-    If the major number is 8, that indicates it to be a disk device.
-
-    The minor number is the partitions on the same device:
-    - 0 means the entire disk
-    - 1 is the primary
-    - 2 is extended
-    - 5 is logical partitions
-    The maximum number of partitions is 15.
-
-    Use `$ sudo fdisk -l` and `$ sudo sfdisk -l /dev/sda` for more information.
-    '''
-
-    with open("/proc/partitions", "r") as f:
-        devices = []
-
-        for line in f.readlines()[2:]:
-            words = [ word.strip() for word in line.split() ]
-            minor_number = int(words[1])
-            device_name = words[3]
-
-            if (minor_number % 16) == 0:
-                path = "/sys/class/block/" + device_name
-
-                if os.path.islink(path):
-                    if os.path.realpath(path).find("/usb") > 0:
-                        devices.append("/dev/" + device_name)
-
-        return devices
 
 # Generic worker to use in threads
 class Worker(QRunnable):
