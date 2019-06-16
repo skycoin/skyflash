@@ -46,7 +46,6 @@ deploy:
       secure: 4P+ztW5gTP6j697PUg1WIleofHvLrzUd/UM0Oc1vW99FRSLB1CrvntJ1z4SXR5Ogol0FYnTonhY98akQZQtvEMyJXCfE227WALNdlHVVdiIedTD4a2IY3gu3aVlgq/t9nAuQM9plM8Pi1fvzXS2Qz8xXi1Rpa0m9Q/bZx60BOFzd8585nT4t4qkGnzoWAZNWfNX6OLaq3cdRU01y2ys0eRshaVwyRX5KeSzlXTa6q6ILwhjHJA3clNrm7HjaWmEQbEGPYD7KoGDPUrCUZFB8L98Yz7y7mmiT0gj7+vZvoBoZ+tXKSgigM7CO0rP8/pPaTql28b1UzBHlqJLjtwQtNtPk4dWLZ2MXK9KuSitOlaFgmsSd1PS70F49FW7+ki1T0sbn2pLBTfAeps3bzPeEsYngF6+/knlx9O9JIbSJX14AvDFgzO90gzurOXfOwHzZZPkyjnT9ulVZ5h2Y9HbV0uu2qOBzgHnQeTDlpxAIiuj47AGmO5FM0ywJJepqqEB7ESml2WEsNNtJuTT3bbU+CvpquMS6iLhNkauK6kiXknR9q23egDwLq8Q1DU0zcr9hrbLGVV+xPU1gD4E6+0SA2Kr9/z3woOObJ1mVJ2IzCkq45etJBaNCRLoKkC/udn/sXWnahQcJPw4HnrWEVQmP7bCmjB7BliF3/06+WIU5Ero=
     file_glob: true
     file:
-      - "final/*all.deb"
       - "final/*linux64-static.gz"
     draft: true
     skip_cleanup: true
