@@ -4,12 +4,7 @@ With this tool you will download, configure, create and flash the default [skybi
 
 The resulting images will only run on the official skyminer hardware so far, aka: Orange Pi Prime SBC.
 
-The tool has two variants:
-
-* A general use GUI tool (skyflash) that works on Linux & Windows _(Mac support is a work in progress)_
-* A Linux only CLI tool (skyflash-cli) **_for developers and advanced users only in Linux, see below_**.
-
-## Skyflash GUI tool
+## Skyflash
 
 The preferred method to configure & flash skybian images is by using this GUI tool
 
@@ -20,19 +15,14 @@ To install this tool, go to the [Releases](https://github.com/skycoin/skyflash/r
 | Operating System | You must download the one... |
 |:----------------:|:--------------------------------:|
 | Windows app| **Skyflash.exe** |
-| Linux (deb based ditro) | **python3-skyflash_[version]_all.deb** |
-| Linux static app| **skyflash-gui_linux64-static.gz** |
-| MacOS | **skyflash-macos-app.tgz** |
+| Linux app | **skyflash-gui_linux64-static.gz** |
+| MacOS app | **skyflash-macos-app.tgz** |
 
 Installing it and running is done by the default OS way, google is your friend on this.
 
 ### Usage
 
 To see more detailed instructions on how to use the Skyflash GUI utility please visit the [User's Manual](USER_MANUAL.md)
-
-## skyflash-cli tool (developer)
-
-The CLI interface for linux developers has [help & usage guide with examples](skyflash-cli_MANUAL.md) if you are interested on it
 
 ## Developers & testers
 
@@ -53,7 +43,6 @@ win-flasher-dev                Create the flasher tool for windows (no internet 
 win                            Create a windows static app (for travis only)
 win-dev                        Create a windows static app using local dev tools (no internet needed if you run "make deps-windows" already)
 posix-streamer                 Create the linux/macos streamer to help with the flashing
-linux-deb                      Create a .deb file ready to use in debian like systems
 linux-static                   Create a linux amd64 compatible static (portable) app
 macos-app                      Create the macos standalone app
 ```
@@ -66,7 +55,7 @@ As you can see the options are self explanatory, just a few must know notes:
 * Options ending on `-dev` are meant to be used on linux local environments and will not pull any data from the internet if you run the `deps` & `deps-windows` before while connected to the internet.
 * Option `deps-windows` installs docker for your distribution, this target is meant to build the needed toolchain in linux to build the windows app and has a trick: 
   * If you don't have docker installed already you must run it, reboot or logout/login and run it again to finish the install.
-* Once you run any of the release related options _(win-dev, linux-deb, linux-static, macos-app)_ your app will be sitting on a folder named `final`
+* Once you run any of the release related options _(win-dev, linux-static, macos-app)_ your app will be sitting on a folder named `final`
 
 ### Releases
 
