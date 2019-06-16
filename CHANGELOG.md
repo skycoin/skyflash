@@ -31,6 +31,7 @@ Dates must be YEAR-MONTH-DAY
 - Full generation of release files via Travis
 - Make now can take care of dependencies in linux
 - Doc update with latest changes
+- UI now shows the name and version of the base image being processed.
 
 ### Changed
 
@@ -42,3 +43,4 @@ Dates must be YEAR-MONTH-DAY
 - Posix OS (Linux/OSX) now uses a own streamer app to feed dd fon the flash process
 - Windows uses a own flasher app (flash)
 - The docker image in the dev stage that was named "pyinstaller-win64py3:pyqt_winapi" and then renamed to pyinstaller-win64py3:skyflash please remove the old and run `make deps-windows` to re-create the new docker image.
+- We will not longer release a .deb file for installation, use the linux static app instead.

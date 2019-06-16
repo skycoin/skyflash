@@ -2,7 +2,7 @@
 
 .PHONY : deps clean build
 
-PWD = $(shell pwd)
+PWD =: $(shell pwd)
 PWDWIN = $(shell pwd)/win-build
 
 deps: ## Install all the needed deps to build it in Ubuntu 18.04 LTS and alike
@@ -83,11 +83,6 @@ win-dev: clean win-flasher-dev ## Create a windows static app using local dev to
 posix-streamer: ## Create the linux/macos streamer to help with the flashing
 	cd posix-build && python3 -m PyInstaller -F pypv.py
 	chmod +x posix-build/dist/pypv
-
-linux-deb: build ## Create a .deb file ready to use in debian like systems
-	sudo python3 setup.py --command-packages=stdeb.command bdist_deb
-	cp deb_dist/*all.deb final/
-	ls -lh final/
 
 linux-static: clean posix-streamer ## Create a linux amd64 compatible static (portable) app
 	python3 -m PyInstaller skyflash-gui.spec
