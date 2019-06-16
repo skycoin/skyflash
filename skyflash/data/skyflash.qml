@@ -61,6 +61,7 @@ ApplicationWindow {
         }
     }
 
+    // open a local skybian base image pack
     FileDialog {
         id: fileDialog
         title: "Please choose a file"
@@ -74,6 +75,42 @@ ApplicationWindow {
 
         onRejected: {
             sbText.text = "You declined to choose a file."
+        }
+    }
+
+    // mesaage to warn the user of the built folder and let them pick a custom one
+    MessageDialog {
+        id: targetFolder
+        icon: StandardIcon.Information
+        title: "Default location for the built images"
+        text: ""
+        standardButtons: StandardButton.Yes | StandardButton.No
+
+        onYes: {
+            console.log("User accepted")
+            skf.imagesBuild(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text, "no")
+        }
+
+        onNo: {
+            folderDialog.open()
+        }
+    }
+
+    FileDialog  {
+        id: folderDialog
+        title: "Select a folder to store the images"
+        folder: shortcuts.home
+        selectFolder: true
+        selectMultiple: false
+
+        onAccepted: {
+            // pasar los detalles al build
+            console.log("User selected the folder: "+ folderDialog)
+            skf.imagesBuild(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text, folderDialog.folder)
+        }
+
+        onRejected: {
+            sbText.text = "You need to choose a folder, cancelling the build."
         }
     }
 
@@ -348,7 +385,7 @@ ApplicationWindow {
 
                     onClicked: {
                         // call skyflash to build the images
-                        skf.imagesBuild(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text)
+                        skf.builtImagesPath()
                     }
                 }
 
@@ -665,5 +702,12 @@ ApplicationWindow {
         onFsProg: {
             pbFlash.value = percent
         }
+
+        // Open folder dialog to select the build images folder destination
+        onBDestinationDialog: {
+            targetFolder.text = "The default folder to put the images is:\n\n" + folder + "\n\nAre you OK with that location?"
+            targetFolder.open()
+        }
+
     }
 }

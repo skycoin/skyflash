@@ -51,6 +51,7 @@ class Skyflash(QObject):
     digest = ""
     localPathDownloads = ""
     localPath = ""
+    localPathBuild = ""
     checked = ""
     netGw = ""
     netDns = ""
@@ -103,6 +104,9 @@ class Skyflash(QObject):
     boProg = pyqtSignal(float, arguments=["percent"])
     # hide the progress bars after the built is done, and show Flash box
     bFinished = pyqtSignal()
+    #
+    # signal to show the default path and let the user pick his own
+    bDestinationDialog = pyqtSignal(str, arguments=["folder"])
 
     ## Signals related to the flash process
 
@@ -715,6 +719,9 @@ To flash the next image just follow these steps:
         # clean work folder
         self.cleanFolder(self.localPath)
 
+        # clean build folder
+        self.cleanFolder(self.localPathBuild)
+
         # clean download folder
         self.cleanFolder(self.localPathDownloads)
 
@@ -952,8 +959,15 @@ To flash the next image just follow these steps:
         # If you reached this point then all is ok
         return True
 
-    @pyqtSlot(str, str, str, str)
-    def imagesBuild(self, gw, dns, manager, nodes):
+    @pyqtSlot()
+    def builtImagesPath(self):
+        '''Receives the info from the UT that the user want to build the images and the parameters to do it
+        but we ask first if it's OK with the location, if not then raise a dialog box'''
+
+        self.bDestinationDialog.emit(self.localPathBuild)
+
+    @pyqtSlot(str, str, str, str, str)
+    def imagesBuild(self, gw, dns, manager, nodes, folder):
         '''Receives the Button order to build the images, passed arguments are:
 
         gw: the network gateway
@@ -969,8 +983,13 @@ To flash the next image just follow these steps:
         if not result:
             return
 
+        # change the build folder if set
+        if folder.startswith("file://"):
+            self.localPathBuild = folder[7:]
+            logging.debug("User pick an alternaive folder: {}".format(self.localPathBuild))
+
         # erase old images on final folder
-        self.cleanFolder(self.localPath)
+        self.cleanFolder(self.localPathBuild)
 
         # All good carry on, set the network vars on top of the object
         self.netGw = gw
@@ -1046,7 +1065,7 @@ To flash the next image just follow these steps:
 
             nodeName = "Skybian-" + nodeNick + ".img"
 
-            nnfp = os.path.join(self.localPath, nodeName)
+            nnfp = os.path.join(self.localPathBuild, nodeName)
             newNode = open(nnfp, 'wb')
             nodes = int(self.netNodes)
 
@@ -1169,7 +1188,7 @@ To flash the next image just follow these steps:
     def pickimages2flash(self, text):
         '''Set the actual selected image in the combo box'''
 
-        self.flashingNow = os.path.join(self.localPath, text)
+        self.flashingNow = os.path.join(self.localPathBuild, text)
         print("You selected the image: {} to be flashed next".format(text))
 
     def dummy(self):
