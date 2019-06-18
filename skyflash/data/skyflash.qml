@@ -705,7 +705,7 @@ ApplicationWindow {
 
         // Open folder dialog to select the build images folder destination
         onBDestinationDialog: {
-            targetFolder.text = "The default folder to put the images is:\n\n" + folder + "\n\nAre you OK with that location?"
+            targetFolder.text = "The default folder to store the images is:\n\n" + folder + "\n\nAre you OK with that location?"
             targetFolder.open()
         }
 
