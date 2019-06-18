@@ -2,7 +2,7 @@
 
 .PHONY : deps clean build
 
-PWD =: $(shell pwd)
+PWD = $(shell pwd)
 PWDWIN = $(shell pwd)/win-build
 
 deps: ## Install all the needed deps to build it in Ubuntu 18.04 LTS and alike

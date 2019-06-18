@@ -63,6 +63,7 @@ def app():
         # main workspace, skyflash object
         path, download, checked = setPath("Skyflash")
         skyflash.localPath = path
+        skyflash.localPathBuild = skyflash.localPath
         skyflash.localPathDownloads = download
         skyflash.checked = checked
 

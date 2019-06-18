@@ -222,7 +222,8 @@ def windowsDevices():
     data = []
 
     for physical_disk in c.Win32_DiskDrive():
-        if 7 in physical_disk.Capabilities:
+        capas = physical_disk.Capabilities
+        if capas != None and 7 in capas:
             # is a removable media
             phy = physical_disk.DeviceID
             size = int(physical_disk.Size)
