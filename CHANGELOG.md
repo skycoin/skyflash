@@ -18,7 +18,7 @@ This is a note for developers about the recommended tags to keep track of the ch
 Dates must be YEAR-MONTH-DAY
 -->
 
-## v0.0.4-beta - 2019-06-08
+## v0.0.4-beta1 - 2019-06-19
 
 ### Added
 
@@ -44,3 +44,5 @@ Dates must be YEAR-MONTH-DAY
 - Windows uses a own flasher app (flash)
 - The docker image in the dev stage that was named "pyinstaller-win64py3:pyqt_winapi" and then renamed to pyinstaller-win64py3:skyflash please remove the old and run `make deps-windows` to re-create the new docker image.
 - We will not longer release a .deb file for installation, use the linux static app instead.
+- The network config now has a natural view on the IPs, no more spaces in the IPs
+- The internal validation mechanism for the IPs and DNS entries was rebuilt almost from scratch
