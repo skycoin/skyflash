@@ -107,6 +107,8 @@ class Skyflash(QObject):
     #
     # signal to show the default path and let the user pick his own
     bDestinationDialog = pyqtSignal(str, arguments=["folder"])
+    # signal to update the network data
+    bNetData = pyqtSignal(str, str, str, str, arguments=["gw", "dns", "manager", "nodes"])
 
     ## Signals related to the flash process
 
@@ -887,7 +889,7 @@ To flash the next image just follow these steps:
         except:
             pass
 
-    def validateNetworkData(self, gw, dns, manager, nodes):
+    def validateNetworkData(self, dgw, ddns, dmanager, dnodes):
         '''Validate the network data passed by the QML UI
 
         gw: the network gateway
@@ -895,13 +897,24 @@ To flash the next image just follow these steps:
         manager: ip of the manager
         nodes: number of nodes to build
 
+        The input vars is prefixed by a 'd' to sign they can be dirty with
+        leading or trailing spaces, comas or dots
+
+        If all data is good, clean values are passed to the UI via a signal
+
         Returns true or false to sign result
         '''
+
+        # removing trailing and leading spaces
+        gw = cleanString(dgw)
+        dns = cleanString(ddns)
+        manager = cleanString(dmanager)
+        nodes = cleanString(dnodes)
 
         # debug
         logging.debug("Build received data is:\nGW: '{}'\nDNS: '{}'\nManager: '{}'\nNodes '{}'".format(gw, dns, manager, nodes))
 
-        # validation #1, are the manger, dns and gw valid ips?
+        # validation #1, are the manger & gw valid ips?
         gwValid, reason = validIP(gw)
         if not gwValid:
             self.uiError.emit("Validation error", "The GW IP entered is not valid, please check that", reason)
@@ -914,55 +927,65 @@ To flash the next image just follow these steps:
             logging.debug("Manager ip not valid: {}".format(manager))
             return False
 
-        # validation #2, dns, two and valid ips
-        dnss = dns.split(' ')
-        dnss[0] = dnss[0].strip(',')
-        if len(dnss) != 2:
-            reason = "DNS must be in the format '1.2.3.4, 2.3.4.5'"
-            self.uiError.emit("Validation error", "The DNS string entered is not valid, please check that.", reason)
+        # validation #2, DNS
+        # from 1 to 3 IPs separated by ',' or space, or both
+        ddns = splitDNS(dns)
+        if ddns[0] == False:
+            reason = "DNS must be in the format '1.2.3.4, 2.3.4.5, 3.4.5.6'"
+            self.uiError.emit("Validation error",
+                              "The DNS string entered is not valid, please check that.",
+                              reason)
             logging.debug("DNS string is not valid: '{}'".format(dns))
-            return False
-
-        dns1Valid, reason = validIP(dnss[0])
-        if not dns1Valid:
-            self.uiError.emit("Validation error", "The first IP on the DNS is not valid, please check that.", reason)
-            logging.debug("DNS1 IP is not valid: '{}'".format(dns))
-            return False
-
-        dns2Valid, reason = validIP(dnss[1])
-        if not dns2Valid:
-            self.uiError.emit("Validation error", "The second IP on the DNS is not valid, please check that.", reason)
-            logging.debug("DNS2 IP is not valid: '{}'".format(dns))
             return False
 
         # validation #3, gw and manager must be on the same IP range
         if gw[0:gw.rfind('.')] != manager[0:manager.rfind('.')]:
-            self.uiError.emit("Validation error", "The manager and the gw are not in the same sub-net, please check that", "")
+            self.uiError.emit("Validation error",
+                              "The manager and the gw are not in the same sub-net, please check that",
+                              "Manager and Gateway must reside on the name subnet")
             logging.debug("Base address for the net differs in gw/manager: '{} vs. {}'".format(gw, manager))
             return False
 
         # validation #4, node counts + ip is not bigger than 255
         endip = int(manager[manager.rfind('.') + 1:]) + int(nodes)
-        if endip > 255:
-            self.uiError.emit("Validation error", "The nodes IP distribution is beyond 255, please lower your manager ip",
-                "The IP of the nodes are distributed from the manager IP and up, if you set the manager node IP so high the node count may not fit")
+        if endip >= 255:
+            self.uiError.emit("Validation error",
+                              "The nodes IP distribution is beyond 254, please lower your manager ip",
+                              "The IP of the nodes are distributed from the manager IP and up, if you set the manager node IP so high the node count may not fit")
             logging.debug("Manager IP to high, last node will be {} and that's not possible".format(endip))
             return False
 
         # validation #5, gw not in manager & nodes range
         if int(gw[gw.rfind('.') + 1:]) in range(int(manager[manager.rfind('.') + 1:]), endip):
-            self.uiError.emit("Validation error", "Please check your GW, Manager & Nodes selection, the GW is one of the Nodes or Manager IPs",
-                "When we distribute the manager & nodes IP we found that the GW is one of that IP and that's wrong")
+            self.uiError.emit("Validation error",
+                              "Please check your GW, Manager & Nodes selection, the GW is one of the Nodes or Manager IPs",
+                              "When we distribute the manager & nodes IP we found that the GW is one of that IP and that's wrong")
             logging.debug("GW ip is on generated nodes range.")
             return False
 
         # If you reached this point then all is ok
+        # Push the new data to the UI
+        self.bNetData.emit(gw, dns, manager, nodes)
+
+        # finally return true
         return True
 
-    @pyqtSlot()
-    def builtImagesPath(self):
-        '''Receives the info from the UT that the user want to build the images and the parameters to do it
-        but we ask first if it's OK with the location, if not then raise a dialog box'''
+    @pyqtSlot(str, str, str, str)
+    def builtImagesPath(self, gw, dns, manager, nodes):
+        '''Receives the info from the UT that the user want to build the images
+        and the parameters to do it.
+
+        We validate the data on the users interface first, if somethins is wrong
+        we raise an error dialog.
+
+        Then ask to the user if it's OK with the location, if not then raise a
+        dialog box to select the new path
+        '''
+
+        # validate network data
+        result = self.validateNetworkData(gw, dns, manager, nodes)
+        if not result:
+            return
 
         self.bDestinationDialog.emit(self.localPathBuild)
 

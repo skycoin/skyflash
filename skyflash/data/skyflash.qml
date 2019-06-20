@@ -381,7 +381,7 @@ ApplicationWindow {
 
                     onClicked: {
                         // call skyflash to build the images
-                        skf.builtImagesPath()
+                        skf.builtImagesPath(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text)
                     }
                 }
 
@@ -703,6 +703,14 @@ ApplicationWindow {
         onBDestinationDialog: {
             targetFolder.text = "The default folder to store the images is:\n\n" + folder + "\n\nAre you OK with that location?"
             targetFolder.open()
+        }
+
+        // receive the corrected values for the network data
+        onBNetData: {
+            txtGateway.text = gw
+            txtDNS.text = dns
+            txtManager.text = manager
+            txtNodes.text = nodes
         }
 
     }
