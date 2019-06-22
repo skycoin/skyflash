@@ -25,6 +25,9 @@ from PyQt5.QtCore import QFileInfo
 from skyflash.skyflash import Skyflash
 from skyflash.utils import *
 
+# define the QT5 app at a higher level to get caught at the end bt the garbage collector.
+QTapp = QGuiApplication(sys.argv)
+
 def app():
     '''Run the app'''
 
@@ -33,7 +36,6 @@ def app():
         skyflash = Skyflash()
 
         # GUI app
-        app = QGuiApplication(sys.argv)
         if getattr( sys, 'frozen', False ) :
             # running in a pyinstaller bundle
             appFolder = sys._MEIPASS
@@ -52,11 +54,11 @@ def app():
         if os.path.exists(iconPath):
             # default path
             print("Found Icon file in: {}".format(iconPath))
-            app.setWindowIcon(QIcon(iconPath))
+            QTapp.setWindowIcon(QIcon(iconPath))
         elif os.path.exists(iconPathData):
             # data folder for source runs
             print("Found Icon file in: {}".format(iconPathData))
-            app.setWindowIcon(QIcon(iconPathData))
+            QTapp.setWindowIcon(QIcon(iconPathData))
         else:
             print("Can not find the icon of the app.")
 
@@ -104,18 +106,23 @@ def app():
                     sys.exit(-1)
 
         # connect the engine
-        engine.quit.connect(app.quit)
+        engine.quit.connect(QTapp.quit)
 
         # check to see if we can load a previous downloaded & tested image
         skyflash.loadPrevious()
 
         # main GUI call
-        sys.exit(app.exec_())
+        sys.exit(QTapp.exec_())
     except SystemExit:
-        skyflash.timerStop()
-        sys.exit("By, see you soon.")
+        if skyflash.timer.isActive():
+            print("Timer is active, stopping it [Explicit exit]")
+            skyflash.timer.stop()
+        
+        sys.exit(0)
     except:
-        skyflash.timerStop()
-        print("Unexpected error:", sys.exc_info()[0])
+        if skyflash.timer.isActive():
+            print("Timer is active, stopping it (Crash?)")
+            skyflash.timer.stop()
+
         raise
         sys.exit(-1)
