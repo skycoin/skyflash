@@ -574,13 +574,12 @@ To flash the next image just follow these steps:
             return
 
         # clean the path depending on the OS
-        if sys.platform in ["win32", "cygwin"]:
+        if 'nt' in os.name:
             # file is like this file:///C:/Users/Pavel/Downloads/Skybian-0.1.0.tar.xz
             # need to remove 3 slashes
             file = file.replace("file:///", "")
         else:
-            # working on linux, like this: file:///home/pavel/Downloads/Skybian-0.1.0.tar.xz
-            # TODO test os MacOS
+            # working on posix, like this: file:///home/pavel/Downloads/Skybian-0.1.0.tar.xz
             file = file.replace("file://", "")
 
         logging.debug("Selected file is " + file)
@@ -1006,11 +1005,14 @@ To flash the next image just follow these steps:
         if not result:
             return
 
-        # windows, the returned folder path has a "file://" or "file:///" at the start
-        # removing that in a clever way
+        # clean the path depending on the OS
         if 'nt' in os.name:
-            driverStartPos = folder.find(":", 5) - 1
-            folder = folder[driverStartPos:]
+            # file is like this file:///C:/Users/...
+            # need to remove 3 slashes
+            folder = folder.replace("file:///", "")
+        else:
+            # working on posix, like this: file:///home/pavel/...
+            folder = folder.replace("file://", "")
 
         if self.localPathBuild != folder:
             # change it
