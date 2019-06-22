@@ -1006,12 +1006,18 @@ To flash the next image just follow these steps:
         if not result:
             return
 
-        # change the build folder if set
-        if folder.startswith("file://"):
-            self.localPathBuild = folder[7:]
-            logging.debug("User pick an alternaive folder: {}".format(self.localPathBuild))
+        # windows, the returned folder path has a "file://" or "file:///" at the start
+        # removing that in a clever way
+        if 'nt' in os.name:
+            driverStartPos = folder.find(":", 5) - 1
+            folder = folder[driverStartPos:]
 
-        # erase old images on final folder
+        if self.localPathBuild != folder:
+            # change it
+            self.localPathBuild = folder
+            logging.debug("User selected a custom build folder: {}".format(self.localPathBuild))
+
+        # erase old images on final folder (if any)
         self.cleanFolder(self.localPathBuild)
 
         # All good carry on, set the network vars on top of the object

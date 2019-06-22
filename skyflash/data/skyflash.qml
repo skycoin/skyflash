@@ -105,7 +105,7 @@ ApplicationWindow {
 
         onAccepted: {
             // pasar los detalles al build
-            console.log("User selected the folder: "+ folderDialog)
+            console.log("User selected the folder: "+ folderDialog.folder)
             skf.imagesBuild(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text, folderDialog.folder)
         }
 
