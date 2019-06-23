@@ -1450,7 +1450,7 @@ To flash the next image just follow these steps:
         data_callback.emit("Flashing now {} image".format(name))
 
         # umount the drive
-        sysexec("diskutil unmountDisk {}".format(destination))
+        getDataFromCLI("diskutil unmountDisk {}".format(destination))
 
         if dd and (python or streamer):
             cmd = "{} {} {} | {} of={}".format(streamer, image, logfile, dd, destination)
