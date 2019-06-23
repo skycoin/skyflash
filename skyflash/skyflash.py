@@ -1014,7 +1014,7 @@ To flash the next image just follow these steps:
             # working on posix, like this: file:///home/pavel/...
             folder = folder.replace("file://", "")
 
-        if self.localPathBuild != folder:
+        if folder != "no":
             # change it
             self.localPathBuild = folder
             logging.debug("User selected a custom build folder: {}".format(self.localPathBuild))
