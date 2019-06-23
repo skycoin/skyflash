@@ -574,13 +574,12 @@ To flash the next image just follow these steps:
             return
 
         # clean the path depending on the OS
-        if sys.platform in ["win32", "cygwin"]:
+        if 'nt' in os.name:
             # file is like this file:///C:/Users/Pavel/Downloads/Skybian-0.1.0.tar.xz
             # need to remove 3 slashes
             file = file.replace("file:///", "")
         else:
-            # working on linux, like this: file:///home/pavel/Downloads/Skybian-0.1.0.tar.xz
-            # TODO test os MacOS
+            # working on posix, like this: file:///home/pavel/Downloads/Skybian-0.1.0.tar.xz
             file = file.replace("file://", "")
 
         logging.debug("Selected file is " + file)
@@ -1006,12 +1005,21 @@ To flash the next image just follow these steps:
         if not result:
             return
 
-        # change the build folder if set
-        if folder.startswith("file://"):
-            self.localPathBuild = folder[7:]
-            logging.debug("User pick an alternaive folder: {}".format(self.localPathBuild))
+        # clean the path depending on the OS
+        if 'nt' in os.name:
+            # file is like this file:///C:/Users/...
+            # need to remove 3 slashes
+            folder = folder.replace("file:///", "")
+        else:
+            # working on posix, like this: file:///home/pavel/...
+            folder = folder.replace("file://", "")
 
-        # erase old images on final folder
+        if folder != "no":
+            # change it
+            self.localPathBuild = folder
+            logging.debug("User selected a custom build folder: {}".format(self.localPathBuild))
+
+        # erase old images on final folder (if any)
         self.cleanFolder(self.localPathBuild)
 
         # All good carry on, set the network vars on top of the object
