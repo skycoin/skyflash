@@ -659,7 +659,7 @@ To flash the next image just follow these steps:
                 progress_callback.emit(percent * 100, data)
 
         # update status
-        filename = skybianUrl.split(os.path.sep)[-1]
+        filename = self.downloadedFile.split(os.path.sep)[-1]
         data_callback.emit("Extracting the file {}, please wait...".format(filename))
         tar = tarfile.open(fileobj=ProgressFileObject(self.downloadedFile, progressfn=tarExtractionProgress))
         tar.extractall()
