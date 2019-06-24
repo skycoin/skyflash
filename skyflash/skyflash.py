@@ -51,6 +51,7 @@ class Skyflash(QObject):
     digest = ""
     localPathDownloads = ""
     localPath = ""
+    localPathBuild = ""
     checked = ""
     netGw = ""
     netDns = ""
@@ -103,6 +104,11 @@ class Skyflash(QObject):
     boProg = pyqtSignal(float, arguments=["percent"])
     # hide the progress bars after the built is done, and show Flash box
     bFinished = pyqtSignal()
+    #
+    # signal to show the default path and let the user pick his own
+    bDestinationDialog = pyqtSignal(str, arguments=["folder"])
+    # signal to update the network data
+    bNetData = pyqtSignal(str, str, str, str, arguments=["gw", "dns", "manager", "nodes"])
 
     ## Signals related to the flash process
 
@@ -254,15 +260,18 @@ class Skyflash(QObject):
         # debug
         logging.debug("Checksum verification result: {}".format(result))
 
+        # name of the downloaded file
+        filename = self.skybianFile.split(os.path.sep)[-1]
+
         if result:
             self.cksumOk = True
-            self.dData.emit("Skybian image verified!")
+            self.dData.emit("{} base image verified!".format(filename))
             logging.debug("Checksum verification result is ok")
         else:
             self.cksumOk = False
-            self.dData.emit("Skybian image can't be verified!")
+            self.dData.emit("Flash file {} can't be verified!".format(filename))
             logging.debug("Checksum verification failed: hash differs!")
-            self.uiError.emit("Skybian image can't be verified!", "The Skybian image integrity check ended with a different fingerprint or a soft error, this image is corrupted or a soft error happened, please start again.", "Downloaded & computed Hash differs")
+            self.uiError.emit("Flash file {} can't be verified!", "The Skybian image integrity check ended with a different fingerprint or a soft error, this image is corrupted or a soft error happened, please start again.", "Downloaded & computed Hash differs".format(filename))
 
     def cksumDone(self):
         '''Callback that is flagged once the checkum was ended.'''
@@ -272,7 +281,7 @@ class Skyflash(QObject):
 
         if self.cksumOk:
             # success must call for a sha1sum check
-            logging.debug("Checksum verification is a success!")
+            logging.debug("Checksum verification success!")
             # next step
             self.netConfig.emit()
             self.buildImages.emit()
@@ -407,7 +416,7 @@ To flash the next image just follow these steps:
 
     @pyqtSlot()
     def downloadSkybian(self):
-        '''Slot that receives the stat download signal from the UI'''
+        '''Slot that receives the start download signal from the UI'''
 
         # check if there is a thread already working there
         downCount = self.threadpool.activeThreadCount()
@@ -479,9 +488,9 @@ To flash the next image just follow these steps:
 
         # emit data of the download
         if self.downloadSize > 0:
-            data_callback.emit("Downloading {:04.1f} MB".format(self.downloadSize/1000/1000))
+            data_callback.emit("{}, {:04.1f} MB".format(fileName, self.downloadSize/1000/1000))
         else:
-            data_callback.emit("Downloading size is unknown")
+            data_callback.emit("Downloading {}...".format(fileName))
 
         # start download
         downloadedChunk = 0
@@ -565,13 +574,12 @@ To flash the next image just follow these steps:
             return
 
         # clean the path depending on the OS
-        if sys.platform in ["win32", "cygwin"]:
+        if 'nt' in os.name:
             # file is like this file:///C:/Users/Pavel/Downloads/Skybian-0.1.0.tar.xz
             # need to remove 3 slashes
             file = file.replace("file:///", "")
         else:
-            # working on linux, like this: file:///home/pavel/Downloads/Skybian-0.1.0.tar.xz
-            # TODO test os MacOS
+            # working on posix, like this: file:///home/pavel/Downloads/Skybian-0.1.0.tar.xz
             file = file.replace("file://", "")
 
         logging.debug("Selected file is " + file)
@@ -651,7 +659,8 @@ To flash the next image just follow these steps:
                 progress_callback.emit(percent * 100, data)
 
         # update status
-        data_callback.emit("Extracting the file, please wait...")
+        filename = skybianUrl.split(os.path.sep)[-1]
+        data_callback.emit("Extracting the file {}, please wait...".format(filename))
         tar = tarfile.open(fileobj=ProgressFileObject(self.downloadedFile, progressfn=tarExtractionProgress))
         tar.extractall()
         tar.close()
@@ -710,6 +719,9 @@ To flash the next image just follow these steps:
 
         # clean work folder
         self.cleanFolder(self.localPath)
+
+        # clean build folder
+        self.cleanFolder(self.localPathBuild)
 
         # clean download folder
         self.cleanFolder(self.localPathDownloads)
@@ -876,7 +888,7 @@ To flash the next image just follow these steps:
         except:
             pass
 
-    def validateNetworkData(self, gw, dns, manager, nodes):
+    def validateNetworkData(self, dgw, ddns, dmanager, dnodes):
         '''Validate the network data passed by the QML UI
 
         gw: the network gateway
@@ -884,13 +896,24 @@ To flash the next image just follow these steps:
         manager: ip of the manager
         nodes: number of nodes to build
 
+        The input vars is prefixed by a 'd' to sign they can be dirty with
+        leading or trailing spaces, comas or dots
+
+        If all data is good, clean values are passed to the UI via a signal
+
         Returns true or false to sign result
         '''
+
+        # removing trailing and leading spaces
+        gw = cleanString(dgw)
+        dns = cleanString(ddns)
+        manager = cleanString(dmanager)
+        nodes = cleanString(dnodes)
 
         # debug
         logging.debug("Build received data is:\nGW: '{}'\nDNS: '{}'\nManager: '{}'\nNodes '{}'".format(gw, dns, manager, nodes))
 
-        # validation #1, are the manger, dns and gw valid ips?
+        # validation #1, are the manger & gw valid ips?
         gwValid, reason = validIP(gw)
         if not gwValid:
             self.uiError.emit("Validation error", "The GW IP entered is not valid, please check that", reason)
@@ -903,53 +926,70 @@ To flash the next image just follow these steps:
             logging.debug("Manager ip not valid: {}".format(manager))
             return False
 
-        # validation #2, dns, two and valid ips
-        dnss = dns.split(' ')
-        dnss[0] = dnss[0].strip(',')
-        if len(dnss) != 2:
-            reason = "DNS must be in the format '1.2.3.4, 2.3.4.5'"
-            self.uiError.emit("Validation error", "The DNS string entered is not valid, please check that.", reason)
+        # validation #2, DNS
+        # from 1 to 3 IPs separated by ',' or space, or both
+        ddns = splitDNS(dns)
+        if ddns[0] == False:
+            reason = "DNS must be in the format '1.2.3.4, 2.3.4.5, 3.4.5.6'"
+            self.uiError.emit("Validation error",
+                              "The DNS string entered is not valid, please check that.",
+                              reason)
             logging.debug("DNS string is not valid: '{}'".format(dns))
-            return False
-
-        dns1Valid, reason = validIP(dnss[0])
-        if not dns1Valid:
-            self.uiError.emit("Validation error", "The first IP on the DNS is not valid, please check that.", reason)
-            logging.debug("DNS1 IP is not valid: '{}'".format(dns))
-            return False
-
-        dns2Valid, reason = validIP(dnss[1])
-        if not dns2Valid:
-            self.uiError.emit("Validation error", "The second IP on the DNS is not valid, please check that.", reason)
-            logging.debug("DNS2 IP is not valid: '{}'".format(dns))
             return False
 
         # validation #3, gw and manager must be on the same IP range
         if gw[0:gw.rfind('.')] != manager[0:manager.rfind('.')]:
-            self.uiError.emit("Validation error", "The manager and the gw are not in the same sub-net, please check that", "")
+            self.uiError.emit("Validation error",
+                              "The manager and the gw are not in the same sub-net, please check that",
+                              "Manager and Gateway must reside on the name subnet")
             logging.debug("Base address for the net differs in gw/manager: '{} vs. {}'".format(gw, manager))
             return False
 
         # validation #4, node counts + ip is not bigger than 255
         endip = int(manager[manager.rfind('.') + 1:]) + int(nodes)
-        if endip > 255:
-            self.uiError.emit("Validation error", "The nodes IP distribution is beyond 255, please lower your manager ip",
-                "The IP of the nodes are distributed from the manager IP and up, if you set the manager node IP so high the node count may not fit")
+        if endip >= 255:
+            self.uiError.emit("Validation error",
+                              "The nodes IP distribution is beyond 254, please lower your manager ip",
+                              "The IP of the nodes are distributed from the manager IP and up, if you set the manager node IP so high the node count may not fit")
             logging.debug("Manager IP to high, last node will be {} and that's not possible".format(endip))
             return False
 
         # validation #5, gw not in manager & nodes range
         if int(gw[gw.rfind('.') + 1:]) in range(int(manager[manager.rfind('.') + 1:]), endip):
-            self.uiError.emit("Validation error", "Please check your GW, Manager & Nodes selection, the GW is one of the Nodes or Manager IPs",
-                "When we distribute the manager & nodes IP we found that the GW is one of that IP and that's wrong")
+            self.uiError.emit("Validation error",
+                              "Please check your GW, Manager & Nodes selection, the GW is one of the Nodes or Manager IPs",
+                              "When we distribute the manager & nodes IP we found that the GW is one of that IP and that's wrong")
             logging.debug("GW ip is on generated nodes range.")
             return False
 
         # If you reached this point then all is ok
+        # Push the new data to the UI
+        self.bNetData.emit(gw, dns, manager, nodes)
+
+        # finally return true
         return True
 
     @pyqtSlot(str, str, str, str)
-    def imagesBuild(self, gw, dns, manager, nodes):
+    def builtImagesPath(self, gw, dns, manager, nodes):
+        '''Receives the info from the UT that the user want to build the images
+        and the parameters to do it.
+
+        We validate the data on the users interface first, if somethins is wrong
+        we raise an error dialog.
+
+        Then ask to the user if it's OK with the location, if not then raise a
+        dialog box to select the new path
+        '''
+
+        # validate network data
+        result = self.validateNetworkData(gw, dns, manager, nodes)
+        if not result:
+            return
+
+        self.bDestinationDialog.emit(self.localPathBuild)
+
+    @pyqtSlot(str, str, str, str, str)
+    def imagesBuild(self, gw, dns, manager, nodes, folder):
         '''Receives the Button order to build the images, passed arguments are:
 
         gw: the network gateway
@@ -965,8 +1005,22 @@ To flash the next image just follow these steps:
         if not result:
             return
 
-        # erase old images on final folder
-        self.cleanFolder(self.localPath)
+        # clean the path depending on the OS
+        if 'nt' in os.name:
+            # file is like this file:///C:/Users/...
+            # need to remove 3 slashes
+            folder = folder.replace("file:///", "")
+        else:
+            # working on posix, like this: file:///home/pavel/...
+            folder = folder.replace("file://", "")
+
+        if folder != "no":
+            # change it
+            self.localPathBuild = folder
+            logging.debug("User selected a custom build folder: {}".format(self.localPathBuild))
+
+        # erase old images on final folder (if any)
+        self.cleanFolder(self.localPathBuild)
 
         # All good carry on, set the network vars on top of the object
         self.netGw = gw
@@ -1042,7 +1096,7 @@ To flash the next image just follow these steps:
 
             nodeName = "Skybian-" + nodeNick + ".img"
 
-            nnfp = os.path.join(self.localPath, nodeName)
+            nnfp = os.path.join(self.localPathBuild, nodeName)
             newNode = open(nnfp, 'wb')
             nodes = int(self.netNodes)
 
@@ -1165,7 +1219,7 @@ To flash the next image just follow these steps:
     def pickimages2flash(self, text):
         '''Set the actual selected image in the combo box'''
 
-        self.flashingNow = os.path.join(self.localPath, text)
+        self.flashingNow = os.path.join(self.localPathBuild, text)
         print("You selected the image: {} to be flashed next".format(text))
 
     def dummy(self):
@@ -1179,7 +1233,7 @@ To flash the next image just follow these steps:
         # failsafe if we are already on a flashing process
         if self.flashingOnProgress:
             logging.debug("User pressed the Flashing button during a flash, aborting")
-            self.uiWarning("Ops!", "Please wait until the actual flashing process ends.")
+            self.uiWarning.emit("Ops!", "Please wait until the actual flashing process ends.")
             return
 
         # stop the timer, it must not mess with the device on the copy process
@@ -1362,7 +1416,7 @@ To flash the next image just follow these steps:
             logging.debug("Error getting one of the dependencies")
 
             # user warning
-            self.uiWarning("Ops!", "There was an utility missing in your system!")
+            self.uiWarning.emit("Ops!", "There was an utility missing in your system!")
 
     def macosFlasher(self, data_callback, progress_callback):
         '''Macos flasher'''
@@ -1396,7 +1450,7 @@ To flash the next image just follow these steps:
         data_callback.emit("Flashing now {} image".format(name))
 
         # umount the drive
-        sysexec("diskutil unmountDisk {}".format(destination))
+        getDataFromCLI("diskutil unmountDisk {}".format(destination))
 
         if dd and (python or streamer):
             cmd = "{} {} {} | {} of={}".format(streamer, image, logfile, dd, destination)
@@ -1450,7 +1504,7 @@ To flash the next image just follow these steps:
             logging.debug("Error getting one of the dependencies")
 
             # user warning
-            self.uiWarning("Ops!", "There was an utility missing in your system!")
+            self.uiWarning.emit("Ops!", "There was an utility missing in your system!")
 
     def loadPrevious(self):
         '''Check for a already downloaded and checksum tested image in the
@@ -1465,22 +1519,28 @@ To flash the next image just follow these steps:
         #  check if a file named .checked is on the downloads path
         baseImage = ""
         if os.path.exists(self.checked):
+            logging.debug("Found a checked file, loading it to process")
             f = open(self.checked)
             baseImage = f.readline().strip("\n")
-            logging.debug("Found a checked file, loading it to process")
+            baseImageFile = baseImage.split(os.path.sep)[-1]
         else:
             logging.debug("No previous work found.")
 
-        if baseImage != "" and os.path.exists(baseImage):
-            # we have a checked image in the file
-            logging.debug("You have an already checked image, loading it")
+        if baseImage != "":
+            if os.path.exists(baseImage):
+                # we have a checked image in the file
+                logging.debug("You have an already checked image, loading it")
+                logging.debug("Loading....{}".format(baseImageFile))
 
-            self.skybianFile = baseImage
-            self.extractionOK = True
-            self.setStatus.emit("Found an already downloaded file, loading it")
-            self.dData.emit("Local image loaded")
-            self.netConfig.emit()
-            self.buildImages.emit()
+                self.skybianFile = baseImage
+                self.extractionOK = True
+                self.setStatus.emit("Using local file: {}".format(baseImageFile))
+                self.dData.emit("Using file {}".format(baseImageFile))
+                self.netConfig.emit()
+                self.buildImages.emit()
+            else:
+                # checkd file exist but image don't, erasing it
+                os.unlink(self.checked)
         else:
             logging.debug("Checked file not valid or corrupt, erasing it")
             if os.path.exists(self.checked): 

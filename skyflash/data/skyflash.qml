@@ -61,6 +61,7 @@ ApplicationWindow {
         }
     }
 
+    // open a local skybian base image pack
     FileDialog {
         id: fileDialog
         title: "Please choose a file"
@@ -74,6 +75,42 @@ ApplicationWindow {
 
         onRejected: {
             sbText.text = "You declined to choose a file."
+        }
+    }
+
+    // mesaage to warn the user of the built folder and let them pick a custom one
+    MessageDialog {
+        id: targetFolder
+        icon: StandardIcon.Information
+        title: "Default location for the built images"
+        text: ""
+        standardButtons: StandardButton.Yes | StandardButton.No
+
+        onYes: {
+            console.log("User accepted")
+            skf.imagesBuild(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text, "no")
+        }
+
+        onNo: {
+            folderDialog.open()
+        }
+    }
+
+    FileDialog  {
+        id: folderDialog
+        title: "Select a folder to store the images"
+        folder: shortcuts.home
+        selectFolder: true
+        selectMultiple: false
+
+        onAccepted: {
+            // pasar los detalles al build
+            console.log("User selected the folder: " + folderDialog.folder)
+            skf.imagesBuild(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text, folderDialog.folder)
+        }
+
+        onRejected: {
+            sbText.text = "You need to choose a folder, cancelling the build."
         }
     }
 
@@ -270,7 +307,6 @@ ApplicationWindow {
                     text: "192.168.0.1"
                     maximumLength: 16
                     enabled: false
-                    inputMask: "000.000.000.000; "
                     // ToolTip.text: "This is the network Gateway IP"
                 }
 
@@ -284,7 +320,6 @@ ApplicationWindow {
                     text: "1.0.0.1, 1.1.1.1"
                     maximumLength: 34
                     enabled: false
-                    inputMask: "000.000.000.000, 000.000.000.000; "
                     // ToolTip.text: "This is DNS your nodes will use to resolve names on the net"
                 }
 
@@ -298,7 +333,6 @@ ApplicationWindow {
                     text: "192.168.0.2"
                     maximumLength: 16
                     enabled: false
-                    inputMask: "000.000.000.000; "
                     // ToolTip.text: "This is the IP of the manager node"
                 }
 
@@ -312,7 +346,6 @@ ApplicationWindow {
                     text: "7"
                     maximumLength: 5
                     enabled: false
-                    inputMask: "000"
                     // ToolTip.text: "How many nodes we must build images for, not counting the manager node"
                 }
             }
@@ -348,7 +381,7 @@ ApplicationWindow {
 
                     onClicked: {
                         // call skyflash to build the images
-                        skf.imagesBuild(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text)
+                        skf.builtImagesPath(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text)
                     }
                 }
 
@@ -665,5 +698,20 @@ ApplicationWindow {
         onFsProg: {
             pbFlash.value = percent
         }
+
+        // Open folder dialog to select the build images folder destination
+        onBDestinationDialog: {
+            targetFolder.text = "The default folder to store the images is:\n\n" + folder + "\n\nAre you OK with that location?"
+            targetFolder.open()
+        }
+
+        // receive the corrected values for the network data
+        onBNetData: {
+            txtGateway.text = gw
+            txtDNS.text = dns
+            txtManager.text = manager
+            txtNodes.text = nodes
+        }
+
     }
 }

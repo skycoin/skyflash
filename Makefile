@@ -84,11 +84,6 @@ posix-streamer: ## Create the linux/macos streamer to help with the flashing
 	cd posix-build && python3 -m PyInstaller -F pypv.py
 	chmod +x posix-build/dist/pypv
 
-linux-deb: build ## Create a .deb file ready to use in debian like systems
-	sudo python3 setup.py --command-packages=stdeb.command bdist_deb
-	cp deb_dist/*all.deb final/
-	ls -lh final/
-
 linux-static: clean posix-streamer ## Create a linux amd64 compatible static (portable) app
 	python3 -m PyInstaller skyflash-gui.spec
 	cd dist && gzip skyflash-gui

@@ -3,7 +3,6 @@
 
 if [ $1 = 'linux' ]; then
     # linux
-    make linux-deb
     make linux-static
 fi
 
