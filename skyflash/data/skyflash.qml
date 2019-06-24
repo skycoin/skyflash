@@ -17,7 +17,7 @@ ApplicationWindow {
             textFormat: Text.RichText
             onLinkActivated: Qt.openUrlExternally(link)
             padding: 10
-            text: "<p><a href='http://github.com/skycoin/skyflash'>Skyflash</a> is the official tool to configure, build and flash the Skyminer images based on <a href='http://github.com/skycoin/skybian'>Skybian</a>.<br></p><p>Current version: v0.0.4-beta</p>"
+            text: "<p><a href='http://github.com/skycoin/skyflash'>Skyflash</a> is the official tool to configure, build and flash the Skyminer images based on <a href='http://github.com/skycoin/skybian'>Skybian</a>.<br></p><p>Current version: v0.0.4</p>"
 
             MouseArea {
                 anchors.fill: parent
