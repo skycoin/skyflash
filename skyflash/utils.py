@@ -16,6 +16,10 @@ if 'nt' in os.name:
     import wmi
     import win32file
 
+# version data
+actualVersion = "v0.0.4beta1"
+updateURL = "https://raw.githubusercontent.com/skycoin/skyflash/master/version.txt"
+
 def cleanString(data):
     '''Cleans a string from trailing or leading chars
 
@@ -612,8 +616,6 @@ def checkUpdates(data_callback, progress_callback):
     
     '''
 
-    actualVersion = "v0.0.4beta1"
-    updateURL = "https://raw.githubusercontent.com/simelo/skyflash/stdevPavelmc_t57_check_for_new_versions/version.txt"
     version = ""
 
     try:
