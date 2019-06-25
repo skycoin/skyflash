@@ -8,9 +8,11 @@ The resulting images will only run on the official skyminer hardware, the one ba
 
 The preferred method to configure & flash the official [skybian](https://github.com/simelo/skybian) images is by using this tool
 
-### Installing
+### Installing or upgrading
 
-To install this tool, go to the [Releases](https://github.com/skycoin/skyflash/releases) link on this page and grab the file corresponding to your OS. The app you get is a standalone software _(often called a "portable app")_ so no dependencies are needed on any of the 3 target OS; just unzip _(if needed)_ and run it.
+The Skyflash tool is a standalone app _(often called a "portable app")_, so you just download the app and run it. To get the latest version just go to the [Releases](https://github.com/skycoin/skyflash/releases) link on this page and grab the file matching to your OS.
+
+If you has an old version already, just erase the old one and use the new one.
 
 ### Usage
 
