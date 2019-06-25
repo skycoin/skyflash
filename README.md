@@ -60,7 +60,7 @@ To do a release you must follow these steps:
 0. Check any pending issues in order to close them if possible on this release cycle
 0. Check the latest release of Skybian and if the URL of the latest image is different update it
 0. Merge your release branch into the master of your repo and check for travis results, if al goes well you will see 3 new draft releases in your repository (you may need to update the deploy credentials)
-0. Update the new version number in the `setup.py` & `skyflash/data/skyflash.qml` files.
+0. Update the new version number in the `setup.py`, `skyflash/data/skyflash.qml` & `skyflash/utils.py` files.
 0. Update the `CHANGELOG.md` file with any needed info and move the `Unreleased` part to the new release version.
 0. Review & update the `README.md` file for any needed updates or changes that need attention in the front page.
 0. Push changes and wait for travis to validate all the changes.
@@ -69,7 +69,8 @@ To do a release you must follow these steps:
 0. If problems are found with raise issues where needed (skyflash/skybian) and fix them before continue with the next step.
 0. Download the releases files after the fix in the previous step (if needed) and test them.
 0. Fix any issues if found (work in the release branch)
-0. After all problems are solved and work as expected, raise a PR against master branch in the skycoin repository, solve any issues and merge it (or wait for a privileged user to do it)
+0. After all problems are solved and work as expected update the version.txt file with the version number, like this: v0.0.4
+0. Raise a PR against master branch in the skycoin repository, solve any issues and merge it (or wait for a privileged user to do it)
 0. Wait for travis completion and check the release files are published on the Github repository under releases.
 0. Edit & comment the release with the changes in CHANGELOG.md that match this release, change status from Draft to Official release.
 0. Merge master into develop.
