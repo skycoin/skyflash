@@ -1,0 +1,2 @@
+# This file holds the version number for the latest stable version of Skyflash, it's used by the automatic feature that checks for updates.
+v0.0.4beta1

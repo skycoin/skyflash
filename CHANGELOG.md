@@ -32,6 +32,7 @@ Dates must be YEAR-MONTH-DAY
 - Make now can take care of dependencies in linux for the devs
 - Doc update with latest changes
 - UI now shows the name and version of the base image being processed.
+- Skyflash now checks for new versions on startup, if found will warn the user and open a web browser with indications to the user...
 
 ### Changed
 

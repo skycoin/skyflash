@@ -1,8 +1,8 @@
 # Skyflash User's Manual
 
-## Installation
+## Installation & Upgrade
 
-Please refer to the [README](README.md) for install instructions.
+Please refer to the [README](README.md) for install or upgrade instructions.
 
 ## Workflow explained
 
