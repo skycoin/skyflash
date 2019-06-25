@@ -32,8 +32,8 @@ imageConfigDataSize = 256
 
 # skybian URL
 skybianUrl = "https://github.com/skycoin/skybian/releases/download/Skybian-v0.0.4/Skybian-v0.0.4.tar.xz"
+readmeUrl = "https://github.com/skycoin/skyflash/blob/master/README.md"
 manualUrl = "https://github.com/skycoin/skyflash/blob/master/USER_MANUAL.md"
-
 
 class Skyflash(QObject):
     '''Main/Base object for all procedures and properties, this is the core
@@ -415,9 +415,24 @@ To flash the next image just follow these steps:
         self.flashingOnProgress = False
 
     def checkUpdatesResult(self, data):
-        '''Receive the result of the check for updates via data'''
+        '''Receive the result of the check for updates via data
+
+        data is a string either: Null, False or True
+
+        Null indicate that we can't reach the update server (ignore, will check on next try)
+        False indicate it checked and you has the latest version
+        True indicates you are in a old version
+        '''
 
         print("Check for updates result: {}".format(data))
+
+        if data == "True":
+            # we have a explicit difference, warn the user
+            comments = "In the startup process we found that you are using a old version of Skyflash.\n"
+            comments += "\nWe are opening our Web page to let you know how to download and use the new version."
+            self.uiWarning.emit("New version available", comments)
+            self.openManual(readmeUrl)
+
 
     @pyqtSlot()
     def downloadSkybian(self):
@@ -679,25 +694,25 @@ To flash the next image just follow these steps:
 
     # open the manual in the browser
     @pyqtSlot()
-    def openManual(self):
+    def openManual(self, url=manualUrl):
         '''Opens the manual in a users's default browser'''
 
-        logging.debug("Trying to open the manual page on the browser, wait for it...")
+        logging.debug("Trying to open the manual page (or readme) on the browser, wait for it...")
 
         if sys.platform in ["win32", "cygwin"]:
             try:
-                os.startfile(manualUrl)
+                os.startfile(url)
             except:
-                webbrowser.open(manualUrl)
+                webbrowser.open(url)
 
         elif sys.platform == "darwin":
-            subprocess.Popen(["open", manualUrl])
+            subprocess.Popen(["open", url])
 
         else:
             try:
-                subprocess.Popen(["xdg-open", manualUrl])
+                subprocess.Popen(["xdg-open", url])
             except OSError:
-                logging.debug("Please open a browser on: " + manualUrl)
+                logging.debug("Please open a browser on: " + url)
 
     def cleanFolder(self, path):
         '''Cleans the passed folder of any temp/work file, covered files to erase
