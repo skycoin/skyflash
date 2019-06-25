@@ -9,6 +9,7 @@ import traceback
 import subprocess
 import json
 import ipaddress
+import requests
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, pyqtSlot
 
 if 'nt' in os.name:
@@ -600,3 +601,42 @@ class Worker(QRunnable):
         NO_ASSOC = 31
         OOM = 8
         SHARE = 26
+
+def checkUpdates(data_callback, progress_callback):
+    '''This routine compare the actual noted version against the one
+    in the official repository to check for updates
+    
+    If we can't ge the file we return null
+    If reached and the same False
+    If reached and different True
+    
+    '''
+
+    actualVersion = "v0.0.4beta1"
+    updateURL = "https://raw.githubusercontent.com/simelo/skyflash/stdevPavelmc_t57_check_for_new_versions/version.txt"
+    version = ""
+
+    try:
+        # try to obtain the file with the latest version
+        r = requests.get(updateURL)
+        if r.status_code != requests.codes.ok:
+            return "None"
+    except:
+        return "None"
+
+    # we get a response
+    data = r.text.splitlines()
+    for line in data:
+        if line == "":
+            continue
+
+        if line.startswith("#"):
+            continue
+
+        if line.startswith("v"):
+            version = line
+    
+    if version != actualVersion:
+        return "False"
+    else:
+        return "True"
