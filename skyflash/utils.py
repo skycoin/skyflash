@@ -636,7 +636,9 @@ def checkUpdates(data_callback, progress_callback):
         if line.startswith("v"):
             version = line
     
-    if version != actualVersion:
+    if version == actualVersion:
+        # you are in the same version
         return "False"
     else:
+        # yep, you have to updates
         return "True"
