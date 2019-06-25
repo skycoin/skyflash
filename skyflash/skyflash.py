@@ -414,6 +414,11 @@ To flash the next image just follow these steps:
         # reset the fail safe trigger
         self.flashingOnProgress = False
 
+    def checkUpdatesResult(self, data):
+        '''Receive the result of the check for updates via data'''
+
+        print("Check for updates result: {}".format(data))
+
     @pyqtSlot()
     def downloadSkybian(self):
         '''Slot that receives the start download signal from the UI'''
@@ -1240,7 +1245,6 @@ To flash the next image just follow these steps:
         self.timerStop()
 
         # Preparing the flasher thread
-        # thead start
         self.flash = Worker(self.flasher)
         self.flash.signals.data.connect(self.dummy)
         self.flash.signals.progress.connect(self.flashProg)
@@ -1545,6 +1549,20 @@ To flash the next image just follow these steps:
             logging.debug("Checked file not valid or corrupt, erasing it")
             if os.path.exists(self.checked): 
                 os.unlink(self.checked)
+
+    def checkForUpdates(self):
+        '''Check for updates in a thread to not disturm the UI flow'''
+
+        # Preparing the check update thread
+        self.ckup = Worker(checkUpdates)
+        self.ckup.signals.data.connect(self.dummy)
+        self.ckup.signals.progress.connect(self.dummy)
+        self.ckup.signals.result.connect(self.checkUpdatesResult)
+        self.ckup.signals.error.connect(self.dummy)
+        self.ckup.signals.finished.connect(self.dummy)
+
+        #  start flashing thread
+        self.threadpool.start(self.ckup)
 
 # load the instance
 Skyflash.instance = Skyflash()
