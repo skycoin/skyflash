@@ -18,18 +18,18 @@ This is a note for developers about the recommended tags to keep track of the ch
 Dates must be YEAR-MONTH-DAY
 -->
 
-## v0.0.4-beta - 2019-06-08
+## v0.0.4 - 2019-06-24
 
 ### Added
 
 - Setuptools compatibility (structure and code changed)
 - Travis yml file for CI/CD
-- Developers now can create a local Docker image to generate the Windows .exe release file
+- Developers now can create a local Docker image to generate the Windows .exe release file from a linux host
 - Full flashing support in Windows & Linux
-- New flashing paradigm in the UI, to help the user and
+- New flashing paradigm in the UI, to help the user and allow for repeated flashing
 - Full flashing support in macos OSX
 - Full generation of release files via Travis
-- Make now can take care of dependencies in linux
+- Make now can take care of dependencies in linux for the devs
 - Doc update with latest changes
 - UI now shows the name and version of the base image being processed.
 
@@ -41,6 +41,8 @@ Dates must be YEAR-MONTH-DAY
 - README and MANUALS updated to reflect recent changes
 - Makefile options changed
 - Posix OS (Linux/OSX) now uses a own streamer app to feed dd fon the flash process
-- Windows uses a own flasher app (flash)
+- Windows uses a own flasher app (flash.exe)
 - The docker image in the dev stage that was named "pyinstaller-win64py3:pyqt_winapi" and then renamed to pyinstaller-win64py3:skyflash please remove the old and run `make deps-windows` to re-create the new docker image.
 - We will not longer release a .deb file for installation, use the linux static app instead.
+- The network config now has a natural view on the IPs, no more spaces in the IPs
+- The internal validation mechanism for the IPs and DNS entries was rebuilt almost from scratch

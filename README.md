@@ -2,36 +2,28 @@
 
 With this tool you will download, configure, create and flash the default [skybian](https://github.com/simelo/skybian) image to your custom environment.
 
-The resulting images will only run on the official skyminer hardware so far, aka: Orange Pi Prime SBC.
+The resulting images will only run on the official skyminer hardware, the one based on Orange Pi Prime SBC.
 
 ## Skyflash
 
-The preferred method to configure & flash skybian images is by using this GUI tool
+The preferred method to configure & flash the official [skybian](https://github.com/simelo/skybian) images is by using this tool
 
 ### Installing
 
-To install this tool, go to the [Releases](https://github.com/skycoin/skyflash/releases) link on this page and grab the file corresponding file to your OS, use the following table to figure it out:
-
-| Operating System | You must download the one... |
-|:----------------:|:--------------------------------:|
-| Windows app| **Skyflash.exe** |
-| Linux app | **skyflash-gui_linux64-static.gz** |
-| MacOS app | **skyflash-macos-app.tgz** |
-
-Installing it and running is done by the default OS way, google is your friend on this.
+To install this tool, go to the [Releases](https://github.com/skycoin/skyflash/releases) link on this page and grab the file corresponding to your OS. The app you get is a standalone software _(often called a "portable app")_ so no dependencies are needed on any of the 3 target OS; just unzip _(if needed)_ and run it.
 
 ### Usage
 
-To see more detailed instructions on how to use the Skyflash GUI utility please visit the [User's Manual](USER_MANUAL.md)
+To see more detailed instructions on how to use the Skyflash utility please visit the [User's Manual](USER_MANUAL.md)
 
 ## Developers & testers
 
-If you are eager to build it yourself take into account that tha base OS for dev is Ubuntu 18.04 LTS, but most of them works on OSX also.
+If you are eager to build it yourself take into account that the base OS for dev is Ubuntu 18.04 LTS, but most of it works on OSX also if you tweak some items _(see notes below)_
 
 The project use the GNU Make to test and build so you can as for help like this `make help`:
 
 ```
-$ make
+$ make help
 deps                           Install all the needed deps to build it in Ubuntu 18.04 LTS and alike
 deps-windows                   Installs a docker image to build the windows .exe from inside linux
 init                           Initial cleanup, erase even the final app dir
@@ -46,6 +38,7 @@ posix-streamer                 Create the linux/macos streamer to help with the 
 linux-static                   Create a linux amd64 compatible static (portable) app
 macos-app                      Create the macos standalone app
 ```
+
 As you can see the options are self explanatory, just a few must know notes:
 
 * Option starting with `deps` works only on Linux, on OSX you will need to install a few packages to get the environment ready to work:
@@ -53,7 +46,7 @@ As you can see the options are self explanatory, just a few must know notes:
 * Use the `init` option to deep clean the working environment, this **will also erase** the pre-built apps.
 * Use the `clean` option to soft clean the working environment, this **will not erase** the pre-built apps in the final folder.
 * Options ending on `-dev` are meant to be used on linux local environments and will not pull any data from the internet if you run the `deps` & `deps-windows` before while connected to the internet.
-* Option `deps-windows` installs docker for your distribution, this target is meant to build the needed toolchain in linux to build the windows app and has a trick: 
+* Option `deps-windows` installs docker for your distribution, this target is meant to build the needed toolchain in linux to build the windows app and has a trick:
   * If you don't have docker installed already you must run it, reboot or logout/login and run it again to finish the install.
 * Once you run any of the release related options _(win-dev, linux-static, macos-app)_ your app will be sitting on a folder named `final`
 
@@ -70,7 +63,7 @@ To do a release you must follow these steps:
 0. Update the new version number in the `setup.py` & `skyflash/data/skyflash.qml` files.
 0. Update the `CHANGELOG.md` file with any needed info and move the `Unreleased` part to the new release version.
 0. Review & update the `README.md` file for any needed updates or changes that need attention in the front page.
-0. Push changs and wait for travis to validate all the changes.
+0. Push changes and wait for travis to validate all the changes.
 0. On success, check the draft release is published on the repository, improve it and keep it as a draft.
 0. Download the releases files and test them.
 0. If problems are found with raise issues where needed (skyflash/skybian) and fix them before continue with the next step.
@@ -84,4 +77,4 @@ To do a release you must follow these steps:
 
     * [Skybian](https://github.com/skycoin/skybian): if needed.
     * [Skycoin](https://github.com/skycoin/skycoin): mentions in it's README.md and elsewhere if applicable
-    * [Skywire](https://github.com/skycoin/skywire): to note the new release and the use of skybian/skyflash
+    * [Skywire](https://github.com/skycoin/skywire): to note the new release and the use of skyflash

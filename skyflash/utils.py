@@ -8,11 +8,45 @@ import enum
 import traceback
 import subprocess
 import json
+import ipaddress
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, pyqtSlot
 
 if 'nt' in os.name:
     import wmi
     import win32file
+
+def cleanString(data):
+    '''Cleans a string from trailing or leading chars
+
+    The list of chars is the cleanOf below, it's just a hack with strip()
+    but saves you from typing boring sentences over and over'''
+
+    cleanOf = " ,.-"
+
+    return data.strip(cleanOf)
+
+def splitDNS(dnsString):
+    '''Split a string that can represent up to tree DNS entries
+    return a list with the entries, if on error first entry is False
+    and second is the reason
+    '''
+
+    # first detecting the split pattern and detecting the most likely
+    data = dnsString.split(" ")
+    coma = dnsString.split(",")
+    if len(coma) > len(data):
+        data = coma
+
+    dns = []
+    err = False
+    for e in data:
+        result, ip = (validIP(cleanString(e)))
+        if result:
+            dns.append(str(ip))
+        else:
+            return [False, ip]
+
+    return dns
 
 def shortenPath(fullpath, ccount):
     '''Shorten a passed FS path to a char count size'''
@@ -114,24 +148,18 @@ def size(size):
 
     return out
 
-def validIP(ip):
+def validIP(iip):
     '''Takes a string of a IP and return a tuple:
     true/false and a reason if false
+
+    It uses ipaddress stock module, and the error is returned as the default comment 
     '''
 
-    # four digits
-    digits = str(ip).split('.')
-    if len(digits) != 4:
-        return (False, "Not enough digits on the IP")
-
-    # from 0 to 255
-    for d in digits:
-        d = int(d)
-        if d > 255 or d < 0:
-            return (False, "One of the digits on the IP is not valid")
-
-    # all good
-    return (True, "")
+    try:
+        ip = ipaddress.IPv4Address(iip)
+        return (True, ip)
+    except ValueError as messg:
+        return (False, str(messg))
 
 def getLinuxPath(soft):
     '''Make use of getDataFromCLI
@@ -222,7 +250,8 @@ def windowsDevices():
     data = []
 
     for physical_disk in c.Win32_DiskDrive():
-        if 7 in physical_disk.Capabilities:
+        capas = physical_disk.Capabilities
+        if capas != None and 7 in capas:
             # is a removable media
             phy = physical_disk.DeviceID
             size = int(physical_disk.Size)
@@ -429,7 +458,6 @@ def getLinDrivesInfo():
         return False
 
 # fileio overide class to get progress on tarfile extraction
-# TODO How to overide a class from a module
 class ProgressFileObject(io.FileIO):
     '''Overide the fileio object to have a callback on progress'''
 
