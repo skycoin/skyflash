@@ -17,7 +17,7 @@ if 'nt' in os.name:
     import win32file
 
 # version data
-actualVersion = "v0.0.4beta1"
+actualVersion = "v0.0.4"
 updateURL = "https://raw.githubusercontent.com/skycoin/skyflash/master/version.txt"
 skybianVersionFile = "https://raw.githubusercontent.com/skycoin/skybian/master/version.txt"
 
