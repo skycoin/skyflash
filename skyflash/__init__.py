@@ -114,6 +114,9 @@ def app():
         # check for updates
         skyflash.checkForUpdates()
 
+        # fetch in the background the latest skybian URL
+        skyflash.updateSkybianURL()
+
         # main GUI call
         sys.exit(QTapp.exec_())
     except SystemExit:

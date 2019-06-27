@@ -19,6 +19,7 @@ if 'nt' in os.name:
 # version data
 actualVersion = "v0.0.4beta1"
 updateURL = "https://raw.githubusercontent.com/skycoin/skyflash/master/version.txt"
+skybianVersionFile = "https://raw.githubusercontent.com/skycoin/skybian/master/version.txt"
 
 def cleanString(data):
     '''Cleans a string from trailing or leading chars
@@ -644,3 +645,42 @@ def checkUpdates(data_callback, progress_callback):
     else:
         # yep, you have to updates
         return "True"
+
+def getLatestSkybian(data_callback, progress_callback):
+    '''Update the URL from which we need to download the Skybian-vX.Y.z.tar.xz file
+
+    Returns a string containing the url for the download ot the error comments
+    '''
+
+    result = []
+
+    try:
+        # try to obtain the file with the latest version
+        r = requests.get(skybianVersionFile)
+        if r.status_code != requests.codes.ok:
+            return "Error: the server returned a {} code".format(r.status_code)
+    except Exception as err:
+        return "Error: {}".format(str(err))
+
+    # we get a response
+    data = r.text.splitlines()
+    for line in data:
+        if line == "":
+            continue
+
+        if str(line).startswith("#"):
+            continue
+
+        if "|" in line:
+            result.append(line.split("|"))
+
+    # data can be parsed
+    if len(result) == 0:
+        return "Error: we can't extract the URL from the Skybian version file"
+    # we are concerned now only for the testnet version
+    for kind, URL in result:
+        if kind == "testnet":
+            return URL.strip()
+
+    # fail safe
+    return "Error: no link provided for the release we are looking for"
