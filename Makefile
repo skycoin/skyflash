@@ -8,7 +8,7 @@ PWDWIN = $(shell pwd)/win-build
 deps: ## Install all the needed deps to build it in Ubuntu 18.04 LTS and alike
 	sudo apt update -q
 	sudo apt install -y python3 python3-all python3-pip python3-pyqt5 python3-pyqt5.qtquick qml-module-qtquick2 qml-module-qtquick-window2 qml-module-qtquick-layouts qml-module-qtquick-extras qml-module-qtquick-dialogs qml-module-qtquick-controls qml-module-qt-labs-folderlistmodel qml-module-qt-labs-settings fakeroot python3-stdeb p7zip-full make
-	pip3 install setuptools pyqt5 PyInstaller
+	pip3 install setuptools pyqt5 PyInstaller requests
 
 deps-windows: deps ## Installs a docker image to build the windows .exe from inside linux
 	# remove the old image from past dev envs

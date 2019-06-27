@@ -32,6 +32,9 @@ Dates must be YEAR-MONTH-DAY
 - Make now can take care of dependencies in linux for the devs
 - Doc update with latest changes
 - UI now shows the name and version of the base image being processed.
+- Skyflash now checks for new versions on startup, if found will warn the user and open a web browser with indications to the user...
+- Skyflash now detects the latest stable version of Skybian (from internet) and use that for the download... if it can detect it, just use the hardcoded one.
+- Added a new dependency for python3: request module, drop your local created docker image and re-create it, see 'make help'
 
 ### Changed
 

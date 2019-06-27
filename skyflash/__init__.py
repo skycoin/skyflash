@@ -111,6 +111,12 @@ def app():
         # check to see if we can load a previous downloaded & tested image
         skyflash.loadPrevious()
 
+        # check for updates
+        skyflash.checkForUpdates()
+
+        # fetch in the background the latest skybian URL
+        skyflash.updateSkybianURL()
+
         # main GUI call
         sys.exit(QTapp.exec_())
     except SystemExit:

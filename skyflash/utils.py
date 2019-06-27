@@ -9,11 +9,17 @@ import traceback
 import subprocess
 import json
 import ipaddress
+import requests
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, pyqtSlot
 
 if 'nt' in os.name:
     import wmi
     import win32file
+
+# version data
+actualVersion = "v0.0.4beta1"
+updateURL = "https://raw.githubusercontent.com/skycoin/skyflash/master/version.txt"
+skybianVersionFile = "https://raw.githubusercontent.com/skycoin/skybian/master/version.txt"
 
 def cleanString(data):
     '''Cleans a string from trailing or leading chars
@@ -600,3 +606,81 @@ class Worker(QRunnable):
         NO_ASSOC = 31
         OOM = 8
         SHARE = 26
+
+def checkUpdates(data_callback, progress_callback):
+    '''This routine compare the actual noted version against the one
+    in the official repository to check for updates
+    
+    If we can't ge the file we return null
+    If reached and the same False
+    If reached and different True
+    
+    '''
+
+    version = ""
+
+    try:
+        # try to obtain the file with the latest version
+        r = requests.get(updateURL)
+        if r.status_code != requests.codes.ok:
+            return "None"
+    except:
+        return "None"
+
+    # we get a response
+    data = r.text.splitlines()
+    for line in data:
+        if line == "":
+            continue
+
+        if line.startswith("#"):
+            continue
+
+        if line.startswith("v"):
+            version = line
+    
+    if version == actualVersion:
+        # you are in the same version
+        return "False"
+    else:
+        # yep, you have to updates
+        return "True"
+
+def getLatestSkybian(data_callback, progress_callback):
+    '''Update the URL from which we need to download the Skybian-vX.Y.z.tar.xz file
+
+    Returns a string containing the url for the download ot the error comments
+    '''
+
+    result = []
+
+    try:
+        # try to obtain the file with the latest version
+        r = requests.get(skybianVersionFile)
+        if r.status_code != requests.codes.ok:
+            return "Error: the server returned a {} code".format(r.status_code)
+    except Exception as err:
+        return "Error: {}".format(str(err))
+
+    # we get a response
+    data = r.text.splitlines()
+    for line in data:
+        if line == "":
+            continue
+
+        if str(line).startswith("#"):
+            continue
+
+        if "|" in line:
+            result.append(line.split("|"))
+
+    # data can be parsed
+    if len(result) == 0:
+        return "Error: we can't extract the URL from the Skybian version file"
+    # we are concerned now only for the testnet version
+    for kind, URL in result:
+        if kind == "testnet":
+            return URL.strip()
+
+    # fail safe
+    return "Error: no link provided for the release we are looking for"

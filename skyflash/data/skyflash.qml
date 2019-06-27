@@ -599,12 +599,11 @@ ApplicationWindow {
 
         // show all buttons in the download and resize the windowds to it's original size
         onSStart: {
-            pbDownload.visible = true
+            pbDownload.visible = false
             pbDownload.value = 0
             phDownloadButtons.visible = true
             btBrowse.visible = true
             lbImageComment.text = ""
-            sbText.text = ""
             btDown.visible = true
             btDown.text = "Download"
             btDown.tooltip = "Click here to download the base Skybian image from the official site"
