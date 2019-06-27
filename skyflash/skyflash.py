@@ -31,7 +31,7 @@ imageConfigAddress = 12582912
 imageConfigDataSize = 256
 
 # skybian URL
-skybianUrl = "https://github.com/skycoin/skybian/releases/download/Skybian-v0.0.4/Skybian-v0.0.4.tar.xz"
+defaultSkybianUrl = "https://github.com/skycoin/skybian/releases/download/Skybian-v0.0.4/Skybian-v0.0.4.tar.xz"
 readmeUrl = "https://github.com/skycoin/skyflash/blob/master/README.md"
 manualUrl = "https://github.com/skycoin/skyflash/blob/master/USER_MANUAL.md"
 
@@ -66,6 +66,8 @@ class Skyflash(QObject):
     flashingOnProgress = False
     appFolder = ""
     bundle = False
+    skybianUrl = ""
+    skybianUpdated = False # true: updated, false: not, none tried but failed
 
     #### registering Signals to emit to QML GUI
 
@@ -433,10 +435,55 @@ To flash the next image just follow these steps:
             self.uiWarning.emit("New version available", comments)
             self.openManual(readmeUrl)
 
+    def skybianUrlResult(self, data):
+        '''Receive the result of the fetch for the latest skybian URL
+
+        data is a string either: the url for the download or a error message
+        '''
+
+        if self.skybianUpdated == False:
+            # check for it
+            logging.debug("Got an answer to the skybian URL update:\n{}".format(data))
+
+            # check if a valid url
+            if data.startswith("https://"):
+                # valid
+                self.skybianUpdated = True
+                self.skybianUrl = data
+                self.setStatus.emit("Skybian download source updated...")
+                self.sStart.emit()
+                logging.debug("Skybian download source updated...")
+            else:
+                # tried but failed
+                self.skybianUpdated = None
+                self.sStart.emit()
+                self.setStatus.emit("Can't fetch the Skybian download source")
+                logging.debug("Can't fetch the Skybian download source")
+
+        elif self.skybianUpdated == None:
+            # tried to update for the second time, using the default
+            self.skybianUpdated = True # fake true
+            self.skybianUrl = defaultSkybianUrl # recall the latest download knows to the app
+            self.sStart.emit()
+            self.setStatus.emit("Using the default Skybian download source")
+            logging.debug("Using the default Skybian download source")
+        else:
+            # already
+            logging.debug("Skybian URL already updated...")
 
     @pyqtSlot()
     def downloadSkybian(self):
         '''Slot that receives the start download signal from the UI'''
+
+        # check to see if we got the skybian download URL
+        if self.skybianUpdated == False:
+            # call for an update
+            self.updateSkybianURL()
+
+            # update the status bar
+            self.setStatus.emit("Fetching the download link... are you Online?")
+
+            return
 
         # check if there is a thread already working there
         downCount = self.threadpool.activeThreadCount()
@@ -465,6 +512,7 @@ To flash the next image just follow these steps:
 
             # set label to stopping
             self.dData.emit("Download canceled...")
+            self.sStart.emit()
 
     # download skybian, will be instantiated in a thread
     def skyDown(self, data_callback, progress_callback):
@@ -477,8 +525,8 @@ To flash the next image just follow these steps:
         upstream so no need to handle it here
         '''
 
-        # take url for skybian from upper
-        url = skybianUrl
+        # get the URL from the object
+        url = self.skybianUrl
 
         # DEBUG
         logging.debug("Downloading from: {}".format(url))
@@ -1578,6 +1626,22 @@ To flash the next image just follow these steps:
 
         #  start flashing thread
         self.threadpool.start(self.ckup)
+
+    def updateSkybianURL(self):
+        '''Fetch the information about the lastest testnet/mainnet version
+        of Skybian from the internet
+        '''
+
+        # Preparing the check update thread
+        self.updl = Worker(getLatestSkybian)
+        self.updl.signals.data.connect(self.dummy)
+        self.updl.signals.progress.connect(self.dummy)
+        self.updl.signals.result.connect(self.skybianUrlResult)
+        self.updl.signals.error.connect(self.dummy)
+        self.updl.signals.finished.connect(self.dummy)
+
+        #  start flashing thread
+        self.threadpool.start(self.updl)
 
 # load the instance
 Skyflash.instance = Skyflash()
