@@ -15,7 +15,7 @@ fi
 
 if [ $1 = 'windows' ]; then
     # build the docker machine in-situ
-    cd Docker/win64py3/
+    cd docker/win64py3/
     docker build -t "pyinstaller-win64py3:skyflash" ./
 
     # exit the docker directory
