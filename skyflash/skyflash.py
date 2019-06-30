@@ -15,7 +15,6 @@ import shutil
 import subprocess
 import enum
 import string
-import json
 import tempfile
 from urllib.request import Request, urlopen
 
@@ -32,9 +31,9 @@ imageConfigAddress = 12582912
 imageConfigDataSize = 256
 
 # skybian URL
-skybianUrl = "https://github.com/skycoin/skybian/releases/download/Skybian-v0.0.3/Skybian-v0.0.3.tar.xz"
-manualUrl = "https://github.com/skycoin/skyflash/blob/develop/USER_MANUAL.md"
-
+defaultSkybianUrl = "https://github.com/skycoin/skybian/releases/download/Skybian-v0.0.4/Skybian-v0.0.4.tar.xz"
+readmeUrl = "https://github.com/skycoin/skyflash/blob/master/README.md"
+manualUrl = "https://github.com/skycoin/skyflash/blob/master/USER_MANUAL.md"
 
 class Skyflash(QObject):
     '''Main/Base object for all procedures and properties, this is the core
@@ -52,6 +51,7 @@ class Skyflash(QObject):
     digest = ""
     localPathDownloads = ""
     localPath = ""
+    localPathBuild = ""
     checked = ""
     netGw = ""
     netDns = ""
@@ -64,6 +64,10 @@ class Skyflash(QObject):
     builtImages = []
     flashingNow = []
     flashingOnProgress = False
+    appFolder = ""
+    bundle = False
+    skybianUrl = ""
+    skybianUpdated = False # true: updated, false: not, none tried but failed
 
     #### registering Signals to emit to QML GUI
 
@@ -102,6 +106,11 @@ class Skyflash(QObject):
     boProg = pyqtSignal(float, arguments=["percent"])
     # hide the progress bars after the built is done, and show Flash box
     bFinished = pyqtSignal()
+    #
+    # signal to show the default path and let the user pick his own
+    bDestinationDialog = pyqtSignal(str, arguments=["folder"])
+    # signal to update the network data
+    bNetData = pyqtSignal(str, str, str, str, arguments=["gw", "dns", "manager", "nodes"])
 
     ## Signals related to the flash process
 
@@ -253,15 +262,18 @@ class Skyflash(QObject):
         # debug
         logging.debug("Checksum verification result: {}".format(result))
 
+        # name of the downloaded file
+        filename = self.skybianFile.split(os.path.sep)[-1]
+
         if result:
             self.cksumOk = True
-            self.dData.emit("Skybian image verified!")
+            self.dData.emit("{} base image verified!".format(filename))
             logging.debug("Checksum verification result is ok")
         else:
             self.cksumOk = False
-            self.dData.emit("Skybian image can't be verified!")
+            self.dData.emit("Flash file {} can't be verified!".format(filename))
             logging.debug("Checksum verification failed: hash differs!")
-            self.uiError.emit("Skybian image can't be verified!", "The Skybian image integrity check ended with a different fingerprint or a soft error, this image is corrupted or a soft error happened, please start again.", "Downloaded & computed Hash differs")
+            self.uiError.emit("Flash file {} can't be verified!", "The Skybian image integrity check ended with a different fingerprint or a soft error, this image is corrupted or a soft error happened, please start again.", "Downloaded & computed Hash differs".format(filename))
 
     def cksumDone(self):
         '''Callback that is flagged once the checkum was ended.'''
@@ -271,7 +283,7 @@ class Skyflash(QObject):
 
         if self.cksumOk:
             # success must call for a sha1sum check
-            logging.debug("Checksum verification is a success!")
+            logging.debug("Checksum verification success!")
             # next step
             self.netConfig.emit()
             self.buildImages.emit()
@@ -375,15 +387,13 @@ class Skyflash(QObject):
 
         # restart the timer
         self.timerStart()
-
-        self.fData.emit("Flash process error...")
         self.setStatus.emit("An error ocurred while flashing the images")
         etype, eval, etrace = error
         logging.debug("An error ocurred while flashing the images:\n{}".format(eval))
         self.uiError.emit("Flash failed!", "The flash process failed, please check the logs to see more details", str(eval))
 
         # reset the fail safe trigger
-        self.flashingOnProgress = false
+        self.flashingOnProgress = False
 
     def flashDone(self, data):
         '''Catch the end of the flash process'''
@@ -402,14 +412,78 @@ To flash the next image just follow these steps:
         self.uiOk.emit("Image flashing succeeded!", msg)
 
         self.setStatus.emit("Flash process was a success!")
-        self.fData.emit("Flash process was a success!")
 
         # reset the fail safe trigger
-        self.flashingOnProgress = false
+        self.flashingOnProgress = False
+
+    def checkUpdatesResult(self, data):
+        '''Receive the result of the check for updates via data
+
+        data is a string either: Null, False or True
+
+        Null indicate that we can't reach the update server (ignore, will check on next try)
+        False indicate it checked and you has the latest version
+        True indicates you are in a old version
+        '''
+
+        print("Check for updates result: {}".format(data))
+
+        if data == "True":
+            # we have a explicit difference, warn the user
+            comments = "In the startup process we found that you are using a old version of Skyflash.\n"
+            comments += "\nWe are opening our Web page to let you know how to download and use the new version."
+            self.uiWarning.emit("New version available", comments)
+            self.openManual(readmeUrl)
+
+    def skybianUrlResult(self, data):
+        '''Receive the result of the fetch for the latest skybian URL
+
+        data is a string either: the url for the download or a error message
+        '''
+
+        if self.skybianUpdated == False:
+            # check for it
+            logging.debug("Got an answer to the skybian URL update:\n{}".format(data))
+
+            # check if a valid url
+            if data.startswith("https://"):
+                # valid
+                self.skybianUpdated = True
+                self.skybianUrl = data
+                self.setStatus.emit("Skybian download source updated...")
+                self.sStart.emit()
+                logging.debug("Skybian download source updated...")
+            else:
+                # tried but failed
+                self.skybianUpdated = None
+                self.sStart.emit()
+                self.setStatus.emit("Can't fetch the Skybian download source")
+                logging.debug("Can't fetch the Skybian download source")
+
+        elif self.skybianUpdated == None:
+            # tried to update for the second time, using the default
+            self.skybianUpdated = True # fake true
+            self.skybianUrl = defaultSkybianUrl # recall the latest download knows to the app
+            self.sStart.emit()
+            self.setStatus.emit("Using the default Skybian download source")
+            logging.debug("Using the default Skybian download source")
+        else:
+            # already
+            logging.debug("Skybian URL already updated...")
 
     @pyqtSlot()
     def downloadSkybian(self):
-        '''Slot that receives the stat download signal from the UI'''
+        '''Slot that receives the start download signal from the UI'''
+
+        # check to see if we got the skybian download URL
+        if self.skybianUpdated == False:
+            # call for an update
+            self.updateSkybianURL()
+
+            # update the status bar
+            self.setStatus.emit("Fetching the download link... are you Online?")
+
+            return
 
         # check if there is a thread already working there
         downCount = self.threadpool.activeThreadCount()
@@ -438,6 +512,7 @@ To flash the next image just follow these steps:
 
             # set label to stopping
             self.dData.emit("Download canceled...")
+            self.sStart.emit()
 
     # download skybian, will be instantiated in a thread
     def skyDown(self, data_callback, progress_callback):
@@ -450,8 +525,8 @@ To flash the next image just follow these steps:
         upstream so no need to handle it here
         '''
 
-        # take url for skybian from upper
-        url = skybianUrl
+        # get the URL from the object
+        url = self.skybianUrl
 
         # DEBUG
         logging.debug("Downloading from: {}".format(url))
@@ -481,9 +556,9 @@ To flash the next image just follow these steps:
 
         # emit data of the download
         if self.downloadSize > 0:
-            data_callback.emit("Downloading {:04.1f} MB".format(self.downloadSize/1000/1000))
+            data_callback.emit("{}, {:04.1f} MB".format(fileName, self.downloadSize/1000/1000))
         else:
-            data_callback.emit("Downloading size is unknown")
+            data_callback.emit("Downloading {}...".format(fileName))
 
         # start download
         downloadedChunk = 0
@@ -567,13 +642,12 @@ To flash the next image just follow these steps:
             return
 
         # clean the path depending on the OS
-        if sys.platform in ["win32", "cygwin"]:
+        if 'nt' in os.name:
             # file is like this file:///C:/Users/Pavel/Downloads/Skybian-0.1.0.tar.xz
             # need to remove 3 slashes
             file = file.replace("file:///", "")
         else:
-            # working on linux, like this: file:///home/pavel/Downloads/Skybian-0.1.0.tar.xz
-            # TODO test os MacOS
+            # working on posix, like this: file:///home/pavel/Downloads/Skybian-0.1.0.tar.xz
             file = file.replace("file://", "")
 
         logging.debug("Selected file is " + file)
@@ -653,7 +727,8 @@ To flash the next image just follow these steps:
                 progress_callback.emit(percent * 100, data)
 
         # update status
-        data_callback.emit("Extracting the file, please wait...")
+        filename = self.downloadedFile.split(os.path.sep)[-1]
+        data_callback.emit("Extracting the file {}, please wait...".format(filename))
         tar = tarfile.open(fileobj=ProgressFileObject(self.downloadedFile, progressfn=tarExtractionProgress))
         tar.extractall()
         tar.close()
@@ -667,25 +742,25 @@ To flash the next image just follow these steps:
 
     # open the manual in the browser
     @pyqtSlot()
-    def openManual(self):
+    def openManual(self, url=manualUrl):
         '''Opens the manual in a users's default browser'''
 
-        logging.debug("Trying to open the manual page on the browser, wait for it...")
+        logging.debug("Trying to open the manual page (or readme) on the browser, wait for it...")
 
         if sys.platform in ["win32", "cygwin"]:
             try:
-                os.startfile(manualUrl)
+                os.startfile(url)
             except:
-                webbrowser.open(manualUrl)
+                webbrowser.open(url)
 
         elif sys.platform == "darwin":
-            subprocess.Popen(["open", manualUrl])
+            subprocess.Popen(["open", url])
 
         else:
             try:
-                subprocess.Popen(["xdg-open", manualUrl])
+                subprocess.Popen(["xdg-open", url])
             except OSError:
-                logging.debug("Please open a browser on: " + manualUrl)
+                logging.debug("Please open a browser on: " + url)
 
     def cleanFolder(self, path):
         '''Cleans the passed folder of any temp/work file, covered files to erase
@@ -712,6 +787,9 @@ To flash the next image just follow these steps:
 
         # clean work folder
         self.cleanFolder(self.localPath)
+
+        # clean build folder
+        self.cleanFolder(self.localPathBuild)
 
         # clean download folder
         self.cleanFolder(self.localPathDownloads)
@@ -878,7 +956,7 @@ To flash the next image just follow these steps:
         except:
             pass
 
-    def validateNetworkData(self, gw, dns, manager, nodes):
+    def validateNetworkData(self, dgw, ddns, dmanager, dnodes):
         '''Validate the network data passed by the QML UI
 
         gw: the network gateway
@@ -886,13 +964,24 @@ To flash the next image just follow these steps:
         manager: ip of the manager
         nodes: number of nodes to build
 
+        The input vars is prefixed by a 'd' to sign they can be dirty with
+        leading or trailing spaces, comas or dots
+
+        If all data is good, clean values are passed to the UI via a signal
+
         Returns true or false to sign result
         '''
+
+        # removing trailing and leading spaces
+        gw = cleanString(dgw)
+        dns = cleanString(ddns)
+        manager = cleanString(dmanager)
+        nodes = cleanString(dnodes)
 
         # debug
         logging.debug("Build received data is:\nGW: '{}'\nDNS: '{}'\nManager: '{}'\nNodes '{}'".format(gw, dns, manager, nodes))
 
-        # validation #1, are the manger, dns and gw valid ips?
+        # validation #1, are the manger & gw valid ips?
         gwValid, reason = validIP(gw)
         if not gwValid:
             self.uiError.emit("Validation error", "The GW IP entered is not valid, please check that", reason)
@@ -905,53 +994,70 @@ To flash the next image just follow these steps:
             logging.debug("Manager ip not valid: {}".format(manager))
             return False
 
-        # validation #2, dns, two and valid ips
-        dnss = dns.split(' ')
-        dnss[0] = dnss[0].strip(',')
-        if len(dnss) != 2:
-            reason = "DNS must be in the format '1.2.3.4, 2.3.4.5'"
-            self.uiError.emit("Validation error", "The DNS string entered is not valid, please check that.", reason)
+        # validation #2, DNS
+        # from 1 to 3 IPs separated by ',' or space, or both
+        ddns = splitDNS(dns)
+        if ddns[0] == False:
+            reason = "DNS must be in the format '1.2.3.4, 2.3.4.5, 3.4.5.6'"
+            self.uiError.emit("Validation error",
+                              "The DNS string entered is not valid, please check that.",
+                              reason)
             logging.debug("DNS string is not valid: '{}'".format(dns))
-            return False
-
-        dns1Valid, reason = validIP(dnss[0])
-        if not dns1Valid:
-            self.uiError.emit("Validation error", "The first IP on the DNS is not valid, please check that.", reason)
-            logging.debug("DNS1 IP is not valid: '{}'".format(dns))
-            return False
-
-        dns2Valid, reason = validIP(dnss[1])
-        if not dns2Valid:
-            self.uiError.emit("Validation error", "The second IP on the DNS is not valid, please check that.", reason)
-            logging.debug("DNS2 IP is not valid: '{}'".format(dns))
             return False
 
         # validation #3, gw and manager must be on the same IP range
         if gw[0:gw.rfind('.')] != manager[0:manager.rfind('.')]:
-            self.uiError.emit("Validation error", "The manager and the gw are not in the same sub-net, please check that", "")
+            self.uiError.emit("Validation error",
+                              "The manager and the gw are not in the same sub-net, please check that",
+                              "Manager and Gateway must reside on the name subnet")
             logging.debug("Base address for the net differs in gw/manager: '{} vs. {}'".format(gw, manager))
             return False
 
         # validation #4, node counts + ip is not bigger than 255
         endip = int(manager[manager.rfind('.') + 1:]) + int(nodes)
-        if endip > 255:
-            self.uiError.emit("Validation error", "The nodes IP distribution is beyond 255, please lower your manager ip",
-                "The IP of the minions are distributed from the manager IP and up, if you set the manager node IP so high the minion count may not fit")
-            logging.debug("Manager IP to high, last minion will be {} and that's not possible".format(endip))
+        if endip >= 255:
+            self.uiError.emit("Validation error",
+                              "The nodes IP distribution is beyond 254, please lower your manager ip",
+                              "The IP of the nodes are distributed from the manager IP and up, if you set the manager node IP so high the node count may not fit")
+            logging.debug("Manager IP to high, last node will be {} and that's not possible".format(endip))
             return False
 
         # validation #5, gw not in manager & nodes range
         if int(gw[gw.rfind('.') + 1:]) in range(int(manager[manager.rfind('.') + 1:]), endip):
-            self.uiError.emit("Validation error", "Please check your GW, Manager & Minion selection, the GW is one of the Minions or Manager IPs",
-                "When we distribute the manager & Minions IP we found that the GW is one of that IP and that's wrong")
-            logging.debug("GW ip is on generated Minions range.")
+            self.uiError.emit("Validation error",
+                              "Please check your GW, Manager & Nodes selection, the GW is one of the Nodes or Manager IPs",
+                              "When we distribute the manager & nodes IP we found that the GW is one of that IP and that's wrong")
+            logging.debug("GW ip is on generated nodes range.")
             return False
 
         # If you reached this point then all is ok
+        # Push the new data to the UI
+        self.bNetData.emit(gw, dns, manager, nodes)
+
+        # finally return true
         return True
 
     @pyqtSlot(str, str, str, str)
-    def imagesBuild(self, gw, dns, manager, nodes):
+    def builtImagesPath(self, gw, dns, manager, nodes):
+        '''Receives the info from the UT that the user want to build the images
+        and the parameters to do it.
+
+        We validate the data on the users interface first, if somethins is wrong
+        we raise an error dialog.
+
+        Then ask to the user if it's OK with the location, if not then raise a
+        dialog box to select the new path
+        '''
+
+        # validate network data
+        result = self.validateNetworkData(gw, dns, manager, nodes)
+        if not result:
+            return
+
+        self.bDestinationDialog.emit(self.localPathBuild)
+
+    @pyqtSlot(str, str, str, str, str)
+    def imagesBuild(self, gw, dns, manager, nodes, folder):
         '''Receives the Button order to build the images, passed arguments are:
 
         gw: the network gateway
@@ -967,8 +1073,22 @@ To flash the next image just follow these steps:
         if not result:
             return
 
-        # erase old images on final folder
-        self.cleanFolder(self.localPath)
+        # clean the path depending on the OS
+        if 'nt' in os.name:
+            # file is like this file:///C:/Users/...
+            # need to remove 3 slashes
+            folder = folder.replace("file:///", "")
+        else:
+            # working on posix, like this: file:///home/pavel/...
+            folder = folder.replace("file://", "")
+
+        if folder != "no":
+            # change it
+            self.localPathBuild = folder
+            logging.debug("User selected a custom build folder: {}".format(self.localPathBuild))
+
+        # erase old images on final folder (if any)
+        self.cleanFolder(self.localPathBuild)
 
         # All good carry on, set the network vars on top of the object
         self.netGw = gw
@@ -1040,11 +1160,11 @@ To flash the next image just follow these steps:
             # new file and it's name
             nodeNick = "manager"
             if nip != self.netManager:
-                nodeNick = "minion-" + str(actual)
+                nodeNick = "node-" + str(actual)
 
             nodeName = "Skybian-" + nodeNick + ".img"
 
-            nnfp = os.path.join(self.localPath, nodeName)
+            nnfp = os.path.join(self.localPathBuild, nodeName)
             newNode = open(nnfp, 'wb')
             nodes = int(self.netNodes)
 
@@ -1096,118 +1216,6 @@ To flash the next image just follow these steps:
         # close the file
         file.close()
 
-    def drivesWin(self):
-        '''Return a list of available drives in windows
-        if possible with a drive label and size in bytes:
-
-        [
-            ('E:/', '[unlabeled drive]', 2369536),
-            ('F:/', 'CO7WT4G', 3995639808)
-        ]
-        '''
-
-        # return list
-        drives = []
-
-        ds = getPHYDrives()
-        if len(ds) > 0:
-            for d in ds:
-                dletters = ""
-                volNames = ""
-                volGUIDs = ""
-                for i in d['drives']:
-                    dletters += " {}".format(i[1])
-                    volNames += " {}".format(i[2])
-                    volGUIDs += " {}".format(i[3])
-
-                dletters = dletters.strip()
-                driveSize = d['size']
-                driveID = d['phydrive']
-
-                drives.append((dletters, volNames, int(driveSize), driveID, volGUIDs))
-
-            return drives
-        else:
-            # TODO: warn the user
-            logging.debug("Error, no storage drive detected...")
-            return False
-
-    def drivesLinux(self):
-        '''Return a list of available drives in linux
-        if possible with a drive label and sizes on bytes:
-
-        On some linux the SD cards take /dev/sdb and on
-
-        [
-            ('/dev/mmcblk0', '', 2369536),
-            ('/dev/mmcblk1', '', 3995639808),
-            ('/dev/sda', '', 8300555)
-        ]
-        '''
-
-        drives = []
-
-        # create a pool of possible drives
-        for i in range(0, 5):
-            drives.append("/dev/mmcblk{}".format(i))
-
-        # add sdb-f as possible mmc drives
-        for i in "abcdef":
-            drives.append("/dev/sd{}".format(i))
-
-        # check if the drive is there
-        for drive in drives[:]:
-            try:
-                # if this work we detected a drive and is readable, see else statement
-                disk = open(drive,'rb')
-            except FileNotFoundError:
-                # there is no such drive
-                drives.pop(drives.index(drive))
-                pass
-            except PermissionError:
-                pass
-            else:
-                # well it can open the disk, we must close it
-                disk.close()
-
-        # if we detected a drive, gather the details via lsblk
-        if drives:
-            d = " ".join(drives)
-            js = getDataFromCLI("lsblk -JpbI 8 {}".format(d))
-        else:
-            # TODO: warn the user
-            logging.debug("Error, no storage drive detected, WTF!")
-            return False
-
-        # is no usefull data exit
-        if js is False:
-            logging.debug("Storage drive detected, but none is removable WTF!")
-            return False
-
-        # usefull data beyond this point
-        finalDrives = []
-        data = json.loads(js)
-
-        # getting data, output format is: [(drive, "LABEL", total),]
-        for device in data['blockdevices']:
-            if device['rm'] == '1':
-                cap = int(device['size'])
-                mounted = ""
-                for c in device['children']:
-                    if c['mountpoint']:
-                        mounted += " ".join([c['mountpoint'].split("/")[-1]])
-
-                if len(mounted) <= 0:
-                    mounted += "Not in use"
-
-                finalDrives.append((device['name'], mounted, cap))
-
-        return finalDrives
-
-    def drivesMac(self):
-        ''''''
-        pass
-
     def detectCards(self):
         '''Detects and identify the uSD cards in the system OS agnostic'''
 
@@ -1215,30 +1223,23 @@ To flash the next image just follow these steps:
         self.drives = []
 
         # OS specific listing
-        if sys.platform in ["win32", "cygwin"]:
-            self.drives = self.drivesWin()
-        elif sys.platform.startswith('linux'):
-            self.drives = self.drivesLinux()
-        elif sys.platform is "darwin":
-            # self.drives = self.drivesMac()
-            logging.debug("Flashing on MacOs is not working yet")
+        aos = sys.platform.strip()
+        if aos in ["win32", "cygwin"]:
+            logging.debug("Detecting Windows Drives")
+            self.drives = getWinDrivesInfo()
+        elif aos.startswith('linux'):
+            logging.debug("Detecting Linux Drives")
+            self.drives = getLinDrivesInfo()
         else:
-            # freebsd or others, not supported yet
-            # TODO warning about not supported OS
-            pass
+            logging.debug("Detecting MacOS Drives")
+            self.drives = getMacDriveInfo()
 
         # build a user friendly string for the cards if there is a card
         if self.drives:
             driveList = []
-            for d in self.drives:
-                # conditional unpacking, windows will have 5 and others just 3 elements
-                if len(d) > 3:
-                    drive, label, size, phydrive, dguid = d
-                else:
-                    drive, label, size = d
-
+            for (drive, label, size) in self.drives:
                 # convert size from bytes to GB
-                if size > 0:
+                if int(size) > 0:
                     size = size / 2**30
 
                 driveList.append("{} '{}' {:0.1f}GB".format(drive, label, size))
@@ -1286,7 +1287,7 @@ To flash the next image just follow these steps:
     def pickimages2flash(self, text):
         '''Set the actual selected image in the combo box'''
 
-        self.flashingNow = os.path.join(self.localPath, text)
+        self.flashingNow = os.path.join(self.localPathBuild, text)
         print("You selected the image: {} to be flashed next".format(text))
 
     def dummy(self):
@@ -1300,14 +1301,13 @@ To flash the next image just follow these steps:
         # failsafe if we are already on a flashing process
         if self.flashingOnProgress:
             logging.debug("User pressed the Flashing button during a flash, aborting")
-            self.uiWarning("Ops!", "Please wait until the actual flashing process ends.")
+            self.uiWarning.emit("Ops!", "Please wait until the actual flashing process ends.")
             return
 
         # stop the timer, it must not mess with the device on the copy process
         self.timerStop()
 
         # Preparing the flasher thread
-        # thead start
         self.flash = Worker(self.flasher)
         self.flash.signals.data.connect(self.dummy)
         self.flash.signals.progress.connect(self.flashProg)
@@ -1328,7 +1328,7 @@ To flash the next image just follow these steps:
             self.windowsFlasher(data_callback, progress_callback)
         elif sys.platform == "darwin":
             # mac
-            pass
+            self.macosFlasher(data_callback, progress_callback)
         else:
             # linux
             self.linuxFlasher(data_callback, progress_callback)
@@ -1350,6 +1350,10 @@ To flash the next image just follow these steps:
 
         # user advice.
         data_callback.emit("Flashing now {} image".format(name))
+
+        # remove the trailing \ on the drive name
+        if "\\" in drive:
+            drive = drive[:-1]
 
         # build the command to flash it
         cmd = "{} \"{}\" \"{}\" \"{}\"".format(flasher, image, drive, logfile)
@@ -1406,13 +1410,21 @@ To flash the next image just follow these steps:
         #  command to run
         pkexec = getLinuxPath("pkexec")
         dd = getLinuxPath("dd")
-        pv = getLinuxPath("pv")
-        logfile = os.path.join(tempfile.gettempdir(), "skfpl.log")
+        python = getLinuxPath("python3")
+        logfile = os.path.join(tempfile.gettempdir(), "skf.log")
 
-        # touch (& truncate) the logfile
-        f = open(logfile, 'w')
-        f.write("0")
+        # touch the logfile
+        f = open(logfile, mode='wt')
+        f.write("0.0%")
         f.close()
+
+        # detect the streamer syntax
+        if self.bundle:
+            # I'm in a static pre compiled env
+            streamer = os.path.join(self.appFolder, "pypv")
+        else:
+            # just a python call to the code
+            streamer = python + " " + os.path.join(self.appFolder, "../posix-build/pypv.py")
 
         # there are images left to burn, pick the first one
         image = self.flashingNow
@@ -1422,31 +1434,32 @@ To flash the next image just follow these steps:
 
         data_callback.emit("Flashing now {} image".format(name))
 
-        if pkexec and dd and pv:
-            cmd = "{} if={} | {} -s {} -n -f 2>{} | {} {} of={}".format(dd, image, pv, size, logfile, pkexec, dd, destination)
+        if pkexec and dd and (python or streamer):
+            cmd = "{} {} {} | {} {} of={}".format(streamer, image, logfile, pkexec, dd, destination)
             logging.debug("Full cmd line is:\n{}".format(cmd))
 
             # TODO Test if the destination file in in there
 
             try:
-                p = subprocess.Popen(cmd,
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    bufsize=0, universal_newlines=True, shell=True)
+                p = subprocess.Popen(cmd, shell=True)
 
                 #  open the log file
                 lf = open(logfile, 'r')
 
-                while True:
-                    # exit condition for the endless loop
-                    if p.poll() is not None:
-                        break
-
+                while p.poll() is None:
                     #  capturing progress via a file
                     l = lf.readline().strip("\n")
-                    if l != '':
-                        pr = int(l)
-                        if pr > 0:
-                            progress_callback.emit(pr, "Flashing {}: {}%".format(name, pr))
+                    if len(l) != 0:
+                        # check for errors
+                        if l.startswith("ERROR"):
+                            print("Error detected:\n{}".format(l))
+                            return False
+
+                        if "%" in l:
+                            # we are on:
+                            pr = float(l.strip()[:-1])
+                            if pr > 0:
+                                progress_callback.emit(pr, "Flashing {}: {}%".format(name, pr))
 
                 #  close the log file
                 if lf:
@@ -1470,15 +1483,95 @@ To flash the next image just follow these steps:
             logging.debug("Error getting one of the dependencies")
 
             # user warning
-            self.uiWarning("Ops!", """Your OS is not ready to flash, you need to install some tools
-to complete the flashing process. Use your OS package manager
-to install this two utilities: 'dd' and 'pv'
+            self.uiWarning.emit("Ops!", "There was an utility missing in your system!")
 
-It's as simple as typing this on a console:
-- On a Debian like distros: sudo apt install pv dd
-- On a RedHat like distros: sudo yum install pv dd
+    def macosFlasher(self, data_callback, progress_callback):
+        '''Macos flasher'''
 
-And so on for other distros.""")
+        #  command to run
+        dd = getLinuxPath("dd")
+        python = getLinuxPath("python3")
+        logfile = os.path.join(tempfile.gettempdir(), "skf.log")
+
+        # touch the logfile
+        f = open(logfile, mode='wt')
+        f.write("0.0%")
+        f.close()
+
+        # detect the streamer syntax
+        if self.bundle:
+            # I'm in a static pre compiled env
+            streamer = os.path.join(self.appFolder, "pypv")
+        else:
+            # just a python call to the code
+            streamer = python + " " + os.path.join(self.appFolder, "../posix-build/pypv.py")
+
+        print("Streamer tool is at: {}".format(streamer))
+
+        # there are images left to burn, pick the first one
+        image = self.flashingNow
+        name = image.split(os.sep)[-1].split(".")[0]
+        destination = self.card
+        size = os.path.getsize(image)
+
+        data_callback.emit("Flashing now {} image".format(name))
+
+        # umount the drive
+        getDataFromCLI("diskutil unmountDisk {}".format(destination))
+
+        if dd and (python or streamer):
+            cmd = "{} {} {} | {} of={}".format(streamer, image, logfile, dd, destination)
+            logging.debug("Basic cmd line is:\n{}".format(cmd))
+
+            # pack the cmd in the long sentence to ask for permissions
+            realcmd = "osascript -e 'do shell script \"{}\" with administrator privileges'".format(cmd)
+            print("Full command is like this:\n")
+            print(realcmd)
+
+            try:
+                p = subprocess.Popen(realcmd, shell=True)
+
+                #  open the log file
+                lf = open(logfile, 'r')
+
+                while p.poll() is None:
+                    #  capturing progress via a file
+                    l = lf.readline().strip("\n")
+                    if len(l) != 0:
+                        # check for errors
+                        if l.startswith("ERROR"):
+                            print("Error detected:\n{}".format(l))
+                            return False
+
+                        if "%" in l:
+                            # we are on:
+                            pr = float(l.strip()[:-1])
+                            if pr > 0:
+                                progress_callback.emit(pr, "Flashing {}: {}%".format(name, pr))
+
+                #  close the log file
+                if lf:
+                    lf.close()
+
+                logging.debug("Return Code was {}".format(p.returncode))
+
+                # check for return code
+                if p.returncode == 0:
+                    # All ok, pop the image from the list
+                    return "Done"
+                else:
+                    # different code
+                    # TODO capture an error
+                    return "Oops!"
+
+            except OSError as e:
+                logging.debug("Failed to execute program '%s': %s" % (cmd, str(e)))
+                raise
+        else:
+            logging.debug("Error getting one of the dependencies")
+
+            # user warning
+            self.uiWarning.emit("Ops!", "There was an utility missing in your system!")
 
     def loadPrevious(self):
         '''Check for a already downloaded and checksum tested image in the
@@ -1493,26 +1586,62 @@ And so on for other distros.""")
         #  check if a file named .checked is on the downloads path
         baseImage = ""
         if os.path.exists(self.checked):
+            logging.debug("Found a checked file, loading it to process")
             f = open(self.checked)
             baseImage = f.readline().strip("\n")
-            logging.debug("Found a checked file, loading it to process")
+            baseImageFile = baseImage.split(os.path.sep)[-1]
         else:
             logging.debug("No previous work found.")
 
-        if baseImage != "" and os.path.exists(baseImage):
-            # we have a checked image in the file
-            logging.debug("You have an already checked image, loading it")
+        if baseImage != "":
+            if os.path.exists(baseImage):
+                # we have a checked image in the file
+                logging.debug("You have an already checked image, loading it")
+                logging.debug("Loading....{}".format(baseImageFile))
 
-            self.skybianFile = baseImage
-            self.extractionOK = True
-            self.setStatus.emit("Found an already downloaded file, loading it")
-            self.dData.emit("Local image loaded")
-            self.netConfig.emit()
-            self.buildImages.emit()
+                self.skybianFile = baseImage
+                self.extractionOK = True
+                self.setStatus.emit("Using local file: {}".format(baseImageFile))
+                self.dData.emit("Using file {}".format(baseImageFile))
+                self.netConfig.emit()
+                self.buildImages.emit()
+            else:
+                # checkd file exist but image don't, erasing it
+                os.unlink(self.checked)
         else:
             logging.debug("Checked file not valid or corrupt, erasing it")
             if os.path.exists(self.checked): 
                 os.unlink(self.checked)
+
+    def checkForUpdates(self):
+        '''Check for updates in a thread to not disturm the UI flow'''
+
+        # Preparing the check update thread
+        self.ckup = Worker(checkUpdates)
+        self.ckup.signals.data.connect(self.dummy)
+        self.ckup.signals.progress.connect(self.dummy)
+        self.ckup.signals.result.connect(self.checkUpdatesResult)
+        self.ckup.signals.error.connect(self.dummy)
+        self.ckup.signals.finished.connect(self.dummy)
+
+        #  start flashing thread
+        self.threadpool.start(self.ckup)
+
+    def updateSkybianURL(self):
+        '''Fetch the information about the lastest testnet/mainnet version
+        of Skybian from the internet
+        '''
+
+        # Preparing the check update thread
+        self.updl = Worker(getLatestSkybian)
+        self.updl.signals.data.connect(self.dummy)
+        self.updl.signals.progress.connect(self.dummy)
+        self.updl.signals.result.connect(self.skybianUrlResult)
+        self.updl.signals.error.connect(self.dummy)
+        self.updl.signals.finished.connect(self.dummy)
+
+        #  start flashing thread
+        self.threadpool.start(self.updl)
 
 # load the instance
 Skyflash.instance = Skyflash()

@@ -1,1 +1,4 @@
 pyqt5 >= 5.12
+wmi >= 1.4.8
+pywin32 >= 223
+requests >= 2.18.0
