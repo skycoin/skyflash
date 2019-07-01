@@ -69,7 +69,7 @@ if 'nt' in os.name:
           bootloader_ignore_signals=False,
           strip=False,
           console=False,
-          debug=False,
+          debug=True,
           icon='skyflash/data/skyflash.ico',
           uac_admin=True
           )
