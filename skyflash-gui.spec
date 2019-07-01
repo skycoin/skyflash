@@ -68,7 +68,7 @@ if 'nt' in os.name:
           name='skyflash-gui',
           bootloader_ignore_signals=False,
           strip=False,
-          console=True,
+          console=False,
           debug=True,
           icon='skyflash/data/skyflash.ico',
           uac_admin=True
