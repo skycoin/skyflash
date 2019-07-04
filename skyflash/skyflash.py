@@ -535,7 +535,7 @@ To flash the next image just follow these steps:
 
         if url.startswith("https"):
             # prepare the https context
-            scontext = ssl.SSLContext(ssl.PROTOCOL_TLS)
+            scontext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             req = urlopen(r, context=scontext)
         else:
             req = urlopen(r)
