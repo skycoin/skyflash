@@ -6,12 +6,10 @@ import io
 import sys
 import webbrowser
 import time
-import traceback
 import tarfile
 import ssl
 import hashlib
 import logging
-import shutil
 import subprocess
 import enum
 import string
