@@ -14,14 +14,9 @@ print("Flashing {} to drive {}".format(args.file, args.drive))
 import sys
 import os
 import subprocess
-import re
 import csv
 
-# regular expresions used below, precompiled here.
-red = re.compile('Disk \#\d\, Partition \#\d')
-rel = re.compile(' [A-Z]: ')
-
-if 'nt' in os.name:
+try:
     import win32file
     import wmi
 
@@ -34,7 +29,7 @@ if 'nt' in os.name:
     w32GenericRead = win32file.GENERIC_READ
     # w32FileShareRead = win32file.FILE_SHARE_READ
     w32OpenExisting = win32file.OPEN_EXISTING
-else:
+except:
     print("This script is not intended for this OS")
     sys.exit()
 
