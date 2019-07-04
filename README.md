@@ -71,7 +71,7 @@ To do a release you must follow these steps:
 0. If problems are found with raise issues where needed (skyflash/skybian) and fix them before continue with the next step.
 0. Download the releases files after the fix in the previous step (if needed) and test them.
 0. Fix any issues if found (work in the release branch)
-0. After all problems are solved and work as expected update the version.txt file with the version number, like this: v0.0.4
+0. After all problems are solved and work as expected update the `version.txt` file with the version number, like this: v0.0.4
 0. Raise a PR against master branch in the skycoin repository, solve any issues and merge it (or wait for a privileged user to do it)
 0. Wait for travis completion and check the release files are published on the Github repository under releases.
 0. Edit & comment the release with the changes in CHANGELOG.md that match this release, change status from Draft to Official release.

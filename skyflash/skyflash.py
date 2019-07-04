@@ -6,12 +6,10 @@ import io
 import sys
 import webbrowser
 import time
-import traceback
 import tarfile
 import ssl
 import hashlib
 import logging
-import shutil
 import subprocess
 import enum
 import string
@@ -537,7 +535,7 @@ To flash the next image just follow these steps:
 
         if url.startswith("https"):
             # prepare the https context
-            scontext = ssl.SSLContext(ssl.PROTOCOL_TLS)
+            scontext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             req = urlopen(r, context=scontext)
         else:
             req = urlopen(r)

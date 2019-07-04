@@ -13,6 +13,7 @@ deps: ## Install all the needed deps to build it in Ubuntu 18.04 LTS and alike
 deps-windows: deps ## Installs a docker image to build the windows .exe from inside linux
 	# remove the old image from past dev envs
 	-sudo docker image rm pyinstaller-win64py3:pyqt_winapi
+	-sudo docker image rm pyinstaller-win64py3:skyflash
 	# install docker
 	sudo apt install apt-transport-https ca-certificates curl software-properties-common
 	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
