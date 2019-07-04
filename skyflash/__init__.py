@@ -18,8 +18,8 @@ name = "skyflash"
 
 # fix for PyQT5 version upgrade see this for more details
 # https://github.com/pyinstaller/pyinstaller/issues/4293
-if hasattr(sys, 'frozen'):
-    os.environ['PATH'] = sys._MEIPASS + ";" + os.environ['PATH']
+if sys.platform == "win32" and hasattr(sys, 'frozen') and hasattr(sys, '_MEIPASS'):
+    os.environ['PATH'] = sys._MEIPASS + "\\PyQt5\\Qt\\bin;" + sys._MEIPASS + ";" + os.environ['PATH']
 
 # GUI imports
 from PyQt5.QtGui import QGuiApplication, QIcon
