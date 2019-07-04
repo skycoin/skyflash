@@ -16,6 +16,11 @@ for i in sorted(glob(os.path.join(module_dir, "*.py"))):
 # Version
 name = "skyflash"
 
+# fix for PyQT5 version upgrade see this for more details
+# https://github.com/pyinstaller/pyinstaller/issues/4293
+if hasattr(sys, 'frozen'):
+    os.environ['PATH'] = sys._MEIPASS + ";" + os.environ['PATH']
+
 # GUI imports
 from PyQt5.QtGui import QGuiApplication, QIcon
 from PyQt5.QtQml import QQmlApplicationEngine
