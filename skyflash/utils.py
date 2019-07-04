@@ -12,9 +12,12 @@ import ipaddress
 import requests
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, pyqtSlot
 
-if 'nt' in os.name:
+# import the windows libs only in linux
+try:
     import wmi
     import win32file
+except:
+    pass
 
 # version data
 actualVersion = "v0.0.4"
