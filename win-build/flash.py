@@ -17,10 +17,6 @@ import subprocess
 import re
 import csv
 
-# regular expresions used below, precompiled here.
-red = re.compile('Disk \#\d\, Partition \#\d')
-rel = re.compile(' [A-Z]: ')
-
 if 'nt' in os.name:
     import win32file
     import wmi
