@@ -1,10 +1,14 @@
 matrix:
   include:
-    - name: "Xenial Linux with Python 3.7.1"
-      python: 3.7
+    - name: "Xenial Linux with Python 3.6"
       os: linux
       dist: xenial
-      language: shell
+      sudo: required
+      # explicit python as language: this force the use of virtual envs to use the right python version
+      language: python
+      python:
+        - "3.6"
+      # Specific OS selection
       env: TARGETOS=linux
 
     - name: "macOS with Python 3.7.2"
