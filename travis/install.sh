@@ -15,7 +15,6 @@ fi
 
 if [ $1 = 'osx' ]; then
     # macos
-    pip install --upgrade pip
     pip3 install -U pip setuptools pyqt5 PyInstaller
 fi
 
