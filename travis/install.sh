@@ -7,7 +7,8 @@ pip3 install -U pip setuptools pyqt5 PyInstaller requests pyqt5-sip sip
 
 if [ $1 = 'linux' ]; then
     # linux
-    echo "No particular actions for Linux builds"
+    sudo apt update -q
+    sudo apt upgrade -y libglib-2.0
 fi
 
 
