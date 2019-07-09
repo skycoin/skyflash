@@ -7,13 +7,13 @@ pip3 install -U pip setuptools pyqt5 PyInstaller requests pyqt5-sip sip
 
 if [ $1 = 'linux' ]; then
     # linux
-    # no particular action needed
+    echo "No particular actions for Linux builds"
 fi
 
 
 if [ $1 = 'osx' ]; then
     # macos
-    # no particular action needed
+    echo "No particular actions for osx builds"
 fi
 
 
