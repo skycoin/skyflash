@@ -9,6 +9,8 @@ if [ $1 = 'linux' ]; then
     # linux
     sudo apt-get update -q
     sudo apt install -y make
+    # double pip install -U statement to get the second one with a latest version of the soft
+    pip3 install -U pip
     pip3 install -U pip setuptools pyqt5 PyInstaller
 fi
 
@@ -23,7 +25,9 @@ if [ $1 = 'windows' ]; then
     # windows
     sudo apt-get update -q
     sudo apt install -y p7zip-full make
-    pip install -U pip setuptools pyqt5
+    # double pip install -U statement to get the second one with a latest version of the soft
+    pip3 install -U pip
+    pip3 install -U setuptools pyqt5
 
     # pull the docker for windows
     docker pull cdrx/pyinstaller-windows

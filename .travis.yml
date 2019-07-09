@@ -24,7 +24,13 @@ matrix:
     - name: "Windows (Wine over Ubuntu Xenial) with Python 3.6"
       os: linux
       dist: xenial
-      language: shell
+      sudo: required
+      # explicit python as language: this force the use of virtual envs to use the right python version
+      language: python
+      python:
+        - "3.6"
+      before_install:
+        - python3 --version ; pip3 --version
       services:
         - docker
       env: TARGETOS=windows
