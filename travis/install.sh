@@ -8,7 +8,7 @@ pip3 install -U pip setuptools pyqt5 PyInstaller requests pyqt5-sip sip
 if [ $1 = 'linux' ]; then
     # linux
     sudo apt update -q
-    sudo apt upgrade -y libglib-2.0
+    sudo apt upgrade -y
 fi
 
 
