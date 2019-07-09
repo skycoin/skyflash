@@ -8,23 +8,23 @@
 if [ $1 = 'linux' ]; then
     # linux
     sudo apt-get update -q
-    sudo apt install -y python3 python3-all python3-pip python3-setuptools python3-wheel make
-    sudo pip3 install setuptools pyqt5 PyInstaller
+    sudo apt install -y make
+    pip3 install -U pip setuptools pyqt5 PyInstaller
 fi
 
 
 if [ $1 = 'osx' ]; then
     # macos
     pip install --upgrade pip
-    pip3 install setuptools pyqt5 PyInstaller
+    pip3 install -U pip setuptools pyqt5 PyInstaller
 fi
 
 
 if [ $1 = 'windows' ]; then
     # windows
     sudo apt-get update -q
-    sudo apt install -y python3 python3-all python3-pip python3-setuptools python3-wheel p7zip-full make
-    sudo pip3 install setuptools pyqt5
+    sudo apt install -y p7zip-full make
+    pip install -U pip setuptools pyqt5
 
     # pull the docker for windows
     docker pull cdrx/pyinstaller-windows
