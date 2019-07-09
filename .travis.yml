@@ -1,6 +1,6 @@
 matrix:
   include:
-    - name: "Xenial Linux with Python 3.6"
+    - name: "Xenial Linux with Python 3.6 & 3.7"
       os: linux
       dist: xenial
       sudo: required
@@ -8,15 +8,18 @@ matrix:
       language: python
       python:
         - "3.6"
+        - "3.7"
+      before_install: 
+        - python3 --version ; pip3 --version
       # Specific OS selection
       env: TARGETOS=linux
 
-    - name: "macOS with Python 3.7.2"
+    - name: "macOS with Python 3.7"
       os: osx
       osx_image: xcode10.2
       language: shell
       before_install: 
-        - python3 --version ; pip3 --version ; sw_vers
+        - python3 --version ; pip3 --version
       env: TARGETOS=osx
 
     - name: "Windows (Wine over Ubuntu Xenial) with Python 3.6"
