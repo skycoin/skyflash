@@ -19,7 +19,7 @@ matrix:
         - python3 --version ; pip3 --version ; sw_vers
       env: TARGETOS=osx
 
-    - name: "Windows (Wine) over Xenial Linux with Python 3.7.1"
+    - name: "Windows (Wine over Ubuntu Xenial) with Python 3.6"
       os: linux
       dist: xenial
       language: shell
