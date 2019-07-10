@@ -454,8 +454,18 @@ To flash the next image just follow these steps:
                 self.skybianUpdated = True
                 self.skybianUrl = data
                 self.setStatus.emit("Skybian download source updated...")
-                self.sStart.emit()
                 logging.debug("Skybian download source updated...")
+
+                # if it's a new version erase local one and restart the UI
+                if self.skybianFileVersion is not '' and self.skybianFile is not '':
+                    # we have a local version, get url version
+                    skbURLVer = getVersion(data)
+
+                    # if a new version alert the user and reset the interface
+                    if skbURLVer != self.skybianFileVersion:
+                        self.uiWarning.emit("New version of Skybian", "We have detected a new version of Skybian, please download the new version")
+                        eraseOldVersions(self.localPathDownloads, "---")
+                        self.sStart.emit()
             else:
                 # tried but failed
                 self.skybianUpdated = None
@@ -466,7 +476,6 @@ To flash the next image just follow these steps:
             # tried to update for the second time, using the default
             self.skybianUpdated = True # fake true
             self.skybianUrl = defaultSkybianUrl # recall the latest download knows to the app
-            self.sStart.emit()
             self.setStatus.emit("Using the default Skybian download source")
             logging.debug("Using the default Skybian download source")
         else:
