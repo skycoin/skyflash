@@ -688,3 +688,50 @@ def getLatestSkybian(data_callback, progress_callback):
 
     # fail safe
     return "Error: no link provided for the release we are looking for"
+
+def getVersion(data):
+    '''Get he version of a Skybian image by it's name
+
+    You can pass either a image or a release file
+    
+    Image:   Skybian-v0.0.4.img
+    Release: Skybian-v0.0.4.tar.xz
+    
+    With the provision to strip the pat is it's a URL, or a FS path
+    it must return something like "v0.0.4"
+    '''
+
+    sfile = ''
+
+    # detect if a url
+    if data.startswith('http://'):
+        # check it the URL ends with a '/' and strip it, shit happens
+        if data[-1] is '/':
+            data = data[:-1]
+        
+        sfile = data.split('/')[-1]
+        print("File for a URL {}".format(sfile))
+    else:
+        # detect if we need to split the path
+        if os.path.sep in data:
+            spath = data.split(os.path.sep)
+            if len(spath) >= 2:
+                sfile = spath[-1]
+
+            print("File for a filepath {}".format(sfile))
+        else:
+            sfile = data
+            print("File direct {}".format(sfile))
+
+    # parse the file, some like this: Skybian-v0.0.4.tar.xz or Skybian-v0.0.4.img
+    if 'img' in sfile:
+        name = '.'.join(sfile.split('.')[:-1])
+    else:
+        name = '.'.join(sfile.split('.')[:-2])
+
+    print("File version is {}".format(name))
+
+    ver = name.split('-')[1]
+    print("Version is {}".format(ver))
+
+    return ver

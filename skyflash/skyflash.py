@@ -454,7 +454,6 @@ To flash the next image just follow these steps:
             else:
                 # tried but failed
                 self.skybianUpdated = None
-                self.sStart.emit()
                 self.setStatus.emit("Can't fetch the Skybian download source")
                 logging.debug("Can't fetch the Skybian download source")
 
@@ -1588,6 +1587,11 @@ To flash the next image just follow these steps:
             f = open(self.checked)
             baseImage = f.readline().strip("\n")
             baseImageFile = baseImage.split(os.path.sep)[-1]
+            
+            logging.debug("Loaded previous image on the Filesystem")
+            # erase any other files in that directory, to prevent to work with other versions
+            getVersion(baseImageFile)
+            
         else:
             logging.debug("No previous work found.")
 
