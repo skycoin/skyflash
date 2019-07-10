@@ -9,7 +9,7 @@ if [ $1 = 'linux' ]; then
     # linux
     sudo apt update -q
     sudo apt upgrade -y
-    sudo apt install -y python3 python3-pip python3-pyqt5 python3-pyqt5.qtquick qml-module-qtquick2 qml-module-qtquick-window2 qml-module-qtquick-layouts qml-module-qtquick-extras qml-module-qtquick-dialogs qml-module-qtquick-controls qml-module-qt-labs-folderlistmodel qml-module-qt-labs-settings
+    sudo apt install -y python3 python3-pip python3-pyqt5 python3-pyqt5.qtquick libqt5libqgtk2 zlib1g qml-module-qtquick2 qml-module-qtquick-window2 qml-module-qtquick-layouts qml-module-qtquick-extras qml-module-qtquick-dialogs qml-module-qtquick-controls qml-module-qt-labs-folderlistmodel qml-module-qt-labs-settings
 fi
 
 
