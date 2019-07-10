@@ -735,3 +735,26 @@ def getVersion(data):
     print("Version is {}".format(ver))
 
     return ver
+
+def eraseOldVersions(dlfolder, version):
+    '''Erase old version files from the download directory
+
+    This is triggered when a new version of skybian is detected & when the
+    download of a skybian ends ok
+    '''
+
+    # iterate over the file list
+    flist = os.listdir(dlfolder)
+    for f in flist:
+        # ignore the checkd file
+        if f == ".checked":
+            continue
+
+        print("Processing file {}".format(f))
+
+        # erase the file of not patch the version
+        if not version in f:
+            item = os.path.join(dlfolder, f)
+            if os.path.isfile(item):
+                print("Erasing file {}".format(item))
+                os.unlink(item)
