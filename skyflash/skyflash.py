@@ -127,6 +127,7 @@ class Skyflash(QObject):
     downloadSize = 0
     downloadedFile = ""
     skybianFile = ""
+    skybianFileVersion = ""
 
     # extraction flags
     extractionOk = False
@@ -283,6 +284,7 @@ class Skyflash(QObject):
             # success must call for a sha1sum check
             logging.debug("Checksum verification success!")
             # next step
+            self.skybianFileVersion = getVersion(self.skybianFile)
             self.netConfig.emit()
             self.buildImages.emit()
 
@@ -290,6 +292,9 @@ class Skyflash(QObject):
             f = open(self.checked, 'w')
             f.write(self.skybianFile + "\n")
             f.close()
+
+            # check if there are old files and clean it up
+            eraseOldVersions(self.localPathDownloads, self.skybianFileVersion)
         else:
             # TODO Raise error if checksum is bad
             if os.path.exists(self.checked):
@@ -534,7 +539,7 @@ To flash the next image just follow these steps:
 
         if url.startswith("https"):
             # prepare the https context
-            scontext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            scontext = ssl.SSLContext(ssl.PROTOCOL_TLS)
             req = urlopen(r, context=scontext)
         else:
             req = urlopen(r)
@@ -602,7 +607,7 @@ To flash the next image just follow these steps:
                 # check if the terminate flag is raised
                 if not self.downloadActive:
                     downFile.close()
-                    os.unlink(downFile)
+                    os.unlink(filePath)
                     return ""
 
         # close the file handle
@@ -1587,11 +1592,6 @@ To flash the next image just follow these steps:
             f = open(self.checked)
             baseImage = f.readline().strip("\n")
             baseImageFile = baseImage.split(os.path.sep)[-1]
-            
-            logging.debug("Loaded previous image on the Filesystem")
-            # erase any other files in that directory, to prevent to work with other versions
-            getVersion(baseImageFile)
-
         else:
             logging.debug("No previous work found.")
 
@@ -1602,13 +1602,14 @@ To flash the next image just follow these steps:
                 logging.debug("Loading....{}".format(baseImageFile))
 
                 self.skybianFile = baseImage
+                self.skybianFileVersion = getVersion(baseImage)
                 self.extractionOK = True
                 self.setStatus.emit("Using local file: {}".format(baseImageFile))
                 self.dData.emit("Using file {}".format(baseImageFile))
                 self.netConfig.emit()
                 self.buildImages.emit()
             else:
-                # checkd file exist but image don't, erasing it
+                # check file exist but image don't, erasing it
                 os.unlink(self.checked)
         else:
             logging.debug("Checked file not valid or corrupt, erasing it")
