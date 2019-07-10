@@ -33,6 +33,12 @@ from skyflash.utils import *
 # define the QT5 app at a higher level to get caught at the end bt the garbage collector.
 QTapp = QGuiApplication(sys.argv)
 
+# define org and name
+QTapp.setOrganizationName("Skycoin")
+QTapp.setOrganizationDomain("skycoin.net")
+QTapp.setApplicationName("Skyflash")
+QTapp.setApplicationDisplayName("Skyflash")
+
 def app():
     '''Run the app'''
 

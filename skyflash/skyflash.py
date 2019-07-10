@@ -19,7 +19,7 @@ from urllib.request import Request, urlopen
 # GUI imports
 from PyQt5.QtGui import QGuiApplication, QIcon
 from PyQt5.QtQml import QQmlApplicationEngine
-from PyQt5.QtCore import *
+from PyQt5.QtCore import QThreadPool, QTimer, pyqtProperty
 
 # New imports
 from skyflash.utils import *

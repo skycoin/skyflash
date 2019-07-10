@@ -19,15 +19,9 @@ This is the configuration file that will be embedded in the final app to customi
 
 ## Use of Docker to get a windows release file locally (Developers Only)
 
-You can create the docker image to generate the Windows .exe file for testing purposes with the info in the [Docker](https://github.com/skycoin/skyflash/docker/win64py3/) folder, for the moment only the 64bits exe is generated.
+We use docker to generate the .exe portable file for Windows, remember the main OS for developing is Ubuntu Linux. The Makefile has target to setup and build the environment run `make help` to check the `make deps-windows` target.
 
-To build the local Docker machine (suggested name is 'pyinstaller-win64py3:pyqt_winapi') you must have a functional docker install on your linux distro and run this command in the console *from the mentioned docker folder where the Dockerfile resides*:
-
-```sh
-docker build -t "pyinstaller-win64py3:pyqt_winapi" ./
-```
-
-The name is tied to the specific targets on the Makefile, so ***Do not change it*, to know more about it run `make help` in the root project folder
+It will install docker (if not already installed) and pull the requirements and build the image for the build, it's called `pyinstaller-win64py3:skyflash`, details for the docker build are in the `docker/win64py3` folder of this repository
 
 ## Flash utility tool
 

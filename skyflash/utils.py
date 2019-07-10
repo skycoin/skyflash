@@ -17,7 +17,8 @@ try:
     import wmi
     import win32file
 except:
-    pass
+    if sys.platform is 'nt':
+        print("Missing python3 wmi or pywin32 modules...")
 
 # version data
 actualVersion = "v0.0.4"

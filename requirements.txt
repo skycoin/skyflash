@@ -1,6 +1,6 @@
-PyQt5 >= 5.11.3
-PyQt5-sip>=4.19.15
-sip>=4.19.7
+PyQt5 >= 5.12.1
+PyQt5-sip >= 4.19.15
+sip >= 4.19.6
 wmi >= 1.4.8
 pywin32 >= 223
 requests >= 2.18.0

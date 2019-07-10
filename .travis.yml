@@ -1,24 +1,36 @@
 matrix:
   include:
-    - name: "Xenial Linux with Python 3.7.1"
-      python: 3.7
+    - name: "Xenial Linux with Python 3.6"
       os: linux
       dist: xenial
-      language: shell
+      sudo: required
+      # explicit python as language: this force the use of virtual envs to use the right python version
+      language: python
+      python:
+        - "3.6"
+      before_install: 
+        - python3 --version ; pip3 --version
+      # Specific OS selection
       env: TARGETOS=linux
 
-    - name: "macOS with Python 3.7.2"
+    - name: "macOS with Python 3.7"
       os: osx
       osx_image: xcode10.2
       language: shell
       before_install: 
-        - python3 --version ; pip3 --version ; sw_vers
+        - python3 --version ; pip3 --version
       env: TARGETOS=osx
 
-    - name: "Windows (Wine) over Xenial Linux with Python 3.7.1"
+    - name: "Windows (Wine over Ubuntu Xenial) with Python 3.6"
       os: linux
       dist: xenial
-      language: shell
+      sudo: required
+      # explicit python as language: this force the use of virtual envs to use the right python version
+      language: python
+      python:
+        - "3.6"
+      before_install:
+        - python3 --version ; pip3 --version
       services:
         - docker
       env: TARGETOS=windows
@@ -29,7 +41,7 @@ install:
 
 script:
   - make init
-  - make install
+  - make build
 
 notifications:
   email: false
