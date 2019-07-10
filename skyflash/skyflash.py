@@ -1591,7 +1591,7 @@ To flash the next image just follow these steps:
             logging.debug("Loaded previous image on the Filesystem")
             # erase any other files in that directory, to prevent to work with other versions
             getVersion(baseImageFile)
-            
+
         else:
             logging.debug("No previous work found.")
 
