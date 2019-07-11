@@ -55,10 +55,7 @@ deploy:
   # deploy on linux
   - provider: releases
     api_key:
-      # skycoin auth
-      #secure: 4P+ztW5gTP6j697PUg1WIleofHvLrzUd/UM0Oc1vW99FRSLB1CrvntJ1z4SXR5Ogol0FYnTonhY98akQZQtvEMyJXCfE227WALNdlHVVdiIedTD4a2IY3gu3aVlgq/t9nAuQM9plM8Pi1fvzXS2Qz8xXi1Rpa0m9Q/bZx60BOFzd8585nT4t4qkGnzoWAZNWfNX6OLaq3cdRU01y2ys0eRshaVwyRX5KeSzlXTa6q6ILwhjHJA3clNrm7HjaWmEQbEGPYD7KoGDPUrCUZFB8L98Yz7y7mmiT0gj7+vZvoBoZ+tXKSgigM7CO0rP8/pPaTql28b1UzBHlqJLjtwQtNtPk4dWLZ2MXK9KuSitOlaFgmsSd1PS70F49FW7+ki1T0sbn2pLBTfAeps3bzPeEsYngF6+/knlx9O9JIbSJX14AvDFgzO90gzurOXfOwHzZZPkyjnT9ulVZ5h2Y9HbV0uu2qOBzgHnQeTDlpxAIiuj47AGmO5FM0ywJJepqqEB7ESml2WEsNNtJuTT3bbU+CvpquMS6iLhNkauK6kiXknR9q23egDwLq8Q1DU0zcr9hrbLGVV+xPU1gD4E6+0SA2Kr9/z3woOObJ1mVJ2IzCkq45etJBaNCRLoKkC/udn/sXWnahQcJPw4HnrWEVQmP7bCmjB7BliF3/06+WIU5Ero=
-      # simelo auth
-      secure: otyfBiezSZgvexnUY7c3lOVlPe1tBNswPMi7n7zuUsfmBJl+gRrhkliXgVBShyqrZ5y7/pG2mQKB5kU6GvUv6ljciIXxeRsTD6+b06hSW1Xl1oFqu3xjGCyXvQrLYW8jgp5dGfoOoldkMG0zcB53X+zqYlX41VS8pMGEMrh5Un9yWkCMTHDc4qGv58aVLyh246Rti2ewqeET5HW/S+NSyTdUhfMMd6YTXWuQC7uoXGI5Dln62V9qOxEfY0UT1jfarSoDY8XVN3kVQCND/KQG5cr/aap9Sg/qBwPOi3O3W5tMn6WljwKoxdc+ZtzR4BxL4Qak6FPe9X4HDDa4/bD4yezT27ipGn5gYVXRGuXfIvyE6tyZWWWIq5c1OU2xyMVK1RTV8G0y74QRL1hrbyVh0BaldgbfcPf3uutjjuX/4DJTEjXBpmat/CsCAl0v8ji1QV5GuegnKlW+rA2l9Yhvdq2SRPT5Dy0yn0mA4Nt/sGrvColsFuVuLSwqiMqxx8BLk4aB4l5layT2RF9cv+vT4towxHEfz8fLm/pD72HPohLy1DYR/ZDqXB0nCqiLQdDhG7KnXsa4kUBFLTf8LdsAu/tTu2T2Sc6ykmTBVnxT4+ZDK0N64UpDJR4ky+47BQQeu10gXbbPD6fF6whG7Xoa/PbfPyHk39C6HL2qKNuXF5k=
+      secure: "$OAUTH"
     file_glob: true
     file:
       - "final/*linux64-static.gz"
@@ -71,10 +68,7 @@ deploy:
   # deploy on macos
   - provider: releases
     api_key:
-      # skycoin auth
-      #secure: 4P+ztW5gTP6j697PUg1WIleofHvLrzUd/UM0Oc1vW99FRSLB1CrvntJ1z4SXR5Ogol0FYnTonhY98akQZQtvEMyJXCfE227WALNdlHVVdiIedTD4a2IY3gu3aVlgq/t9nAuQM9plM8Pi1fvzXS2Qz8xXi1Rpa0m9Q/bZx60BOFzd8585nT4t4qkGnzoWAZNWfNX6OLaq3cdRU01y2ys0eRshaVwyRX5KeSzlXTa6q6ILwhjHJA3clNrm7HjaWmEQbEGPYD7KoGDPUrCUZFB8L98Yz7y7mmiT0gj7+vZvoBoZ+tXKSgigM7CO0rP8/pPaTql28b1UzBHlqJLjtwQtNtPk4dWLZ2MXK9KuSitOlaFgmsSd1PS70F49FW7+ki1T0sbn2pLBTfAeps3bzPeEsYngF6+/knlx9O9JIbSJX14AvDFgzO90gzurOXfOwHzZZPkyjnT9ulVZ5h2Y9HbV0uu2qOBzgHnQeTDlpxAIiuj47AGmO5FM0ywJJepqqEB7ESml2WEsNNtJuTT3bbU+CvpquMS6iLhNkauK6kiXknR9q23egDwLq8Q1DU0zcr9hrbLGVV+xPU1gD4E6+0SA2Kr9/z3woOObJ1mVJ2IzCkq45etJBaNCRLoKkC/udn/sXWnahQcJPw4HnrWEVQmP7bCmjB7BliF3/06+WIU5Ero=
-      # simelo auth
-      secure: otyfBiezSZgvexnUY7c3lOVlPe1tBNswPMi7n7zuUsfmBJl+gRrhkliXgVBShyqrZ5y7/pG2mQKB5kU6GvUv6ljciIXxeRsTD6+b06hSW1Xl1oFqu3xjGCyXvQrLYW8jgp5dGfoOoldkMG0zcB53X+zqYlX41VS8pMGEMrh5Un9yWkCMTHDc4qGv58aVLyh246Rti2ewqeET5HW/S+NSyTdUhfMMd6YTXWuQC7uoXGI5Dln62V9qOxEfY0UT1jfarSoDY8XVN3kVQCND/KQG5cr/aap9Sg/qBwPOi3O3W5tMn6WljwKoxdc+ZtzR4BxL4Qak6FPe9X4HDDa4/bD4yezT27ipGn5gYVXRGuXfIvyE6tyZWWWIq5c1OU2xyMVK1RTV8G0y74QRL1hrbyVh0BaldgbfcPf3uutjjuX/4DJTEjXBpmat/CsCAl0v8ji1QV5GuegnKlW+rA2l9Yhvdq2SRPT5Dy0yn0mA4Nt/sGrvColsFuVuLSwqiMqxx8BLk4aB4l5layT2RF9cv+vT4towxHEfz8fLm/pD72HPohLy1DYR/ZDqXB0nCqiLQdDhG7KnXsa4kUBFLTf8LdsAu/tTu2T2Sc6ykmTBVnxT4+ZDK0N64UpDJR4ky+47BQQeu10gXbbPD6fF6whG7Xoa/PbfPyHk39C6HL2qKNuXF5k=
+      secure: "$OAUTH"
     file_glob: true
     file:
       - "final/*-app.tgz"
@@ -87,10 +81,7 @@ deploy:
   # deploy on windows
   - provider: releases
     api_key:
-      # skycoin auth
-      #secure: 4P+ztW5gTP6j697PUg1WIleofHvLrzUd/UM0Oc1vW99FRSLB1CrvntJ1z4SXR5Ogol0FYnTonhY98akQZQtvEMyJXCfE227WALNdlHVVdiIedTD4a2IY3gu3aVlgq/t9nAuQM9plM8Pi1fvzXS2Qz8xXi1Rpa0m9Q/bZx60BOFzd8585nT4t4qkGnzoWAZNWfNX6OLaq3cdRU01y2ys0eRshaVwyRX5KeSzlXTa6q6ILwhjHJA3clNrm7HjaWmEQbEGPYD7KoGDPUrCUZFB8L98Yz7y7mmiT0gj7+vZvoBoZ+tXKSgigM7CO0rP8/pPaTql28b1UzBHlqJLjtwQtNtPk4dWLZ2MXK9KuSitOlaFgmsSd1PS70F49FW7+ki1T0sbn2pLBTfAeps3bzPeEsYngF6+/knlx9O9JIbSJX14AvDFgzO90gzurOXfOwHzZZPkyjnT9ulVZ5h2Y9HbV0uu2qOBzgHnQeTDlpxAIiuj47AGmO5FM0ywJJepqqEB7ESml2WEsNNtJuTT3bbU+CvpquMS6iLhNkauK6kiXknR9q23egDwLq8Q1DU0zcr9hrbLGVV+xPU1gD4E6+0SA2Kr9/z3woOObJ1mVJ2IzCkq45etJBaNCRLoKkC/udn/sXWnahQcJPw4HnrWEVQmP7bCmjB7BliF3/06+WIU5Ero=
-      # simelo auth
-      secure: otyfBiezSZgvexnUY7c3lOVlPe1tBNswPMi7n7zuUsfmBJl+gRrhkliXgVBShyqrZ5y7/pG2mQKB5kU6GvUv6ljciIXxeRsTD6+b06hSW1Xl1oFqu3xjGCyXvQrLYW8jgp5dGfoOoldkMG0zcB53X+zqYlX41VS8pMGEMrh5Un9yWkCMTHDc4qGv58aVLyh246Rti2ewqeET5HW/S+NSyTdUhfMMd6YTXWuQC7uoXGI5Dln62V9qOxEfY0UT1jfarSoDY8XVN3kVQCND/KQG5cr/aap9Sg/qBwPOi3O3W5tMn6WljwKoxdc+ZtzR4BxL4Qak6FPe9X4HDDa4/bD4yezT27ipGn5gYVXRGuXfIvyE6tyZWWWIq5c1OU2xyMVK1RTV8G0y74QRL1hrbyVh0BaldgbfcPf3uutjjuX/4DJTEjXBpmat/CsCAl0v8ji1QV5GuegnKlW+rA2l9Yhvdq2SRPT5Dy0yn0mA4Nt/sGrvColsFuVuLSwqiMqxx8BLk4aB4l5layT2RF9cv+vT4towxHEfz8fLm/pD72HPohLy1DYR/ZDqXB0nCqiLQdDhG7KnXsa4kUBFLTf8LdsAu/tTu2T2Sc6ykmTBVnxT4+ZDK0N64UpDJR4ky+47BQQeu10gXbbPD6fF6whG7Xoa/PbfPyHk39C6HL2qKNuXF5k=
+      secure: "$OAUTH"
     file_glob: true
     file:
       - "final/*.exe"
@@ -99,4 +90,3 @@ deploy:
     on:
       all_branches: true
       condition: "$TARGETOS = windows && $TRAVIS_BRANCH =~ ^master$|^release-.*$"
-
