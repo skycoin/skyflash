@@ -710,18 +710,14 @@ def getVersion(data):
             data = data[:-1]
         
         sfile = data.split('/')[-1]
-        print("File for a URL {}".format(sfile))
     else:
         # detect if we need to split the path
         if os.path.sep in data:
             spath = data.split(os.path.sep)
             if len(spath) >= 2:
                 sfile = spath[-1]
-
-            print("File for a filepath {}".format(sfile))
         else:
             sfile = data
-            print("File direct {}".format(sfile))
 
     # parse the file, some like this: Skybian-v0.0.4.tar.xz or Skybian-v0.0.4.img
     if 'img' in sfile:
@@ -729,11 +725,7 @@ def getVersion(data):
     else:
         name = '.'.join(sfile.split('.')[:-2])
 
-    print("File version is {}".format(name))
-
     ver = name.split('-')[1]
-    print("Version is {}".format(ver))
-
     return ver
 
 def eraseOldVersions(dlfolder, version):
@@ -750,11 +742,8 @@ def eraseOldVersions(dlfolder, version):
         if f == ".checked":
             continue
 
-        print("Processing file {}".format(f))
-
         # erase the file of not patch the version
         if not version in f:
             item = os.path.join(dlfolder, f)
             if os.path.isfile(item):
-                print("Erasing file {}".format(item))
                 os.unlink(item)
