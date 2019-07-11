@@ -54,13 +54,15 @@ We incorporated a magic effect into Skyflash to ease your life, go & close the a
 
 The magic resides in the Skyflash app folder, once you run it for the first time it will create a folder named Skyflash in a specific place depending on your OS:
 
-| Operating System | Path |
-|:---:|:---:|
-| Windows | My Documents\Skyflash |
-| Linux | ~/Skyflash |
-| MacOS | ~/Skyflash |
+| Operating System | Path | Comments |
+|:---:|:---:|:---:|
+| Windows | My Documents\Skyflash | Default Documents Folder |
+| Linux | ~/Skyflash | Inside your home directory |
+| MacOS | ~/Skyflash | Inside your home directory |
 
 Please take a moment to find this folder, inside it you will find at least a `Downloads` folder and a file called Skyflash.log
+
+Mac OS users may get confused as some times there is no Home directory bookmark in finder, simply search for the Documents folder in Finder and press `cmd + up key` that's your home folder, now you can drag it to the bookmarks; inside it you will see a Skyflash folder.
 
 The download folder is the place where the app put the downloaded & extracted base images plus some other files, the Skyflash.log file is just that: the log file for all operations & you will love it if you get in trouble at some point.
 
