@@ -75,7 +75,7 @@ VOLUME /src/
 WORKDIR /wine/drive_c/src/
 RUN mkdir -p /wine/drive_c/tmp
 
-RUN pip install pyinstaller==$PYINSTALLER_VERSION pyqt5 pypiwin32 wmi requests
+RUN pip install pyinstaller==$PYINSTALLER_VERSION pyqt5 pyqt5-sip sip wmi pywin32 requests
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

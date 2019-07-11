@@ -23,9 +23,9 @@ exe = EXE(pyz,
           a.datas,
           [],
           name='flash',
-          debug=False,
+          debug=True,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
-          console=False)
+          console=True)

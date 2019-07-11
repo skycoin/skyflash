@@ -12,9 +12,13 @@ import ipaddress
 import requests
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, pyqtSlot
 
-if 'nt' in os.name:
+# import the windows libs only in linux
+try:
     import wmi
     import win32file
+except:
+    if sys.platform is 'nt':
+        print("Missing python3 wmi or pywin32 modules...")
 
 # version data
 actualVersion = "v0.0.4"
@@ -684,3 +688,62 @@ def getLatestSkybian(data_callback, progress_callback):
 
     # fail safe
     return "Error: no link provided for the release we are looking for"
+
+def getVersion(data):
+    '''Get he version of a Skybian image by it's name
+
+    You can pass either a image or a release file
+    
+    Image:   Skybian-v0.0.4.img
+    Release: Skybian-v0.0.4.tar.xz
+    
+    With the provision to strip the pat is it's a URL, or a FS path
+    it must return something like "v0.0.4"
+    '''
+
+    sfile = ''
+
+    # detect if a url
+    if data.startswith('http://'):
+        # check it the URL ends with a '/' and strip it, shit happens
+        if data[-1] is '/':
+            data = data[:-1]
+        
+        sfile = data.split('/')[-1]
+    else:
+        # detect if we need to split the path
+        if os.path.sep in data:
+            spath = data.split(os.path.sep)
+            if len(spath) >= 2:
+                sfile = spath[-1]
+        else:
+            sfile = data
+
+    # parse the file, some like this: Skybian-v0.0.4.tar.xz or Skybian-v0.0.4.img
+    if 'img' in sfile:
+        name = '.'.join(sfile.split('.')[:-1])
+    else:
+        name = '.'.join(sfile.split('.')[:-2])
+
+    ver = name.split('-')[1]
+    return ver
+
+def eraseOldVersions(dlfolder, version):
+    '''Erase old version files from the download directory
+
+    This is triggered when a new version of skybian is detected & when the
+    download of a skybian ends ok
+    '''
+
+    # iterate over the file list
+    flist = os.listdir(dlfolder)
+    for f in flist:
+        # ignore the checkd file
+        if f == ".checked":
+            continue
+
+        # erase the file of not patch the version
+        if not version in f:
+            item = os.path.join(dlfolder, f)
+            if os.path.isfile(item):
+                os.unlink(item)

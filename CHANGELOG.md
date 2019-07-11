@@ -49,3 +49,4 @@ Dates must be YEAR-MONTH-DAY
 - We will not longer release a .deb file for installation, use the linux static app instead.
 - The network config now has a natural view on the IPs, no more spaces in the IPs
 - The internal validation mechanism for the IPs and DNS entries was rebuilt almost from scratch
+- Dev docker image updated, please run `make deps-windows` to erase your old one and to re-create the updated one

@@ -6,12 +6,10 @@ import io
 import sys
 import webbrowser
 import time
-import traceback
 import tarfile
 import ssl
 import hashlib
 import logging
-import shutil
 import subprocess
 import enum
 import string
@@ -21,7 +19,7 @@ from urllib.request import Request, urlopen
 # GUI imports
 from PyQt5.QtGui import QGuiApplication, QIcon
 from PyQt5.QtQml import QQmlApplicationEngine
-from PyQt5.QtCore import *
+from PyQt5.QtCore import QThreadPool, QTimer, pyqtProperty
 
 # New imports
 from skyflash.utils import *
@@ -129,6 +127,7 @@ class Skyflash(QObject):
     downloadSize = 0
     downloadedFile = ""
     skybianFile = ""
+    skybianFileVersion = ""
 
     # extraction flags
     extractionOk = False
@@ -285,6 +284,7 @@ class Skyflash(QObject):
             # success must call for a sha1sum check
             logging.debug("Checksum verification success!")
             # next step
+            self.skybianFileVersion = getVersion(self.skybianFile)
             self.netConfig.emit()
             self.buildImages.emit()
 
@@ -292,6 +292,9 @@ class Skyflash(QObject):
             f = open(self.checked, 'w')
             f.write(self.skybianFile + "\n")
             f.close()
+
+            # check if there are old files and clean it up
+            eraseOldVersions(self.localPathDownloads, self.skybianFileVersion)
         else:
             # TODO Raise error if checksum is bad
             if os.path.exists(self.checked):
@@ -451,12 +454,21 @@ To flash the next image just follow these steps:
                 self.skybianUpdated = True
                 self.skybianUrl = data
                 self.setStatus.emit("Skybian download source updated...")
-                self.sStart.emit()
                 logging.debug("Skybian download source updated...")
+
+                # if it's a new version erase local one and restart the UI
+                if self.skybianFileVersion is not '' and self.skybianFile is not '':
+                    # we have a local version, get url version
+                    skbURLVer = getVersion(data)
+
+                    # if a new version alert the user and reset the interface
+                    if skbURLVer != self.skybianFileVersion:
+                        self.uiWarning.emit("New version of Skybian", "We have detected a new version of Skybian, please download the new version")
+                        eraseOldVersions(self.localPathDownloads, "---")
+                        self.sStart.emit()
             else:
                 # tried but failed
                 self.skybianUpdated = None
-                self.sStart.emit()
                 self.setStatus.emit("Can't fetch the Skybian download source")
                 logging.debug("Can't fetch the Skybian download source")
 
@@ -464,7 +476,6 @@ To flash the next image just follow these steps:
             # tried to update for the second time, using the default
             self.skybianUpdated = True # fake true
             self.skybianUrl = defaultSkybianUrl # recall the latest download knows to the app
-            self.sStart.emit()
             self.setStatus.emit("Using the default Skybian download source")
             logging.debug("Using the default Skybian download source")
         else:
@@ -605,7 +616,7 @@ To flash the next image just follow these steps:
                 # check if the terminate flag is raised
                 if not self.downloadActive:
                     downFile.close()
-                    os.unlink(downFile)
+                    os.unlink(filePath)
                     return ""
 
         # close the file handle
@@ -1600,13 +1611,14 @@ To flash the next image just follow these steps:
                 logging.debug("Loading....{}".format(baseImageFile))
 
                 self.skybianFile = baseImage
+                self.skybianFileVersion = getVersion(baseImage)
                 self.extractionOK = True
                 self.setStatus.emit("Using local file: {}".format(baseImageFile))
                 self.dData.emit("Using file {}".format(baseImageFile))
                 self.netConfig.emit()
                 self.buildImages.emit()
             else:
-                # checkd file exist but image don't, erasing it
+                # check file exist but image don't, erasing it
                 os.unlink(self.checked)
         else:
             logging.debug("Checked file not valid or corrupt, erasing it")

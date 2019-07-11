@@ -16,6 +16,11 @@ for i in sorted(glob(os.path.join(module_dir, "*.py"))):
 # Version
 name = "skyflash"
 
+# fix for PyQT5 version upgrade see this for more details
+# https://github.com/pyinstaller/pyinstaller/issues/4293
+if sys.platform == "win32" and hasattr(sys, 'frozen') and hasattr(sys, '_MEIPASS'):
+    os.environ['PATH'] = sys._MEIPASS + "\\PyQt5\\Qt\\bin;" + sys._MEIPASS + ";" + os.environ['PATH']
+
 # GUI imports
 from PyQt5.QtGui import QGuiApplication, QIcon
 from PyQt5.QtQml import QQmlApplicationEngine
@@ -27,6 +32,12 @@ from skyflash.utils import *
 
 # define the QT5 app at a higher level to get caught at the end bt the garbage collector.
 QTapp = QGuiApplication(sys.argv)
+
+# define org and name
+QTapp.setOrganizationName("Skycoin")
+QTapp.setOrganizationDomain("skycoin.net")
+QTapp.setApplicationName("Skyflash")
+QTapp.setApplicationDisplayName("Skyflash")
 
 def app():
     '''Run the app'''
