@@ -18,7 +18,7 @@ This is a note for developers about the recommended tags to keep track of the ch
 Dates must be YEAR-MONTH-DAY
 -->
 
-## v0.0.4 - 2019-06-27
+## v0.0.4 - 2019-07-12
 
 ### Added
 
@@ -50,3 +50,4 @@ Dates must be YEAR-MONTH-DAY
 - The network config now has a natural view on the IPs, no more spaces in the IPs
 - The internal validation mechanism for the IPs and DNS entries was rebuilt almost from scratch
 - Dev docker image updated, please run `make deps-windows` to erase your old one and to re-create the updated one
+- Change in Python & PyQt5 version, now we use Python v3.6 and PyQt5 v 5.13
