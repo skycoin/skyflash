@@ -15,7 +15,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='skyflash',
-    version="0.0.3rc0",
+    version="0.0.4",
     description='Skycoin Skyminer\'s OS configuring and flashing',
     long_description=long_description,
     long_description_content_type='text/markdown',

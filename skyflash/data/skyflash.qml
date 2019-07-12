@@ -13,7 +13,18 @@ ApplicationWindow {
     MessageDialog {
         id: aboutDiag
         title: "About Skyflash"
-        text: "Skyflash is the official tool to configure & create the Skyminers images from Skybian.\n\nActual version is: v0.0.3-rc"
+        Text {
+            textFormat: Text.RichText
+            onLinkActivated: Qt.openUrlExternally(link)
+            padding: 10
+            text: "<p><a href='http://github.com/skycoin/skyflash'>Skyflash</a> is the official tool to configure, build and flash the Skyminer images based on <a href='http://github.com/skycoin/skybian'>Skybian</a>.<br></p><p>Current version: v0.0.4</p>"
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.NoButton
+                cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+            }
+        }
         onAccepted: visible = false
     }
 
@@ -50,6 +61,7 @@ ApplicationWindow {
         }
     }
 
+    // open a local skybian base image pack
     FileDialog {
         id: fileDialog
         title: "Please choose a file"
@@ -63,6 +75,42 @@ ApplicationWindow {
 
         onRejected: {
             sbText.text = "You declined to choose a file."
+        }
+    }
+
+    // mesaage to warn the user of the built folder and let them pick a custom one
+    MessageDialog {
+        id: targetFolder
+        icon: StandardIcon.Information
+        title: "Default location for the built images"
+        text: ""
+        standardButtons: StandardButton.Yes | StandardButton.No
+
+        onYes: {
+            console.log("User accepted")
+            skf.imagesBuild(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text, "no")
+        }
+
+        onNo: {
+            folderDialog.open()
+        }
+    }
+
+    FileDialog  {
+        id: folderDialog
+        title: "Select a folder to store the images"
+        folder: shortcuts.home
+        selectFolder: true
+        selectMultiple: false
+
+        onAccepted: {
+            // pasar los detalles al build
+            console.log("User selected the folder: " + folderDialog.folder)
+            skf.imagesBuild(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text, folderDialog.folder)
+        }
+
+        onRejected: {
+            sbText.text = "You need to choose a folder, cancelling the build."
         }
     }
 
@@ -259,7 +307,6 @@ ApplicationWindow {
                     text: "192.168.0.1"
                     maximumLength: 16
                     enabled: false
-                    inputMask: "000.000.000.000; "
                     // ToolTip.text: "This is the network Gateway IP"
                 }
 
@@ -273,7 +320,6 @@ ApplicationWindow {
                     text: "1.0.0.1, 1.1.1.1"
                     maximumLength: 34
                     enabled: false
-                    inputMask: "000.000.000.000, 000.000.000.000; "
                     // ToolTip.text: "This is DNS your nodes will use to resolve names on the net"
                 }
 
@@ -287,12 +333,11 @@ ApplicationWindow {
                     text: "192.168.0.2"
                     maximumLength: 16
                     enabled: false
-                    inputMask: "000.000.000.000; "
                     // ToolTip.text: "This is the IP of the manager node"
                 }
 
                 // node count
-                Label { text: "Minions count:" }
+                Label { text: "Node count:" }
 
                 TextField  {
                     id: txtNodes
@@ -301,8 +346,7 @@ ApplicationWindow {
                     text: "7"
                     maximumLength: 5
                     enabled: false
-                    inputMask: "000"
-                    // ToolTip.text: "How many minions we must build images for, not counting the manager node"
+                    // ToolTip.text: "How many nodes we must build images for, not counting the manager node"
                 }
             }
         }
@@ -337,7 +381,7 @@ ApplicationWindow {
 
                     onClicked: {
                         // call skyflash to build the images
-                        skf.imagesBuild(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text)
+                        skf.builtImagesPath(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text)
                     }
                 }
 
@@ -410,10 +454,10 @@ ApplicationWindow {
 
             // flash tools
             RowLayout {
-                // pick your uSD
+                // pick your uSD device
                 Label {
                     id: lbSdCard
-                    text: "SD card:"
+                    text: "Device to flash:"
                 }
 
                 // ComboBox uSD
@@ -425,7 +469,6 @@ ApplicationWindow {
                     Layout.preferredWidth: 200
 
                     onCurrentTextChanged: {
-                        console.debug("Actual Text is " + currentText)
                         if (currentText != "Please insert a card") {
                             skf.selectedCard = currentText
                             btFlash.enabled = true
@@ -437,7 +480,32 @@ ApplicationWindow {
                         skf.pickCard(currentText)
                     }
                 }
+            }
 
+            // image to flash
+            RowLayout {
+                // pick your uSD
+                Label {
+                    id: lbImage2Flash
+                    text: "Image to flash: "
+                }
+
+                // ComboBox uSD
+                ComboBox {
+                    id: cbImage2flash
+                    currentIndex: 0
+                    model: skf.images2flash
+                    Layout.preferredHeight: 30
+                    Layout.preferredWidth: 200
+                    onCurrentTextChanged: {
+                        // call to update the selected text
+                        skf.pickimages2flash(currentText)
+                    }
+                }
+            }
+
+            // Flash Button, alone in a row
+            RowLayout {
                 // Start Flashing!
                 Button {
                     id: btFlash
@@ -453,17 +521,19 @@ ApplicationWindow {
                         skf.imageFlash()
                     }
                 }
+
+                // Please Review
+                Label {
+                    id: lbPleaseReview
+                    text: " Please double check before start!"
+                    color: "red"
+                }
             }
 
             // box
             ColumnLayout {
                 id: flashProgressBox
                 visible: false
-
-                Label {
-                    id: lbFlash
-                    text: "Select a card from the list and click on Start Flashing button"
-                }
 
                 // flash ProgressBar
                 RowLayout{
@@ -473,22 +543,6 @@ ApplicationWindow {
                     }
                     ProgressBar {
                         id: pbFlash
-                        Layout.fillWidth: true
-                        visible: true
-                        maximumValue: 100
-                        minimumValue: 0
-                        value: 0
-                    }
-                }
-
-                // flash ProgressBar
-                RowLayout{
-                    Label {
-                        text: "Overall:"
-                        color: "black"
-                    }
-                    ProgressBar {
-                        id: pbFlashOverall
                         Layout.fillWidth: true
                         visible: true
                         maximumValue: 100
@@ -545,12 +599,11 @@ ApplicationWindow {
 
         // show all buttons in the download and resize the windowds to it's original size
         onSStart: {
-            pbDownload.visible = true
+            pbDownload.visible = false
             pbDownload.value = 0
             phDownloadButtons.visible = true
             btBrowse.visible = true
             lbImageComment.text = ""
-            sbText.text = ""
             btDown.visible = true
             btDown.text = "Download"
             btDown.tooltip = "Click here to download the base Skybian image from the official site"
@@ -640,19 +693,24 @@ ApplicationWindow {
             btBuild.enabled = false
         }
 
-        // flash data passing, hints to the user
-        onFData: {
-            lbFlash.text = data
-        }
-
         // flash data percent
         onFsProg: {
             pbFlash.value = percent
         }
 
-        // flash overal data percent
-        onFsProgOverall: {
-            pbFlashOverall.value = percent
+        // Open folder dialog to select the build images folder destination
+        onBDestinationDialog: {
+            targetFolder.text = "The default folder to store the images is:\n\n" + folder + "\n\nAre you OK with that location?"
+            targetFolder.open()
         }
+
+        // receive the corrected values for the network data
+        onBNetData: {
+            txtGateway.text = gw
+            txtDNS.text = dns
+            txtManager.text = manager
+            txtNodes.text = nodes
+        }
+
     }
 }

@@ -7,22 +7,56 @@ import io
 import enum
 import traceback
 import subprocess
-import re
-import csv
-from pprint import pprint
-
+import json
+import ipaddress
+import requests
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, pyqtSlot
 
-# regular expresions used below, precompiled here.
-red = re.compile('Disk \#\d\, Partition \#\d')
-rel = re.compile(' [A-Z]: ')
+# import the windows libs only in linux
+try:
+    import wmi
+    import win32file
+except:
+    if sys.platform is 'nt':
+        print("Missing python3 wmi or pywin32 modules...")
 
-if 'nt' in os.name:
-    import ctypes
-    # some aliases
-    getLogicalDrives = ctypes.windll.kernel32.GetLogicalDrives
-    getVolumeInformation = ctypes.windll.kernel32.GetVolumeInformationW
-    createUnicodeBuffer = ctypes.create_unicode_buffer
+# version data
+actualVersion = "v0.0.4"
+updateURL = "https://raw.githubusercontent.com/skycoin/skyflash/master/version.txt"
+skybianVersionFile = "https://raw.githubusercontent.com/skycoin/skybian/master/version.txt"
+
+def cleanString(data):
+    '''Cleans a string from trailing or leading chars
+
+    The list of chars is the cleanOf below, it's just a hack with strip()
+    but saves you from typing boring sentences over and over'''
+
+    cleanOf = " ,.-"
+
+    return data.strip(cleanOf)
+
+def splitDNS(dnsString):
+    '''Split a string that can represent up to tree DNS entries
+    return a list with the entries, if on error first entry is False
+    and second is the reason
+    '''
+
+    # first detecting the split pattern and detecting the most likely
+    data = dnsString.split(" ")
+    coma = dnsString.split(",")
+    if len(coma) > len(data):
+        data = coma
+
+    dns = []
+    err = False
+    for e in data:
+        result, ip = (validIP(cleanString(e)))
+        if result:
+            dns.append(str(ip))
+        else:
+            return [False, ip]
+
+    return dns
 
 def shortenPath(fullpath, ccount):
     '''Shorten a passed FS path to a char count size'''
@@ -124,24 +158,18 @@ def size(size):
 
     return out
 
-def validIP(ip):
+def validIP(iip):
     '''Takes a string of a IP and return a tuple:
     true/false and a reason if false
+
+    It uses ipaddress stock module, and the error is returned as the default comment 
     '''
 
-    # four digits
-    digits = str(ip).split('.')
-    if len(digits) != 4:
-        return (False, "Not enough digits on the IP")
-
-    # from 0 to 255
-    for d in digits:
-        d = int(d)
-        if d > 255 or d < 0:
-            return (False, "One of the digits on the IP is not valid")
-
-    # all good
-    return (True, "")
+    try:
+        ip = ipaddress.IPv4Address(iip)
+        return (True, ip)
+    except ValueError as messg:
+        return (False, str(messg))
 
 def getLinuxPath(soft):
     '''Make use of getDataFromCLI
@@ -176,19 +204,17 @@ def setPath(dir):
     dir is the app name folder "Skyflash" by default
     '''
 
+    # default path for the user
+    path = os.path.expanduser('~')
+
+    # where in the user's folder I need to put the  skybian folder:
+    # linux and macos right in the home folder, windows on the document folder
     if sys.platform in ["win32", "cygwin"]:
         # windows
-        path = os.path.expanduser('~')
         # path has the c:\Users\[username] so we need to add the Documents folder
-        # Windows has a trick for other langs beside English
+        # Windows has a trick for other langs beside English: Documents is the real
+        # folder and other lang folders just point to that
         path = os.path.join(path, "Documents")
-    elif sys.platform == "darwin":
-        # mac
-        # TODO reliable way to ident the users Documents folder
-        pass
-    else:
-        # linux
-        path = os.path.expanduser('~')
 
     # now adding the app dir
     path = os.path.join(path, dir)
@@ -214,199 +240,234 @@ def setPath(dir):
     # return it
     return (path, downloads, checked)
 
-def sysexec(cmd):
-    '''
-    Execute a command in the console of the base os, this one is intended
-    for windows only.
+def windowsDevices():
+    '''This one is to get all the info about windows removable devices in
+    a big array, the format is as follows:
 
-    It parses the output into a list (by line endings) and cleans empty ones
-    '''
+    [
+        ['\\\\.\\PHYSICALDRIVE1', 'Mass Storage Device USB Device', '8052549120',
+            [('F:\\', 'MSDOS', '\\\\?\\Volume{23e2ba26-8a62-11e9-afa4-080027673c27}\\')]
+        ],
+        ['\\\\.\\PHYSICALDRIVE2', 'Verbatim STORE N GO USB Device', '7739988480',
+            [('G:\\', 'PAVEL', '\\\\?\\Volume{23e2ba2b-8a62-11e9-afa4-080027673c27}\\')],
+            [('H:\\', 'RAPUT', '\\\\?\\Volume{23e2bcfb-8112-11e9-afa4-080276524590}\\')]
+        ]
+    ]
 
-    l = subprocess.check_output(cmd, shell=True)
-    l = l.decode(encoding='oem').splitlines()
-
-    # cleans empty lines
-    for i in l:
-        if i == '': l.remove('')
-
-    return l
-
-def getLetter(logicaldrive):
-    '''
-    Windows Only:
-    It get the device ID in this format: "Disk #0, Partition #0"
-    and answer back with an drive letter matching or a empty str
-    if not mounted/used
     '''
 
-    l = sysexec("wmic partition where (DeviceID='{}') assoc /assocclass:Win32_LogicalDiskToPartition".format(logicaldrive))
+    c = wmi.WMI ()
+    data = []
 
-    r = []
-    # filter for " G: "
-    # if not matching need to return ""
+    for physical_disk in c.Win32_DiskDrive():
+        capas = physical_disk.Capabilities
+        if capas != None and 7 in capas:
+            # is a removable media
+            phy = physical_disk.DeviceID
+            size = int(physical_disk.Size)
+            desc = physical_disk.Caption
+            drives = []
+            for partition in physical_disk.associators ("Win32_DiskDriveToDiskPartition"):
+                for logical_disk in partition.associators ("Win32_LogicalDiskToPartition"):
+                    name = logical_disk.Name + "\\"
+                    label = logical_disk.VolumeName
+                    guid = win32file.GetVolumeNameForVolumeMountPoint(name)
+                    drives.append((name, label, guid))
 
-    for e in l:
-        fe = rel.findall(e)
-        for ee in fe:
-            nee = ee.strip()
-            if not nee in r:
-                r.append(nee)
+            data.append([phy, desc, size, drives])
 
-    if len(r) > 0:
-        # DEBUG
-        d = r[0].strip()
-        return d
+    return data
+
+def linuxMediaDevices():
+    ''' List the media devices that are removable in liunux
+
+    If the major number is 8, that indicates it to be a disk device.
+
+    The minor number is the partitions on the same device:
+    - 0 means the entire disk
+    - 1 is the primary
+    - 2 is extended
+    - 5 is logical partitions
+    The maximum number of partitions is 15.
+
+    Use `$ sudo fdisk -l` and `$ sudo sfdisk -l /dev/sda` for more information.
+    '''
+
+    with open("/proc/partitions", "r") as f:
+        devices = []
+
+        for line in f.readlines()[2:]:
+            words = [ word.strip() for word in line.split() ]
+            major_number = int(words[0])
+            minor_number = int(words[1])
+            device_name = words[3]
+
+            # disk devices by device name, not partitions
+            if (major_number == 8) and not (minor_number % 16):
+                devices.append("/dev/" + device_name)
+
+        # data return
+        return devices
+
+    # default return if devices are not found
+    return False
+
+def getMacDriveInfo():
+    '''Get drives info in MacOS
+
+    Must return this: [(dev, label, size)]
+
+    [
+        ('/dev/disk2', '', 2369536),
+        ('/dev/disk3', 'uD', 3995639808),
+        ('/dev/disk4', 'MULTIBOOT', 8300555)
+    ]
+    '''
+
+    # load the plistlib
+    import plistlib
+
+    # get the info
+    cmd = ("diskutil list -plist external")
+    rx = subprocess.check_output(cmd, shell=True)
+    d = plistlib.loads(rx)
+
+    # usdcard and flash drive example
+    #
+    # {'AllDisks': ['disk1', 'disk1s1', 'disk2', 'disk2s1'],
+    # 'AllDisksAndPartitions': [{'Content': 'FDisk_partition_scheme',
+    #                             'DeviceIdentifier': 'disk1',
+    #                             'Partitions': [{'Content': 'DOS_FAT_32',
+    #                                             'DeviceIdentifier': 'disk1s1',
+    #                                             'MountPoint': '/Volumes/USD CARD',
+    #                                             'Size': 7948205056,
+    #                                             'VolumeName': 'USD CARD',
+    #                                             'VolumeUUID': '9FEFF8C2-E394-391B-9921-F0E5DD38D522'}],
+    #                             'Size': 7948206080},
+    #                         {'Content': 'FDisk_partition_scheme',
+    #                             'DeviceIdentifier': 'disk2',
+    #                             'Partitions': [{'Content': 'Windows_FAT_32',
+    #                                             'DeviceIdentifier': 'disk2s1',
+    #                                             'MountPoint': '/Volumes/PAVEL',
+    #                                             'Size': 7745830912,
+    #                                             'VolumeName': 'PAVEL',
+    #                                             'VolumeUUID': 'DC01B9FE-840D-346C-99AF-E4C961D2E441'}],
+    #                             'Size': 7746879488}],
+    # 'VolumesFromDisks': ['USD CARD', 'PAVEL'],
+    # 'WholeDisks': ['disk1', 'disk2']}
+
+    data = False
+
+    if len(d["AllDisks"]) > 0:
+        # we have suspects
+        data = []
+
+        for devs in d["AllDisksAndPartitions"]:
+            # direct attributes
+            device = "/dev/{}".format(devs["DeviceIdentifier"])
+            size = int(devs["Size"])
+
+            # indirect attributes: volume list (mounted partitions)
+            parts = ""
+            for p in devs["Partitions"]:
+                try:
+                    parts += " '" + p["VolumeName"] + "'"
+                except KeyError:
+                    pass
+
+            # clkean extra spaces around
+            vols = parts.strip()
+
+            data.append((device, vols, size))
+
+    # return
+    return data
+
+def getWinDrivesInfo():
+    '''Return a list of available drives in windows
+    if possible with a drive label and size in bytes:
+
+    [
+        ('E:/', '', 2369536),
+        ('F:/', 'CO7WT4G', 3995639808)
+    ]
+    '''
+
+    # get the data
+    data = windowsDevices()
+    phydrives = []
+    for phy in data:
+        size = phy[2]
+        letter = []
+        label = []
+        for d in phy[3]:
+            letter.append(d[0])
+
+            # catching an NoneType as the label
+            if d[1] != None:
+                label.append(d[1])
+            else:
+                label.append('No-Label')
+
+        phydrives.append((', '.join(letter), ', '.join(label), size))
+
+    # return result
+    return phydrives
+
+def getLinDrivesInfo():
+    '''Return a list of available drives in linux
+    if possible with a drive label and sizes on bytes:
+
+    [
+        ('/dev/mmcblk0', '', 8388608),
+        ('/dev/mmcblk1', 'BIG uSD Card', 16777216),
+        ('/dev/sda', 'MULTIBOOT', 8300555)
+    ]
+    '''
+
+    # get all removable media devices in the system
+    drives = linuxMediaDevices()
+
+    # if we detected a drive, gather the details via lsblk
+    if drives:
+        d = " ".join(drives)
+        js = getDataFromCLI("lsblk -JpbI 8 {}".format(d))
     else:
-        return ''
+        # TODO: warn the user
+        print("No drives found, detection procedure returned no drive")
+        return False
 
-def getLogicalDrive(phydrive):
-    '''
-    Get the physical drive (\\\\.\\PHYSICALDRIVE0) name and
-    return the logical volumes in a list like this
-        Disk #0, Partition #0
-        Disk #0, Partition #1
-        etc...
+    # is no usefull data exit
+    if js is False:
+        print("lsblk did not offered info about the drive requested, weird!")
+        return False
 
-    associated with it
-    '''
+    # usefull data beyond this point
+    finalDrives = []
+    data = json.loads(js)
 
-    # scape the \'s in the name of the device
-    phydrive = phydrive.replace('\\\\.\\', '\\\\\\\\.\\\\')
-    l = sysexec("wmic DiskDrive where \"DeviceID='" + "{}".format(phydrive) + "'\" Assoc /assocclass:Win32_DiskDriveToDiskPartition")
+    # getting data, output format is: [(drive, "LABEL", total),]
+    for device in data['blockdevices']:
+        if device['rm'] == '1':
+            name = device['name']
+            cap = int(device['size'])
+            mounted = ""
+            for c in device['children']:
+                nn = 'No Label'
+                if c['mountpoint'] is not None:
+                    nn = c['mountpoint'].split("/")[-1]
 
-    record = []
-    data = []
+                mounted += "{}, ".format(nn)
 
-    # the list has many times the same info, pick unique names
-    # dive into results
-    for element in l:
-        # matching it via regular expressions
-        for logVol in red.findall(element):
-            # already present?
-            if not logVol in record:
-                record.append(logVol)
-                # get the drive letter associated with the logDrive
-                l = getLetter(logVol)
-                # get the guid
-                g = getWinGUID(l)
-                # adding the info to the return list
-                data.append([logVol, l, getLabel(l), g])
+            finalDrives.append((name, mounted.strip(" ,"), cap))
 
-    return data
-
-def getLabel(d):
-    '''
-    Windows Only:
-
-    From a drive letter, get the label if proceed
-    '''
-    name_buffer = createUnicodeBuffer(1024)
-    filesystem_buffer = createUnicodeBuffer(1024)
-    volume_name = ""
-    drive = u"{}/".format(d)
-    # drive = drive.encode("ascii")
-    error = getVolumeInformation(ctypes.c_wchar_p(drive), name_buffer,
-            ctypes.sizeof(name_buffer), None, None, None,
-            filesystem_buffer, ctypes.sizeof(filesystem_buffer))
-
-    if error != 0:
-        volume_name = name_buffer.value
-
-    if not volume_name:
-        volume_name = "[No Label]"
-
-    return volume_name
-
-def getWinGUID(drive):
-    '''Windows Only
-    Get the capacity, deviceId, driveletter for all storage devices on the machine
-    then filter by drive and & return false or the string of the guid
-
-    Tip: if ithas no letter windows can't handle it, so no worry
-    '''
-
-    l = sysexec("wmic volume get DeviceID,DriveLetter /format:csv")
-    listd = csv.reader(l)
-    header = next(listd)
-
-    # extracted fields
-    guidh = header.index("DeviceID")
-    letter = header.index("DriveLetter")
-
-    guid = False
-    for r in listd:
-        if len(r) == 0:
-            continue
-
-        # if no drive letter match the size
-        if len(r[letter]) > 0 and r[letter] == drive:
-            guid = r[guidh]
-
-    return guid
-
-def getPHYDrives():
-    '''
-    List all physical drives, filter for the ones with the removable
-    media flag (most likely card readers & USB thumb drives) and
-    retrieve the logical drive name and it's letter if proceed
-
-    Returns an array with physical & logical names for drives, it's
-    associated letter, size and the interface type.
-    '''
-
-    l = sysexec("wmic diskdrive list full /format:csv")
-
-    # get the headers
-    listd = csv.reader(l)
-    header = next(listd)
-
-    # extracted fields
-    capa = header.index("Capabilities") # {3;4;7} we are looking for '7' aka removable media
-    phydrive = header.index("DeviceID")
-    interface = header.index("InterfaceType")
-    descDirty = header.index("PNPDeviceID")
-    size = header.index("Size")
-
-    data = []
-
-    for r in listd:
-        if len(r) == 0:
-            continue
-
-        d = dict()
-
-        # check if the media is removable (cap has #7)
-        capas = r[capa].strip('{}').split(';')
-        if '7' in capas:
-            d["phydrive"] = r[phydrive]
-            d['drives'] = getLogicalDrive(r[phydrive])
-            d["interface"] = r[interface]
-            d["desc"] = r[descDirty]
-            d["size"] = r[size]
-            data.append(d)
-
-    # sample output
-    # [{'desc': 'USBSTOR\\DISK&amp;VEN_VERBATIM&amp;PROD_STORE_N_GO&amp;REV_PMAP\\900067B77116E868&amp;0',
-    # 'drives': [['Disk #1, Partition #0',
-    #             'F:',
-    #             'MULTIBOOT',
-    #             '\\\\?\\Volume{62c491be-0ec2-11e9-a1ea-080027b4fa52}\\']],
-    # 'interface': 'USB',
-    # 'phydrive': '\\\\.\\PHYSICALDRIVE1',
-    # 'size': '7739988480'},
-    # {'desc': 'USBSTOR\\DISK&amp;VEN_MASS&amp;PROD_STORAGE_DEVICE&amp;REV_1.00\\121220160204&amp;0',
-    # 'drives': [['Disk #2, Partition #0',
-    #             'H:',
-    #             '[No Label]',
-    #             '\\\\?\\Volume{37189f6b-5e76-11e9-a1fd-0800275fd42d}\\']],
-    # 'interface': 'USB',
-    # 'phydrive': '\\\\.\\PHYSICALDRIVE2',
-    # 'size': '8052549120'}]
-
-    return data
+    # final test
+    if len(finalDrives) > 0:
+        return finalDrives
+    else:
+        return False
 
 # fileio overide class to get progress on tarfile extraction
-# TODO How to overide a class from a module
 class ProgressFileObject(io.FileIO):
     '''Overide the fileio object to have a callback on progress'''
 
@@ -430,7 +491,6 @@ class ProgressFileObject(io.FileIO):
 
         return io.FileIO.read(self, size)
 
-
 # signals class, to be used on threads; for all major tasks
 class WorkerSignals(QObject):
     '''This class defines the signals to be emmited by the different threaded
@@ -444,7 +504,6 @@ class WorkerSignals(QObject):
 
     def __init__(self, parent=None):
         super(WorkerSignals, self).__init__(parent=parent)
-
 
 # Generic worker to use in threads
 class Worker(QRunnable):
@@ -551,3 +610,140 @@ class Worker(QRunnable):
         NO_ASSOC = 31
         OOM = 8
         SHARE = 26
+
+def checkUpdates(data_callback, progress_callback):
+    '''This routine compare the actual noted version against the one
+    in the official repository to check for updates
+    
+    If we can't ge the file we return null
+    If reached and the same False
+    If reached and different True
+    
+    '''
+
+    version = ""
+
+    try:
+        # try to obtain the file with the latest version
+        r = requests.get(updateURL)
+        if r.status_code != requests.codes.ok:
+            return "None"
+    except:
+        return "None"
+
+    # we get a response
+    data = r.text.splitlines()
+    for line in data:
+        if line == "":
+            continue
+
+        if line.startswith("#"):
+            continue
+
+        if line.startswith("v"):
+            version = line
+    
+    if version == actualVersion:
+        # you are in the same version
+        return "False"
+    else:
+        # yep, you have to updates
+        return "True"
+
+def getLatestSkybian(data_callback, progress_callback):
+    '''Update the URL from which we need to download the Skybian-vX.Y.z.tar.xz file
+
+    Returns a string containing the url for the download ot the error comments
+    '''
+
+    result = []
+
+    try:
+        # try to obtain the file with the latest version
+        r = requests.get(skybianVersionFile)
+        if r.status_code != requests.codes.ok:
+            return "Error: the server returned a {} code".format(r.status_code)
+    except Exception as err:
+        return "Error: {}".format(str(err))
+
+    # we get a response
+    data = r.text.splitlines()
+    for line in data:
+        if line == "":
+            continue
+
+        if str(line).startswith("#"):
+            continue
+
+        if "|" in line:
+            result.append(line.split("|"))
+
+    # data can be parsed
+    if len(result) == 0:
+        return "Error: we can't extract the URL from the Skybian version file"
+    # we are concerned now only for the testnet version
+    for kind, URL in result:
+        if kind == "testnet":
+            return URL.strip()
+
+    # fail safe
+    return "Error: no link provided for the release we are looking for"
+
+def getVersion(data):
+    '''Get he version of a Skybian image by it's name
+
+    You can pass either a image or a release file
+    
+    Image:   Skybian-v0.0.4.img
+    Release: Skybian-v0.0.4.tar.xz
+    
+    With the provision to strip the pat is it's a URL, or a FS path
+    it must return something like "v0.0.4"
+    '''
+
+    sfile = ''
+
+    # detect if a url
+    if data.startswith('http://'):
+        # check it the URL ends with a '/' and strip it, shit happens
+        if data[-1] is '/':
+            data = data[:-1]
+        
+        sfile = data.split('/')[-1]
+    else:
+        # detect if we need to split the path
+        if os.path.sep in data:
+            spath = data.split(os.path.sep)
+            if len(spath) >= 2:
+                sfile = spath[-1]
+        else:
+            sfile = data
+
+    # parse the file, some like this: Skybian-v0.0.4.tar.xz or Skybian-v0.0.4.img
+    if 'img' in sfile:
+        name = '.'.join(sfile.split('.')[:-1])
+    else:
+        name = '.'.join(sfile.split('.')[:-2])
+
+    ver = name.split('-')[1]
+    return ver
+
+def eraseOldVersions(dlfolder, version):
+    '''Erase old version files from the download directory
+
+    This is triggered when a new version of skybian is detected & when the
+    download of a skybian ends ok
+    '''
+
+    # iterate over the file list
+    flist = os.listdir(dlfolder)
+    for f in flist:
+        # ignore the checkd file
+        if f == ".checked":
+            continue
+
+        # erase the file of not patch the version
+        if not version in f:
+            item = os.path.join(dlfolder, f)
+            if os.path.isfile(item):
+                os.unlink(item)
