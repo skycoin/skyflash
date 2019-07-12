@@ -55,7 +55,7 @@ deploy:
   # deploy on linux
   - provider: releases
     api_key:
-      secure: "$OAUTH"
+      secure: $OAUTH
     file_glob: true
     file:
       - "final/*linux64-static.gz"
@@ -68,7 +68,7 @@ deploy:
   # deploy on macos
   - provider: releases
     api_key:
-      secure: "$OAUTH"
+      secure: $OAUTH
     file_glob: true
     file:
       - "final/*-app.tgz"
@@ -81,7 +81,7 @@ deploy:
   # deploy on windows
   - provider: releases
     api_key:
-      secure: "$OAUTH"
+      secure: $OAUTH
     file_glob: true
     file:
       - "final/*.exe"
