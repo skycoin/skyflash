@@ -68,10 +68,10 @@ if 'nt' in os.name:
           name='skyflash-gui',
           bootloader_ignore_signals=False,
           strip=False,
-          console=False,
+          console=True,
           debug=False,
           icon='skyflash/data/skyflash.ico',
-          uac_admin=True
+          uac_admin=True,
           )
 
     coll = COLLECT(exe,
