@@ -621,18 +621,26 @@ def checkUpdates(data_callback, progress_callback):
     
     '''
 
+    # DEBUG
+    print("Started thread to check for skyflash updates")
+
     version = ""
 
     try:
         # try to obtain the file with the latest version
         r = requests.get(updateURL)
         if r.status_code != requests.codes.ok:
+            # DEBUG
+            print("Getting the version file we received a not good status code of: {}, so cant's check for updates".format(r.status_code))
             return "None"
     except:
+        # DEBUG
+        print("Getting the version file we raised a exception so cant's check for updates")
         return "None"
 
     # we get a response
     data = r.text.splitlines()
+
     for line in data:
         if line == "":
             continue
@@ -645,9 +653,13 @@ def checkUpdates(data_callback, progress_callback):
     
     if version == actualVersion:
         # you are in the same version
+        # DEBUG
+        print("Same versions, return False: {} = {}".format(version, actualVersion))
         return "False"
     else:
         # yep, you have to updates
+        # DEBUG
+        print("Different versions, return True: {} = {}".format(version, actualVersion))
         return "True"
 
 def getLatestSkybian(data_callback, progress_callback):
@@ -656,18 +668,24 @@ def getLatestSkybian(data_callback, progress_callback):
     Returns a string containing the url for the download ot the error comments
     '''
 
+    # DEBUG
+    print("Started thread to check for skybian URL")
+
     result = []
 
     try:
         # try to obtain the file with the latest version
         r = requests.get(skybianVersionFile)
         if r.status_code != requests.codes.ok:
+            # DEBUG
+            print("Getting the skybian file we received a not good status code of: {}, so cant's check for updates".format(r.status_code))
             return "Error: the server returned a {} code".format(r.status_code)
     except Exception as err:
         return "Error: {}".format(str(err))
 
     # we get a response
     data = r.text.splitlines()
+
     for line in data:
         if line == "":
             continue
@@ -680,53 +698,21 @@ def getLatestSkybian(data_callback, progress_callback):
 
     # data can be parsed
     if len(result) == 0:
+        # DEBUG
+        print("parsed result has zero length")
         return "Error: we can't extract the URL from the Skybian version file"
+
     # we are concerned now only for the testnet version
     for kind, URL in result:
         if kind == "testnet":
+            # DEBUG
+            print("Found the URL in the data: {}".format(URL))
             return URL.strip()
 
     # fail safe
+    # DEBUG
+    print("No URL found in the data?")
     return "Error: no link provided for the release we are looking for"
-
-def getVersion(data):
-    '''Get he version of a Skybian image by it's name
-
-    You can pass either a image or a release file
-    
-    Image:   Skybian-v0.0.4.img
-    Release: Skybian-v0.0.4.tar.xz
-    
-    With the provision to strip the pat is it's a URL, or a FS path
-    it must return something like "v0.0.4"
-    '''
-
-    sfile = ''
-
-    # detect if a url
-    if data.startswith('http://'):
-        # check it the URL ends with a '/' and strip it, shit happens
-        if data[-1] is '/':
-            data = data[:-1]
-        
-        sfile = data.split('/')[-1]
-    else:
-        # detect if we need to split the path
-        if os.path.sep in data:
-            spath = data.split(os.path.sep)
-            if len(spath) >= 2:
-                sfile = spath[-1]
-        else:
-            sfile = data
-
-    # parse the file, some like this: Skybian-v0.0.4.tar.xz or Skybian-v0.0.4.img
-    if 'img' in sfile:
-        name = '.'.join(sfile.split('.')[:-1])
-    else:
-        name = '.'.join(sfile.split('.')[:-2])
-
-    ver = name.split('-')[1]
-    return ver
 
 def eraseOldVersions(dlfolder, version):
     '''Erase old version files from the download directory
@@ -735,6 +721,9 @@ def eraseOldVersions(dlfolder, version):
     download of a skybian ends ok
     '''
 
+    # DEBUG
+    print("Erasing old files from previous versions in {} folder, actual version is {}".format(dlfolder, version))
+
     # iterate over the file list
     flist = os.listdir(dlfolder)
     for f in flist:
@@ -742,8 +731,13 @@ def eraseOldVersions(dlfolder, version):
         if f == ".checked":
             continue
 
+        # DEBUG
+        print("Parsing item: {}".format(f))
+
         # erase the file of not patch the version
         if not version in f:
             item = os.path.join(dlfolder, f)
+            # DEBUG
+            print("Item does not match version, erasing if file")
             if os.path.isfile(item):
                 os.unlink(item)
