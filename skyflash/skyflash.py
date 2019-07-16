@@ -284,7 +284,7 @@ class Skyflash(QObject):
             # success must call for a sha1sum check
             logging.debug("Checksum verification success!")
             # next step
-            self.skybianFileVersion = getVersion(self.skybianFile)
+            self.skybianFileVersion = self.getSkybianVersion(self.skybianFile)
             self.netConfig.emit()
             self.buildImages.emit()
 
