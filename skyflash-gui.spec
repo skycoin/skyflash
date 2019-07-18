@@ -71,7 +71,7 @@ if 'nt' in os.name:
           console=False,
           debug=False,
           icon='skyflash/data/skyflash.ico',
-          uac_admin=True
+          uac_admin=True,
           )
 
     coll = COLLECT(exe,
