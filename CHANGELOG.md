@@ -18,6 +18,16 @@ This is a note for developers about the recommended tags to keep track of the ch
 Dates must be YEAR-MONTH-DAY
 -->
 
+## v0.0.5 - 2019-07-19
+
+### Fixed
+
+- Issue #70, Windows apps problem when checking for the Skybian download URL, that triggered a annoying "New version of Skybian, please download" dialog box, fixed now.
+
+### Changed
+
+- The logic behind the parsing of the Skybian URL and the version matching schema, to fix issue #70 described above.
+
 ## v0.0.4 - 2019-07-12
 
 ### Added

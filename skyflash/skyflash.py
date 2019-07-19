@@ -284,7 +284,7 @@ class Skyflash(QObject):
             # success must call for a sha1sum check
             logging.debug("Checksum verification success!")
             # next step
-            self.skybianFileVersion = getVersion(self.skybianFile)
+            self.skybianFileVersion = self.getSkybianVersion(self.skybianFile)
             self.netConfig.emit()
             self.buildImages.emit()
 
@@ -429,7 +429,7 @@ To flash the next image just follow these steps:
         True indicates you are in a old version
         '''
 
-        print("Check for updates result: {}".format(data))
+        logging.debug("Check for skyflash updates result: {}".format(data))
 
         if data == "True":
             # we have a explicit difference, warn the user
@@ -437,6 +437,63 @@ To flash the next image just follow these steps:
             comments += "\nWe are opening our Web page to let you know how to download and use the new version."
             self.uiWarning.emit("New version available", comments)
             self.openManual(readmeUrl)
+
+    def getSkybianVersion(self, data):
+        '''Get he version of a Skybian image by it's name
+
+        You can pass either a image or a release file
+
+        Image:   Skybian-v0.0.4.img
+        Release: Skybian-v0.0.4.tar.xz
+
+        With the provision to strip the pat is it's a URL, or a FS path
+        it must return something like "v0.0.4"
+        '''
+
+        # DEBUG
+        logging.debug("Get he version from a data line, in this case:\n{}".format(data))
+
+        sfile = ''
+
+        # detect if a url
+        if data.startswith('https'):
+            # DEBUG
+            logging.debug("Passed data is an URL")
+
+            # check it the URL ends with a '/' and strip it, shit happens
+            if data[-1] is '/':
+                data = data[:-1]
+
+            sfile = data.split('/')[-1]
+        else:
+            # DEBUG
+            logging.debug("Passed data is not an URL")
+
+            # detect if we need to split the path
+            if os.path.sep in data:
+                # DEBUG
+                logging.debug("Passed data is FS path")
+                spath = data.split(os.path.sep)
+                if len(spath) >= 2:
+                    sfile = spath[-1]
+            else:
+                sfile = data
+
+        # DEBUG
+        logging.debug("At this point we get the filename only: {}".format(sfile))
+
+        # parse the file, some like this: Skybian-v0.0.4.tar.xz or Skybian-v0.0.4.img
+        if 'img' in sfile:
+            name = '.'.join(sfile.split('.')[:-1])
+        else:
+            name = '.'.join(sfile.split('.')[:-2])
+
+        ver = name.split('-')[1]
+
+        # DEBUG
+        logging.debug("Version is {}".format(ver))
+
+        return ver
 
     def skybianUrlResult(self, data):
         '''Receive the result of the fetch for the latest skybian URL
@@ -449,7 +506,7 @@ To flash the next image just follow these steps:
             logging.debug("Got an answer to the skybian URL update:\n{}".format(data))
 
             # check if a valid url
-            if data.startswith("https://"):
+            if data.startswith("https"):
                 # valid
                 self.skybianUpdated = True
                 self.skybianUrl = data
@@ -459,7 +516,7 @@ To flash the next image just follow these steps:
                 # if it's a new version erase local one and restart the UI
                 if self.skybianFileVersion is not '' and self.skybianFile is not '':
                     # we have a local version, get url version
-                    skbURLVer = getVersion(data)
+                    skbURLVer = self.getSkybianVersion(data)
 
                     # if a new version alert the user and reset the interface
                     if skbURLVer != self.skybianFileVersion:
@@ -1594,39 +1651,71 @@ To flash the next image just follow these steps:
         the downlads folder.
         '''
 
+        # DEBUG
+        logging.debug("===> Starting to load previous work")
+
         #  check if a file named .checked is on the downloads path
         baseImage = ""
         if os.path.exists(self.checked):
-            logging.debug("Found a checked file, loading it to process")
+            # DEBUG
+            logging.debug("Checked File exist")
+
             f = open(self.checked)
             baseImage = f.readline().strip("\n")
+            f.close()
             baseImageFile = baseImage.split(os.path.sep)[-1]
+
+            # DEBUG
+            logging.debug("Base image from checked file is {}".format(baseImage))
+
         else:
-            logging.debug("No previous work found.")
+            # DEBUG
+            logging.debug("No checked file found")
 
         if baseImage != "":
+            # DEBUG
+            logging.debug("Base image is set in checked file")
+
             if os.path.exists(baseImage):
-                # we have a checked image in the file
-                logging.debug("You have an already checked image, loading it")
+                # DEBUG
+                logging.debug("Base image exist on file system")
                 logging.debug("Loading....{}".format(baseImageFile))
 
                 self.skybianFile = baseImage
-                self.skybianFileVersion = getVersion(baseImage)
+                self.skybianFileVersion = self.getSkybianVersion(baseImage)
+
+                # DEBUG
+                logging.debug("Base image version is {}".format(self.skybianFileVersion))
+                logging.debug("Tweaking internals to show config and build steps visible")
+
                 self.extractionOK = True
                 self.setStatus.emit("Using local file: {}".format(baseImageFile))
                 self.dData.emit("Using file {}".format(baseImageFile))
                 self.netConfig.emit()
                 self.buildImages.emit()
             else:
+                # DEBUG
+                logging.debug("Base image does not exist")
+
                 # check file exist but image don't, erasing it
                 os.unlink(self.checked)
+
+                # DEBUG
+                logging.debug("Checked file erased as it's not useful")
         else:
-            logging.debug("Checked file not valid or corrupt, erasing it")
+            # DEBUG
+            logging.debug("Base image from checked is empty")
+
             if os.path.exists(self.checked): 
                 os.unlink(self.checked)
 
+                # DEBUG
+                logging.debug("Checked file erased as it's not useful")
+
     def checkForUpdates(self):
-        '''Check for updates in a thread to not disturm the UI flow'''
+        '''Check for updates in a thread to not disturb the UI flow'''
+
+        logging.debug("===> Starting to check for updates")
 
         # Preparing the check update thread
         self.ckup = Worker(checkUpdates)
