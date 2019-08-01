@@ -30,7 +30,7 @@ imageConfigDataSize = 256
 
 # skybian URL
 defaultSkybianUrl = "https://github.com/skycoin/skybian/releases/download/Skybian-v0.0.4/Skybian-v0.0.4.tar.xz"
-readmeUrl = "https://github.com/skycoin/skyflash/blob/master/README.md"
+readmeUrl = "https://github.com/skycoin/skyflash/blob/master/README.md#installing-or-upgrading"
 manualUrl = "https://github.com/skycoin/skyflash/blob/master/USER_MANUAL.md"
 
 class Skyflash(QObject):
@@ -82,6 +82,8 @@ class Skyflash(QObject):
     uiWarning = pyqtSignal(str, str, arguments=["title", "text"])
     # target is errorwarnDialog Box rise
     uiError = pyqtSignal(str, str, str, arguments=["title", "text", "details"])
+    # target is errorwarnDialog Box rise
+    uiNewVersion = pyqtSignal()
 
     ## image related signals
 
@@ -432,11 +434,14 @@ To flash the next image just follow these steps:
         logging.debug("Check for skyflash updates result: {}".format(data))
 
         if data == "True":
-            # we have a explicit difference, warn the user
-            comments = "In the startup process we found that you are using a old version of Skyflash.\n"
-            comments += "\nWe are opening our Web page to let you know how to download and use the new version."
-            self.uiWarning.emit("New version available", comments)
-            self.openManual(readmeUrl)
+            # we have a explicit difference, warn the user; then open the manual
+            self.uiNewVersion.emit()
+
+    @pyqtSlot()
+    def openUpdateLink(self):
+        '''Open the Link to the online manual in the readme url'''
+
+        self.openManual(readmeUrl)
 
     def getSkybianVersion(self, data):
         '''Get he version of a Skybian image by it's name

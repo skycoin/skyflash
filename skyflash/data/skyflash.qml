@@ -66,6 +66,18 @@ ApplicationWindow {
         }
     }
 
+    // new version detected
+    MessageDialog {
+        id: newDiag
+        icon: StandardIcon.Information
+        title: "New version of Skyflash available!"
+        text: "In the startup process we found that you are using a old version of Skyflash.\nA Web page will open to show you how to upgrade."
+        onAccepted: {
+            newDiag.visible = false
+            skf.openUpdateLink()
+        }
+    }
+
     // open a local skybian base image pack
     FileDialog {
         id: fileDialog
@@ -658,6 +670,11 @@ ApplicationWindow {
                 errorDiag.detailedText.visible = false
             }
             errorDiag.open()
+        }
+
+        // on new version detected
+        onUiNewVersion: {
+            newDiag.open()
         }
 
         // build data passing, hints to the user
