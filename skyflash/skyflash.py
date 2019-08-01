@@ -359,7 +359,7 @@ class Skyflash(QObject):
         '''
 
         self.setStatus.emit("Images build was a success, next step is flashing!")
-        self.bData.emit("All images was built")
+        self.bData.emit("All images were built")
         self.bFinished.emit()
         # check for cards timer start
         self.timerStart()
