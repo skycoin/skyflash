@@ -12,12 +12,17 @@ ApplicationWindow {
     // about dialog
     MessageDialog {
         id: aboutDiag
-        title: "About Skyflash"
+        title: "About"
         Text {
+            anchors.centerIn: parent
             textFormat: Text.RichText
             onLinkActivated: Qt.openUrlExternally(link)
             padding: 10
-            text: "<p><a href='http://github.com/skycoin/skyflash'>Skyflash</a> is the official tool to configure, build and flash the Skyminer images based on <a href='http://github.com/skycoin/skybian'>Skybian</a>.<br></p><p>Current version: v0.0.5</p>"
+            text: " <p align='center'><h1>Skycoin's Skyflash</h1></p>\
+                    <p align='center'><a href='https://github.com/skycoin/skyflash'>Skyflash</a> is the official tool to configure,<br/>\
+                    build and flash the Skyminer images based on <a href='https://github.com/skycoin/skybian'>Skybian</a>.\
+                    </p>\
+                    <p align='center'>Current version: <b>v0.0.5</b></p>"
 
             MouseArea {
                 anchors.fill: parent
