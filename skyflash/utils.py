@@ -21,7 +21,7 @@ except:
         print("Missing python3 wmi or pywin32 modules...")
 
 # version data
-actualVersion = "v0.0.4"
+actualVersion = "v0.0.5"
 updateURL = "https://raw.githubusercontent.com/skycoin/skyflash/master/version.txt"
 skybianVersionFile = "https://raw.githubusercontent.com/skycoin/skybian/master/version.txt"
 

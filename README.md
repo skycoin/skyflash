@@ -1,5 +1,7 @@
 # GUI tool to flash Skybian for Skyminer on SD card images of any kind
 
+[![Build Status](https://travis-ci.com/skycoin/skyflash.svg?branch=master)](https://travis-ci.com/skycoin/skyflash)
+
 With this tool you will download, configure, create and flash the default [skybian](https://github.com/simelo/skybian) image to your custom environment.
 
 The resulting images will only run on the official skyminer hardware, the one based on Orange Pi Prime SBC.
