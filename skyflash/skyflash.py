@@ -14,6 +14,7 @@ import subprocess
 import enum
 import string
 import tempfile
+import time
 from urllib.request import Request, urlopen
 
 # GUI imports
@@ -1506,10 +1507,11 @@ To flash the next image just follow these steps:
             cmd = "{} {} {} | {} {} of={}".format(streamer, image, logfile, pkexec, dd, destination)
             logging.debug("Full cmd line is:\n{}".format(cmd))
 
-            # TODO Test if the destination file in in there
+            # TODO Test if the destination file is in there
 
             try:
                 p = subprocess.Popen(cmd, shell=True)
+                flash_start = time.time()
 
                 #  open the log file
                 lf = open(logfile, 'r')
@@ -1518,16 +1520,20 @@ To flash the next image just follow these steps:
                     #  capturing progress via a file
                     l = lf.readline().strip("\n")
                     if len(l) != 0:
+                        # get time
+                        now_time = time.time()
+
                         # check for errors
                         if l.startswith("ERROR"):
                             print("Error detected:\n{}".format(l))
                             return False
 
                         if "%" in l:
-                            # we are on:
                             pr = float(l.strip()[:-1])
+
                             if pr > 0:
-                                progress_callback.emit(pr, "Flashing {}: {}%".format(name, pr))
+                                (speed, eta) = calc_speed_eta(size, pr, flash_start, now_time)
+                                progress_callback.emit(pr, "Flashing {}: {}%, {}, {} left".format(name, pr, speed, eta))
 
                 #  close the log file
                 if lf:
