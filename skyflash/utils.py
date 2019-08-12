@@ -741,3 +741,27 @@ def eraseOldVersions(dlfolder, version):
             print("Item does not match version, erasing if file")
             if os.path.isfile(item):
                 os.unlink(item)
+
+def calc_speed_eta(size, pr, start_time, time_now):
+    '''Calculate the write speed and remaining time from a few values
+    
+    Output format must be strings ready to print, like this:
+    6.2 MBytes/s, 8 minutes 22 seconds
+    '''
+
+    try:
+        # initial calcs
+        time_delta = time_now - start_time
+        wrote = size * pr / 100
+        remains = size - wrote
+
+        # speed from the time spent in writing the actual amount
+        lspeed = wrote / time_delta
+
+        # estimated time for completion
+        leta = int(remains / lspeed)
+    
+    except ZeroDivisionError: 
+        return ("please", "wait...")
+
+    return (speed(lspeed), eta(leta)) 
