@@ -18,6 +18,16 @@ This is a note for developers about the recommended tags to keep track of the ch
 Dates must be YEAR-MONTH-DAY
 -->
 
+## UNRELEASED
+
+### Changed
+
+- Some UI improvements and fixes: reformat the about box, fix the grammar of a sentences and delay the browser popup after the "new version of skyflash" is detected.
+
+### Added
+
+- Now the flashing process shows the write speed and the time left (both as average of the whole flash process)
+
 ## v0.0.5 - 2019-07-19
 
 ### Fixed
