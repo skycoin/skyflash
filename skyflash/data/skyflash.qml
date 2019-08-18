@@ -104,7 +104,6 @@ ApplicationWindow {
         standardButtons: StandardButton.Yes | StandardButton.No
 
         onYes: {
-            console.log("User accepted")
             skf.imagesBuild(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text, "no")
         }
 
@@ -289,6 +288,8 @@ ApplicationWindow {
                         txtNodes.enabled = false
                         // net details are not shown
                         networkDetails.visible = false
+                        // tell the app we have checked the checkbox
+                        skf.defaultNetwork(true)
                     } else {
                         // enable the fields for edit
                         txtGateway.enabled = true
@@ -297,6 +298,8 @@ ApplicationWindow {
                         txtNodes.enabled = true
                         // net details are shown
                         networkDetails.visible = true
+                        // tell the app we have un-checked the checkbox
+                        skf.defaultNetwork(false)
                     }
 
                     // if you change the config of the network and the
@@ -633,6 +636,12 @@ ApplicationWindow {
         onNetConfig: {
             // set next step visible
             boxNetwork.visible = true
+        }
+
+        // force the default network configs to a checked/unchecked status from the app
+        onNetDefaultBox: {
+            ckbDefaultNetwork.checked = status
+            console.log("Bassed Default Network check box status:", status)
         }
 
         // show build images config
