@@ -1300,6 +1300,7 @@ To flash the next image just follow these steps:
         
         # update the image list 
         self.images2flash = images
+        self.update_images_in_config(images)
 
         # close the file
         file.close()
@@ -1798,14 +1799,23 @@ To flash the next image just follow these steps:
 
         This process triggers the status of the App in the following order:
 
-        MAIN > setup = no
+        MAIN > setup = yes|no (if no)
             Abort config, just created a new one
 
         SKYBIAN > verified = yes|no (if yes)
             Process and load the skybian file (check if there, etc)
             Triggers the network part show
 
-        NET > default = yes|no (if yes)
+        NET > default = yes|no (if no)
+            Load net parameters as local vars
+            Validate the local net config
+            upload it to the UI
+
+        IMAGES > generated = yes|no (if yes)
+            load the values
+            Check if the files are there
+            Load them in the class var
+            Update the UI.
 
         '''
 
@@ -1855,6 +1865,9 @@ To flash the next image just follow these steps:
             # first run, don't load anything
             logging.debug("First time run, default loaded")
             return
+        else:
+            # non default config
+            logging.debug("Config file has custom data")
 
         # TODO
         # DEPRECATED erase this 'if' on ver 0.7 and forward
@@ -1877,7 +1890,7 @@ To flash the next image just follow these steps:
         if self.config['SKYBIAN']['verified'] == 'yes':
             skybian_file = self.config['SKYBIAN']['file']
             if os.path.exists(skybian_file):
-                logging.debug("Using skybian file")
+                logging.debug("Skybian file already on the FS, so we will use it")
                 self.skybianFile = skybian_file
                 self.skybianFileVersion = self.config['SKYBIAN']['version']
 
@@ -1895,11 +1908,12 @@ To flash the next image just follow these steps:
         else:
             # reset config
             reset_skybian_config()
+            logging.debug("No custom config about the Skybian file")
 
         # Test the net part
         if self.config['NET']['configured'] == 'yes':
             # net part appears to be in place
-            logging.debug("NET section config detected.")
+            logging.debug("NET section custom config detected.")
 
             # is net conf default?
             if not is_net_conf_default():
@@ -1928,38 +1942,77 @@ To flash the next image just follow these steps:
                     reset_net_config()
 
             else:
+                # logging
+                logging.debug("NET section config is default, loading...")
+
                 # reset it just in case
                 self.netDefaultBox.emit(True)
                 reset_net_config()
 
-                # logging
-                logging.debug("NET section config is default, loading...")
+        else:
+            logging.debug("No custom config about the network parameters")
+
+        # Test the images part
+        if self.config['IMAGES']['generated'] == 'yes':
+            # ok, we have a set of images generated
+            logging.debug("IMAGES section has some generated images, parsing it...")
+
+            # this var will hold the image list from the config & FS
+            images = []
+
+            for (option, value) in self.config['IMAGES'].items():
+                # filter just the image ones
+                if 'image' in option:
+                    if value is '':
+                        continue
+
+                    if os.path.isfile(value):
+                        # is there, adding it to the count
+                        images.append(value)
+                        logging.debug("Adding image: {}".format(value))
+                    else:
+                        # not there but in file, pop the config
+                        self.config.remove_option('IMAGES', option)
+                        self.save_config()
+                        logging.debug("Config image {} not found, removing from config".format(value))
+
+            # images has the valid images from the config and FS, passing it to main class
+            self.images2flash = [x[x.rfind(os.path.sep) + 1:] for x in images]
+
+            # notify the UI about the images
+            self.bFinished.emit()
+
+            # check for cards timer start
+            self.timerStart()
+        else:
+            logging.debug("No custom config about the local generated images")
 
     def create_config(self, passit = False):
         '''Create a empty and default config file in the local filesystem'''
 
         conf = configparser.ConfigParser()
         conf['MAIN'] = {
-                                'setup' : 'no',
-                              }
+                            'setup' : 'no',
+                            }
+
         conf['SKYBIAN'] = {
-                                'verified' : 'no',
-                                'file' : '',
-                                'version' : '',
-                              }
+                            'verified' : 'no',
+                            'file' : '',
+                            'version' : '',
+                            }
+
         conf['NET'] = {
-                                'configured' : 'no',
-                                'gw' : '192.168.0.1',
-                                'dns' : '1.0.0.1, 1.1.1.1',
-                                'manager' : '192.168.0.2',
-                                'count' : '2',
-                              }
+                            'configured' : 'no',
+                            'gw' : '192.168.0.1',
+                            'dns' : '1.0.0.1, 1.1.1.1',
+                            'manager' : '192.168.0.2',
+                            'count' : '2',
+                            }
+
         conf['IMAGES'] = {
-                                'count' : '0',
-                                'images' : {
-                                    '1' : ''
-                                }
-                              }
+                            'generated' : 'no',
+                            'image0' : ''
+                            }
 
         if passit is False:
             self.config = conf
@@ -1974,6 +2027,24 @@ To flash the next image just follow these steps:
             ret = self.config.write(configfile)
             logging.debug("Configuration Saved/Updated")
 
+
+    def update_images_in_config(self, images):
+        '''Get the list of images built and update the config file with them'''
+
+        # no parameters passed
+        if len(images) is 0:
+            return
+
+        # ok, it's time to update.
+        self.config['IMAGES']['generated'] = 'yes'
+        logging.debug("IMAGES section needs update")
+
+        # images...
+        for i in range(len(images)):
+            self.config['IMAGES']['image{}'.format(i)] = os.path.join(self.localPathBuild, images[i])
+
+        # save config file.
+        self.save_config()
 
 # load the instance
 Skyflash.instance = Skyflash()
