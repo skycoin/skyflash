@@ -1135,7 +1135,7 @@ To flash the next image just follow these steps:
 
     @pyqtSlot(str, str, str, str)
     def builtImagesPath(self, gw, dns, manager, nodes):
-        '''Receives the info from the UT that the user want to build the images
+        '''Receives the info from the UI that the user want to build the images
         and the parameters to do it.
 
         We validate the data on the users interface first, if somethins is wrong
@@ -1191,6 +1191,14 @@ To flash the next image just follow these steps:
         self.netDns = dns
         self.netManager = manager
         self.netNodes = nodes
+
+        # push the values oin the config
+        self.config['NET']['configured'] = 'yes'
+        self.config['NET']['gw'] = gw
+        self.config['NET']['dns'] = dns
+        self.config['NET']['manager'] = manager
+        self.config['NET']['count'] = nodes
+        self.save_config()
 
         # Starting to build the nodes.
         # thead start
