@@ -1833,13 +1833,12 @@ To flash the next image just follow these steps:
 
         # reset net config
         def reset_net_config():
-            '''To reset the NET section fo the config to the default values'''
+            '''To reset the NET section of the config to the default values'''
 
             # get the default config
             conf = self.create_config(True)
             self.config['NET'] = conf['NET']
             self.save_config()
-
 
         # is there?
         if not os.path.exists(self.config_file):
@@ -1899,8 +1898,12 @@ To flash the next image just follow these steps:
 
         # Test the net part
         if self.config['NET']['configured'] == 'yes':
+            # net part appears to be in place
+            logging.debug("NET section config detected.")
+
             # is net conf default?
             if not is_net_conf_default():
+                logging.debug("NET section config is loaded and not the default, validating...")
                 # load the net parameters as locals and validate them before passing to the app
                 lgw = self.config['NET']['gw']
                 ldns = self.config['NET']['dns']
@@ -1911,11 +1914,16 @@ To flash the next image just follow these steps:
                 result = self.validateNetworkData(lgw, ldns, lmanager, lcount, ui=False)
                 if result:
                     # ok, network data in place
+                    logging.debug("NET section config validated...")
+
                     # tell the UI that we need the Network visible
                     self.netDefaultBox.emit(False)
 
                 else:
-                    # Failed to validate, load defaults and notify UI
+                    # Failed to validate
+                    logging.debug("NET section config is broken, resetting to defaults...")
+
+                    # Load defaults and notify UI
                     self.netDefaultBox.emit(True)
                     reset_net_config()
 
@@ -1923,6 +1931,9 @@ To flash the next image just follow these steps:
                 # reset it just in case
                 self.netDefaultBox.emit(True)
                 reset_net_config()
+
+                # logging
+                logging.debug("NET section config is default, loading...")
 
     def create_config(self, passit = False):
         '''Create a empty and default config file in the local filesystem'''
