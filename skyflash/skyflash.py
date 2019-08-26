@@ -295,6 +295,7 @@ class Skyflash(QObject):
             self.buildImages.emit()
 
             # set the config items and save them
+            self.config['MAIN']['setup'] = 'yes'
             self.config['SKYBIAN']['setup'] = 'yes'
             self.config['SKYBIAN']['file'] = self.skybianFile
             self.config['SKYBIAN']['version'] = self.skybianFileVersion
@@ -375,6 +376,9 @@ class Skyflash(QObject):
         # check for cards timer start
         self.timerStart()
 
+        # config update
+        self.config['MAIN']['setup'] = 'yes'
+        self.save_config()
 
     # flash ones
 
@@ -429,6 +433,10 @@ To flash the next image just follow these steps:
 
         # reset the fail safe trigger
         self.flashingOnProgress = False
+
+        # config update
+        self.config['MAIN']['setup'] == 'yes'
+        self.save_config()
 
     def checkUpdatesResult(self, data):
         '''Receive the result of the check for updates via data
@@ -1866,7 +1874,9 @@ To flash the next image just follow these steps:
             if self.config['MAIN']['setup'] == 'no':
                 # first run, don't load anything
                 logging.debug("First time run, default loaded")
-                return
+
+                # resetting it to protect us from a sloppy/curious user
+                self.create_config()
             else:
                 # non default config
                 logging.debug("Config file has custom data")
@@ -1999,6 +2009,15 @@ To flash the next image just follow these steps:
             self.config.read(self.config_file)
             logging.debug("Mangled config file detected, resetting it and loading defaults")
 
+            # erase old/previous (now orphaned) images from the default dir
+            logging.debug("As we are resetting we need to also erase the now orphaned images on this system")
+            flist = os.listdir(self.localPathBuild)
+            for f in flist:
+                if ".img" in f:
+                    item = os.path.join(self.localPathBuild, f)
+                    if os.path.isfile(item):
+                        os.unlink(item)
+                        logging.debug("Orphaned file {} erased".format(item))
 
     def create_config(self, passit = False):
         '''Create a empty and default config file in the local filesystem'''
