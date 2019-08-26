@@ -1856,136 +1856,149 @@ To flash the next image just follow these steps:
             logging.debug("Config File not present, creating one")
             self.create_config()
 
-        # now load it
-        self.config.read(self.config_file)
-        logging.debug("Config File loaded, parsing...")
+        # fail safe for invalid data
+        try:
+            # now load it
+            self.config.read(self.config_file)
+            logging.debug("Config File loaded, parsing...")
 
-        # validate some of the config items
-        if self.config['MAIN']['setup'] == 'no':
-            # first run, don't load anything
-            logging.debug("First time run, default loaded")
-            return
-        else:
-            # non default config
-            logging.debug("Config file has custom data")
-
-        # TODO
-        # DEPRECATED erase this 'if' on ver 0.7 and forward
-        if self.config['SKYBIAN']['verified'] == 'no':
-            logging.debug("Skybian file not verified acording to config file, testing the filesystem...")
-
-            # try to detect it on the fs
-            (file, version) = self.loadPrevious()
-
-            if file != False:
-                logging.debug("Found a valid local skybian copy, loading it [WARNING! this feature will be deprecated]")
-                self.config['SKYBIAN'] = {
-                                        'verified' : 'yes',
-                                        'file' : file,
-                                        'version' : version,
-                                    }
-                self.save_config()
-
-        # skybian present ?
-        if self.config['SKYBIAN']['verified'] == 'yes':
-            skybian_file = self.config['SKYBIAN']['file']
-            if os.path.exists(skybian_file):
-                logging.debug("Skybian file already on the FS, so we will use it")
-                self.skybianFile = skybian_file
-                self.skybianFileVersion = self.config['SKYBIAN']['version']
-
-                self.extractionOK = True
-                self.setStatus.emit("Using local file: {}".format(shortenPath(self.skybianFile, 20)))
-                self.dData.emit("Using file {}".format(shortenPath(self.skybianFile, 20)))
-                self.netConfig.emit()
-                self.buildImages.emit()
-
+            # validate some of the config items
+            if self.config['MAIN']['setup'] == 'no':
+                # first run, don't load anything
+                logging.debug("First time run, default loaded")
+                return
             else:
-                # Verified but the file is not present... ?
-                logging.debug("Config file says there is a skybian image, but we can't find it... fixing config")
-                reset_skybian_config()
+                # non default config
+                logging.debug("Config file has custom data")
 
-        else:
-            # reset config
-            reset_skybian_config()
-            logging.debug("No custom config about the Skybian file")
+            # TODO
+            # DEPRECATED erase this 'if' on ver 0.7 and forward
+            if self.config['SKYBIAN']['verified'] == 'no':
+                logging.debug("Skybian file not verified acording to config file, testing the filesystem...")
 
-        # Test the net part
-        if self.config['NET']['configured'] == 'yes':
-            # net part appears to be in place
-            logging.debug("NET section custom config detected.")
+                # try to detect it on the fs
+                (file, version) = self.loadPrevious()
 
-            # is net conf default?
-            if not is_net_conf_default():
-                logging.debug("NET section config is loaded and not the default, validating...")
-                # load the net parameters as locals and validate them before passing to the app
-                lgw = self.config['NET']['gw']
-                ldns = self.config['NET']['dns']
-                lmanager = self.config['NET']['manager']
-                lcount = self.config['NET']['count']
+                if file != False:
+                    logging.debug("Found a valid local skybian copy, loading it [WARNING! this feature will be deprecated]")
+                    self.config['SKYBIAN'] = {
+                                            'verified' : 'yes',
+                                            'file' : file,
+                                            'version' : version,
+                                        }
+                    self.save_config()
 
-                # now test them
-                result = self.validateNetworkData(lgw, ldns, lmanager, lcount, ui=False)
-                if result:
-                    # ok, network data in place
-                    logging.debug("NET section config validated...")
+            # skybian present ?
+            if self.config['SKYBIAN']['verified'] == 'yes':
+                skybian_file = self.config['SKYBIAN']['file']
+                if os.path.exists(skybian_file):
+                    logging.debug("Skybian file already on the FS, so we will use it")
+                    self.skybianFile = skybian_file
+                    self.skybianFileVersion = self.config['SKYBIAN']['version']
 
-                    # tell the UI that we need the Network visible
-                    self.netDefaultBox.emit(False)
+                    self.extractionOK = True
+                    self.setStatus.emit("Using local file: {}".format(shortenPath(self.skybianFile, 20)))
+                    self.dData.emit("Using file {}".format(shortenPath(self.skybianFile, 20)))
+                    self.netConfig.emit()
+                    self.buildImages.emit()
 
                 else:
-                    # Failed to validate
-                    logging.debug("NET section config is broken, resetting to defaults...")
+                    # Verified but the file is not present... ?
+                    logging.debug("Config file says there is a skybian image, but we can't find it... fixing config")
+                    reset_skybian_config()
 
-                    # Load defaults and notify UI
+            else:
+                # reset config
+                reset_skybian_config()
+                logging.debug("No custom config about the Skybian file")
+
+            # Test the net part
+            if self.config['NET']['configured'] == 'yes':
+                # net part appears to be in place
+                logging.debug("NET section custom config detected.")
+
+                # is net conf default?
+                if not is_net_conf_default():
+                    logging.debug("NET section config is loaded and not the default, validating...")
+                    # load the net parameters as locals and validate them before passing to the app
+                    lgw = self.config['NET']['gw']
+                    ldns = self.config['NET']['dns']
+                    lmanager = self.config['NET']['manager']
+                    lcount = self.config['NET']['count']
+
+                    # now test them
+                    result = self.validateNetworkData(lgw, ldns, lmanager, lcount, ui=False)
+                    if result:
+                        # ok, network data in place
+                        logging.debug("NET section config validated...")
+
+                        # tell the UI that we need the Network visible
+                        self.netDefaultBox.emit(False)
+
+                    else:
+                        # Failed to validate
+                        logging.debug("NET section config is broken, resetting to defaults...")
+
+                        # Load defaults and notify UI
+                        self.netDefaultBox.emit(True)
+                        reset_net_config()
+
+                else:
+                    # logging
+                    logging.debug("NET section config is default, loading...")
+
+                    # reset it just in case
                     self.netDefaultBox.emit(True)
                     reset_net_config()
 
             else:
-                # logging
-                logging.debug("NET section config is default, loading...")
+                logging.debug("No custom config about the network parameters")
 
-                # reset it just in case
-                self.netDefaultBox.emit(True)
-                reset_net_config()
+            # Test the images part
+            if self.config['IMAGES']['generated'] == 'yes':
+                # ok, we have a set of images generated
+                logging.debug("IMAGES section has some generated images, parsing it...")
 
-        else:
-            logging.debug("No custom config about the network parameters")
+                # this var will hold the image list from the config & FS
+                images = []
 
-        # Test the images part
-        if self.config['IMAGES']['generated'] == 'yes':
-            # ok, we have a set of images generated
-            logging.debug("IMAGES section has some generated images, parsing it...")
+                for (option, value) in self.config['IMAGES'].items():
+                    # filter just the image ones
+                    if 'image' in option:
+                        if value is '':
+                            continue
 
-            # this var will hold the image list from the config & FS
-            images = []
+                        if os.path.isfile(value):
+                            # is there, adding it to the count
+                            images.append(value)
+                            logging.debug("Adding image: {}".format(value))
+                        else:
+                            # not there but in file, pop the config
+                            self.config.remove_option('IMAGES', option)
+                            self.save_config()
+                            logging.debug("Config image {} not found, removing from config".format(value))
 
-            for (option, value) in self.config['IMAGES'].items():
-                # filter just the image ones
-                if 'image' in option:
-                    if value is '':
-                        continue
+                # images has the valid images from the config and FS, passing it to main class
+                self.images2flash = [x[x.rfind(os.path.sep) + 1:] for x in images]
 
-                    if os.path.isfile(value):
-                        # is there, adding it to the count
-                        images.append(value)
-                        logging.debug("Adding image: {}".format(value))
-                    else:
-                        # not there but in file, pop the config
-                        self.config.remove_option('IMAGES', option)
-                        self.save_config()
-                        logging.debug("Config image {} not found, removing from config".format(value))
+                # notify the UI about the images
+                self.bFinished.emit()
 
-            # images has the valid images from the config and FS, passing it to main class
-            self.images2flash = [x[x.rfind(os.path.sep) + 1:] for x in images]
+                # check for cards timer start
+                self.timerStart()
+            else:
+                logging.debug("No custom config about the local generated images")
+        except:
+            # some error in the loading of the config with bad parameters or simply the user
+            # mangled it trying to fix/force something.
 
-            # notify the UI about the images
-            self.bFinished.emit()
+            # create a new clean config
+            self.create_config()
 
-            # check for cards timer start
-            self.timerStart()
-        else:
-            logging.debug("No custom config about the local generated images")
+            # now load it
+            self.config.read(self.config_file)
+            logging.debug("Mangled config file detected, resetting it and loading defaults")
+
 
     def create_config(self, passit = False):
         '''Create a empty and default config file in the local filesystem'''
