@@ -96,8 +96,10 @@ class Skyflash(QObject):
     dProg = pyqtSignal(float, arguments=["percent"])
     # target is hide download buttons
     dDone = pyqtSignal()
-    # target is show download buttons
+    # target is show download buttons and reset the whole UI
     sStart = pyqtSignal()
+    # target is show download buttons as ready to download
+    sDB = pyqtSignal()
 
     ## Signals related to the build process
 
@@ -533,6 +535,7 @@ To flash the next image just follow these steps:
                 self.skybianUpdated = True
                 self.skybianUrl = data
                 self.setStatus.emit("Skybian download source updated...")
+                self.sDB.emit()
                 logging.debug("Skybian download source updated...")
 
                 # if it's a new version erase local one and restart the UI
