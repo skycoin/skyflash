@@ -635,7 +635,6 @@ ApplicationWindow {
         // set the download button to visible after the update of the skybian URL
         // needed if the internet is slow and the user click the download button earlier
         onSDB: {
-            lbImageComment.text = ""
             btDown.visible = true
             btDown.text = "Download"
             btDown.tooltip = "Click here to download the base Skybian image from the official site"
