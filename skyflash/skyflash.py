@@ -298,7 +298,7 @@ class Skyflash(QObject):
 
             # set the config items and save them
             self.config['MAIN']['setup'] = 'yes'
-            self.config['SKYBIAN']['setup'] = 'yes'
+            self.config['SKYBIAN']['verified'] = 'yes'
             self.config['SKYBIAN']['file'] = self.skybianFile
             self.config['SKYBIAN']['version'] = self.skybianFileVersion
             self.save_config()
