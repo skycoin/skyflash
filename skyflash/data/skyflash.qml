@@ -402,6 +402,7 @@ ApplicationWindow {
                     onClicked: {
                         // call skyflash to build the images
                         skf.builtImagesPath(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text)
+                        btBuild.enabled = false
                     }
                 }
 
@@ -649,7 +650,7 @@ ApplicationWindow {
         // force the default network configs to a checked/unchecked status from the app
         onNetDefaultBox: {
             ckbDefaultNetwork.checked = status
-            console.log("Bassed Default Network check box status:", status)
+            console.log("Network check box status:", status)
         }
 
         // show build images config
@@ -729,7 +730,8 @@ ApplicationWindow {
         onBFinished: {
             buildProgressBars.visible = false
             boxFlash.visible = true
-            btBuild.enabled = false
+            // re-enable the build button
+            btBuild.enabled = true
         }
 
         // flash data percent
