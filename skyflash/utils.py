@@ -205,7 +205,7 @@ def setPath(dir):
     '''
 
     # default path for the user
-    path = os.path.expanduser('~')
+    workpath = os.path.expanduser('~')
 
     # where in the user's folder I need to put the  skybian folder:
     # linux and macos right in the home folder, windows on the document folder
@@ -214,31 +214,31 @@ def setPath(dir):
         # path has the c:\Users\[username] so we need to add the Documents folder
         # Windows has a trick for other langs beside English: Documents is the real
         # folder and other lang folders just point to that
-        path = os.path.join(path, "Documents")
+        workpath = os.path.join(workpath, "Documents")
 
     # now adding the app dir
-    path = os.path.join(path, dir)
+    workpath = os.path.join(workpath, dir)
 
     # test if the folder is already there
-    if not os.path.isdir(path):
+    if not os.path.isdir(workpath):
         # creating the folder, or not if created
-        os.makedirs(path, exist_ok=True)
+        os.makedirs(workpath, exist_ok=True)
 
-    # set downloads folder & path to checked file
-    downloads = os.path.join(path,"Downloads")
-    checked = os.path.join(downloads, ".checked")
+    # set downloads folder & path to config file
+    downloads = os.path.join(workpath,"Downloads")
+    config = os.path.join(workpath, "skyflash.conf")
 
     if not os.path.isdir(downloads):
         # creating a downloads folder inside it
         os.makedirs(downloads, exist_ok=True)
 
     # logging to console
-    print("App folder is {}".format(path))
+    print("App workfolder is {}".format(workpath))
     print("Downloads folder is {}".format(downloads))
-    print("Checked file will be {}".format(checked))
+    print("Config file is {}".format(config))
 
     # return it
-    return (path, downloads, checked)
+    return (workpath, downloads, config)
 
 def windowsDevices():
     '''This one is to get all the info about windows removable devices in
@@ -727,14 +727,10 @@ def eraseOldVersions(dlfolder, version):
     # iterate over the file list
     flist = os.listdir(dlfolder)
     for f in flist:
-        # ignore the checkd file
-        if f == ".checked":
-            continue
-
         # DEBUG
         print("Parsing item: {}".format(f))
 
-        # erase the file of not patch the version
+        # erase the file of not match the version
         if not version in f:
             item = os.path.join(dlfolder, f)
             # DEBUG

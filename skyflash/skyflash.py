@@ -15,6 +15,7 @@ import enum
 import string
 import tempfile
 import time
+import configparser
 from urllib.request import Request, urlopen
 
 # GUI imports
@@ -51,7 +52,8 @@ class Skyflash(QObject):
     localPathDownloads = ""
     localPath = ""
     localPathBuild = ""
-    checked = ""
+    config = configparser.ConfigParser()
+    config_file = ""
     netGw = ""
     netDns = ""
     netManager = ""
@@ -94,8 +96,10 @@ class Skyflash(QObject):
     dProg = pyqtSignal(float, arguments=["percent"])
     # target is hide download buttons
     dDone = pyqtSignal()
-    # target is show download buttons
+    # target is show download buttons and reset the whole UI
     sStart = pyqtSignal()
+    # target is show download buttons as ready to download
+    sDB = pyqtSignal()
 
     ## Signals related to the build process
 
@@ -140,6 +144,7 @@ class Skyflash(QObject):
 
     # network signals
     netConfig = pyqtSignal()
+    netDefaultBox = pyqtSignal(bool, arguments=["status"])
     buildImages = pyqtSignal()
 
     # thread pool
@@ -278,7 +283,7 @@ class Skyflash(QObject):
             self.uiError.emit("Flash file {} can't be verified!", "The Skybian image integrity check ended with a different fingerprint or a soft error, this image is corrupted or a soft error happened, please start again.", "Downloaded & computed Hash differs".format(filename))
 
     def cksumDone(self):
-        '''Callback that is flagged once the checkum was ended.'''
+        '''Callback that is flagged once the checksum was ended.'''
 
         # debug
         logging.debug("Checksum verification done")
@@ -291,17 +296,23 @@ class Skyflash(QObject):
             self.netConfig.emit()
             self.buildImages.emit()
 
-            # set the checked file
-            f = open(self.checked, 'w')
-            f.write(self.skybianFile + "\n")
-            f.close()
+            # set the config items and save them
+            self.config['MAIN']['setup'] = 'yes'
+            self.config['SKYBIAN']['verified'] = 'yes'
+            self.config['SKYBIAN']['file'] = self.skybianFile
+            self.config['SKYBIAN']['version'] = self.skybianFileVersion
+            self.save_config()
 
             # check if there are old files and clean it up
             eraseOldVersions(self.localPathDownloads, self.skybianFileVersion)
         else:
-            # TODO Raise error if checksum is bad
-            if os.path.exists(self.checked):
-                os.unlink(self.checked)
+            # error in the checksum process is not handled here, just at the end of the checksum, see cksumError for process errors
+
+            # cksum failed
+            self.config['SKYBIAN']['setup'] = 'no'
+            self.config['SKYBIAN']['file'] = ''
+            self.config['SKYBIAN']['version'] = ''
+            self.save_config()
 
     def cksumError(self, error):
         '''Process the error of the checksum, this only process error in the
@@ -367,6 +378,9 @@ class Skyflash(QObject):
         # check for cards timer start
         self.timerStart()
 
+        # config update
+        self.config['MAIN']['setup'] = 'yes'
+        self.save_config()
 
     # flash ones
 
@@ -421,6 +435,10 @@ To flash the next image just follow these steps:
 
         # reset the fail safe trigger
         self.flashingOnProgress = False
+
+        # config update
+        self.config['MAIN']['setup'] == 'yes'
+        self.save_config()
 
     def checkUpdatesResult(self, data):
         '''Receive the result of the check for updates via data
@@ -517,6 +535,7 @@ To flash the next image just follow these steps:
                 self.skybianUpdated = True
                 self.skybianUrl = data
                 self.setStatus.emit("Skybian download source updated...")
+                self.sDB.emit()
                 logging.debug("Skybian download source updated...")
 
                 # if it's a new version erase local one and restart the UI
@@ -1030,7 +1049,7 @@ To flash the next image just follow these steps:
         except:
             pass
 
-    def validateNetworkData(self, dgw, ddns, dmanager, dnodes):
+    def validateNetworkData(self, dgw, ddns, dmanager, dnodes, ui=True):
         '''Validate the network data passed by the QML UI
 
         gw: the network gateway
@@ -1058,13 +1077,15 @@ To flash the next image just follow these steps:
         # validation #1, are the manger & gw valid ips?
         gwValid, reason = validIP(gw)
         if not gwValid:
-            self.uiError.emit("Validation error", "The GW IP entered is not valid, please check that", reason)
+            if ui:
+                self.uiError.emit("Validation error", "The GW IP entered is not valid, please check that", reason)
             logging.debug("GW ip not valid: {}".format(gw))
             return False
 
         managerValid, reason = validIP(manager)
         if not managerValid:
-            self.uiError.emit("Validation error", "The Manager IP entered is not valid, please check that", reason)
+            if ui:
+                self.uiError.emit("Validation error", "The Manager IP entered is not valid, please check that", reason)
             logging.debug("Manager ip not valid: {}".format(manager))
             return False
 
@@ -1072,8 +1093,9 @@ To flash the next image just follow these steps:
         # from 1 to 3 IPs separated by ',' or space, or both
         ddns = splitDNS(dns)
         if ddns[0] == False:
-            reason = "DNS must be in the format '1.2.3.4, 2.3.4.5, 3.4.5.6'"
-            self.uiError.emit("Validation error",
+            if ui:
+                reason = "DNS must be in the format '1.2.3.4, 2.3.4.5, 3.4.5.6'"
+                self.uiError.emit("Validation error",
                               "The DNS string entered is not valid, please check that.",
                               reason)
             logging.debug("DNS string is not valid: '{}'".format(dns))
@@ -1081,7 +1103,8 @@ To flash the next image just follow these steps:
 
         # validation #3, gw and manager must be on the same IP range
         if gw[0:gw.rfind('.')] != manager[0:manager.rfind('.')]:
-            self.uiError.emit("Validation error",
+            if ui:
+                self.uiError.emit("Validation error",
                               "The manager and the gw are not in the same sub-net, please check that",
                               "Manager and Gateway must reside on the name subnet")
             logging.debug("Base address for the net differs in gw/manager: '{} vs. {}'".format(gw, manager))
@@ -1090,7 +1113,8 @@ To flash the next image just follow these steps:
         # validation #4, node counts + ip is not bigger than 255
         endip = int(manager[manager.rfind('.') + 1:]) + int(nodes)
         if endip >= 255:
-            self.uiError.emit("Validation error",
+            if ui:
+                self.uiError.emit("Validation error",
                               "The nodes IP distribution is beyond 254, please lower your manager ip",
                               "The IP of the nodes are distributed from the manager IP and up, if you set the manager node IP so high the node count may not fit")
             logging.debug("Manager IP to high, last node will be {} and that's not possible".format(endip))
@@ -1098,7 +1122,8 @@ To flash the next image just follow these steps:
 
         # validation #5, gw not in manager & nodes range
         if int(gw[gw.rfind('.') + 1:]) in range(int(manager[manager.rfind('.') + 1:]), endip):
-            self.uiError.emit("Validation error",
+            if ui:
+                self.uiError.emit("Validation error",
                               "Please check your GW, Manager & Nodes selection, the GW is one of the Nodes or Manager IPs",
                               "When we distribute the manager & nodes IP we found that the GW is one of that IP and that's wrong")
             logging.debug("GW ip is on generated nodes range.")
@@ -1113,7 +1138,7 @@ To flash the next image just follow these steps:
 
     @pyqtSlot(str, str, str, str)
     def builtImagesPath(self, gw, dns, manager, nodes):
-        '''Receives the info from the UT that the user want to build the images
+        '''Receives the info from the UI that the user want to build the images
         and the parameters to do it.
 
         We validate the data on the users interface first, if somethins is wrong
@@ -1169,6 +1194,14 @@ To flash the next image just follow these steps:
         self.netDns = dns
         self.netManager = manager
         self.netNodes = nodes
+
+        # push the values oin the config
+        self.config['NET']['configured'] = 'yes'
+        self.config['NET']['gw'] = gw
+        self.config['NET']['dns'] = dns
+        self.config['NET']['manager'] = manager
+        self.config['NET']['count'] = nodes
+        self.save_config()
 
         # Starting to build the nodes.
         # thead start
@@ -1286,6 +1319,7 @@ To flash the next image just follow these steps:
         
         # update the image list 
         self.images2flash = images
+        self.update_images_in_config(images)
 
         # close the file
         file.close()
@@ -1664,7 +1698,13 @@ To flash the next image just follow these steps:
             self.uiWarning.emit("Ops!", "There was an utility missing in your system!")
 
     def loadPrevious(self):
-        '''Check for a already downloaded and checksum tested image in the
+        '''WARNING legacy procedure, will be removed in future versions, deprecated in favor of
+        the use of configparser and a config file; now returns the file and version as a tuple
+        or a (false, false)
+
+        Original docstring follows
+
+        Check for a already downloaded and checksum tested image in the
         downloads folder
 
         If so enable the next steps, and show a comment to the user, the fact
@@ -1678,11 +1718,12 @@ To flash the next image just follow these steps:
 
         #  check if a file named .checked is on the downloads path
         baseImage = ""
-        if os.path.exists(self.checked):
+        checked = os.path.join(self.localPathDownloads, '.checked')
+        if os.path.exists(checked):
             # DEBUG
             logging.debug("Checked File exist")
 
-            f = open(self.checked)
+            f = open(checked)
             baseImage = f.readline().strip("\n")
             f.close()
             baseImageFile = baseImage.split(os.path.sep)[-1]
@@ -1703,24 +1744,16 @@ To flash the next image just follow these steps:
                 logging.debug("Base image exist on file system")
                 logging.debug("Loading....{}".format(baseImageFile))
 
-                self.skybianFile = baseImage
-                self.skybianFileVersion = self.getSkybianVersion(baseImage)
+                return (baseImage, self.getSkybianVersion(baseImage))
 
                 # DEBUG
                 logging.debug("Base image version is {}".format(self.skybianFileVersion))
-                logging.debug("Tweaking internals to show config and build steps visible")
-
-                self.extractionOK = True
-                self.setStatus.emit("Using local file: {}".format(baseImageFile))
-                self.dData.emit("Using file {}".format(baseImageFile))
-                self.netConfig.emit()
-                self.buildImages.emit()
             else:
                 # DEBUG
                 logging.debug("Base image does not exist")
 
                 # check file exist but image don't, erasing it
-                os.unlink(self.checked)
+                os.unlink(checked)
 
                 # DEBUG
                 logging.debug("Checked file erased as it's not useful")
@@ -1728,11 +1761,14 @@ To flash the next image just follow these steps:
             # DEBUG
             logging.debug("Base image from checked is empty")
 
-            if os.path.exists(self.checked): 
-                os.unlink(self.checked)
+            if os.path.exists(checked):
+                os.unlink(checked)
 
                 # DEBUG
                 logging.debug("Checked file erased as it's not useful")
+
+        # if you get here is tha there is no file
+        return (False, False)
 
     def checkForUpdates(self):
         '''Check for updates in a thread to not disturb the UI flow'''
@@ -1765,6 +1801,293 @@ To flash the next image just follow these steps:
 
         #  start flashing thread
         self.threadpool.start(self.updl)
+
+    @pyqtSlot(bool)
+    def defaultNetwork(self, status):
+        '''Receives a signal with the value of the default network check box'''
+
+        # which value
+        if status:
+            # ticked: default values
+            conf = self.create_config(True)
+            self.config['NET'] = conf['NET']
+            self.save_config()
+
+    def get_config(self):
+        '''Get the config file and load it. If empty or not present then create it with a basic structure.
+
+        This process triggers the status of the App in the following order:
+
+        MAIN > setup = yes|no (if no)
+            Abort config, just created a new one
+
+        SKYBIAN > verified = yes|no (if yes)
+            Process and load the skybian file (check if there, etc)
+            Triggers the network part show
+
+        NET > default = yes|no (if no)
+            Load net parameters as local vars
+            Validate the local net config
+            upload it to the UI
+
+        IMAGES > generated = yes|no (if yes)
+            load the values
+            Check if the files are there
+            Load them in the class var
+            Update the UI.
+
+        '''
+
+        #### Internal procedures follows
+
+        # reset skybian config
+        def reset_skybian_config():
+            '''To reset the SKYBIAN section fo the config to the default values'''
+
+            # get the default config
+            conf = self.create_config(True)
+            self.config['SKYBIAN'] = conf['SKYBIAN']
+            self.save_config()
+
+        # if the net config stored the default one?
+        def is_net_conf_default():
+            '''Returns true or false if the net config is the same as the default'''
+
+            # get the default config
+            conf = self.create_config(True)
+            if self.config['NET'] == conf['NET']:
+                return True
+            else:
+                return False
+
+        # reset net config
+        def reset_net_config():
+            '''To reset the NET section of the config to the default values'''
+
+            # get the default config
+            conf = self.create_config(True)
+            self.config['NET'] = conf['NET']
+            self.save_config()
+
+        # is there?
+        if not os.path.exists(self.config_file):
+            # create a new one
+            logging.debug("Config File not present, creating one")
+            self.create_config()
+
+        # fail safe for invalid data
+        try:
+            # now load it
+            self.config.read(self.config_file)
+            logging.debug("Config File loaded, parsing...")
+
+            # validate some of the config items
+            if self.config['MAIN']['setup'] == 'no':
+                # first run, don't load anything
+                logging.debug("First time run, default loaded")
+
+                # resetting it to protect us from a sloppy/curious user
+                self.create_config()
+            else:
+                # non default config
+                logging.debug("Config file has custom data")
+
+            # TODO
+            # DEPRECATED erase this 'if' on ver 0.7 and forward
+            if self.config['SKYBIAN']['verified'] == 'no':
+                logging.debug("Skybian file not verified acording to config file, testing the filesystem...")
+
+                # try to detect it on the fs
+                (file, version) = self.loadPrevious()
+
+                if file != False:
+                    logging.debug("Found a valid local skybian copy, loading it [WARNING! this feature will be deprecated]")
+                    self.config['SKYBIAN'] = {
+                                            'verified' : 'yes',
+                                            'file' : file,
+                                            'version' : version,
+                                        }
+                    self.save_config()
+
+            # skybian present ?
+            if self.config['SKYBIAN']['verified'] == 'yes':
+                skybian_file = self.config['SKYBIAN']['file']
+                if os.path.exists(skybian_file):
+                    logging.debug("Skybian file already on the FS, so we will use it")
+                    self.skybianFile = skybian_file
+                    self.skybianFileVersion = self.config['SKYBIAN']['version']
+
+                    self.extractionOK = True
+                    self.setStatus.emit("Using local file: {}".format(shortenPath(self.skybianFile, 20)))
+                    self.dData.emit("Using file {}".format(shortenPath(self.skybianFile, 20)))
+                    self.netConfig.emit()
+                    self.buildImages.emit()
+
+                else:
+                    # Verified but the file is not present... ?
+                    logging.debug("Config file says there is a skybian image, but we can't find it... fixing config")
+                    reset_skybian_config()
+
+            else:
+                # reset config
+                reset_skybian_config()
+                logging.debug("No custom config about the Skybian file")
+
+            # Test the net part
+            if self.config['NET']['configured'] == 'yes':
+                # net part appears to be in place
+                logging.debug("NET section custom config detected.")
+
+                # is net conf default?
+                if not is_net_conf_default():
+                    logging.debug("NET section config is loaded and not the default, validating...")
+                    # load the net parameters as locals and validate them before passing to the app
+                    lgw = self.config['NET']['gw']
+                    ldns = self.config['NET']['dns']
+                    lmanager = self.config['NET']['manager']
+                    lcount = self.config['NET']['count']
+
+                    # now test them
+                    result = self.validateNetworkData(lgw, ldns, lmanager, lcount, ui=False)
+                    if result:
+                        # ok, network data in place
+                        logging.debug("NET section config validated...")
+
+                        # tell the UI that we need the Network visible
+                        self.netDefaultBox.emit(False)
+
+                    else:
+                        # Failed to validate
+                        logging.debug("NET section config is broken, resetting to defaults...")
+
+                        # Load defaults and notify UI
+                        self.netDefaultBox.emit(True)
+                        reset_net_config()
+
+                else:
+                    # logging
+                    logging.debug("NET section config is default, loading...")
+
+                    # reset it just in case
+                    self.netDefaultBox.emit(True)
+                    reset_net_config()
+
+            else:
+                logging.debug("No custom config about the network parameters")
+
+            # Test the images part
+            if self.config['IMAGES']['generated'] == 'yes':
+                # ok, we have a set of images generated
+                logging.debug("IMAGES section has some generated images, parsing it...")
+
+                # this var will hold the image list from the config & FS
+                images = []
+
+                for (option, value) in self.config['IMAGES'].items():
+                    # filter just the image ones
+                    if 'image' in option:
+                        if value is '':
+                            continue
+
+                        if os.path.isfile(value):
+                            # is there, adding it to the count
+                            images.append(value)
+                            logging.debug("Adding image: {}".format(value))
+                        else:
+                            # not there but in file, pop the config
+                            self.config.remove_option('IMAGES', option)
+                            self.save_config()
+                            logging.debug("Config image {} not found, removing from config".format(value))
+
+                # images has the valid images from the config and FS, passing it to main class
+                self.images2flash = [x[x.rfind(os.path.sep) + 1:] for x in images]
+
+                # notify the UI about the images
+                self.bFinished.emit()
+
+                # check for cards timer start
+                self.timerStart()
+            else:
+                logging.debug("No custom config about the local generated images")
+        except:
+            # some error in the loading of the config with bad parameters or simply the user
+            # mangled it trying to fix/force something.
+
+            # create a new clean config
+            self.create_config()
+
+            # now load it
+            self.config.read(self.config_file)
+            logging.debug("Mangled config file detected, resetting it and loading defaults")
+
+            # erase old/previous (now orphaned) images from the default dir
+            logging.debug("As we are resetting we need to also erase the now orphaned images on this system")
+            flist = os.listdir(self.localPathBuild)
+            for f in flist:
+                if ".img" in f:
+                    item = os.path.join(self.localPathBuild, f)
+                    if os.path.isfile(item):
+                        os.unlink(item)
+                        logging.debug("Orphaned file {} erased".format(item))
+
+    def create_config(self, passit = False):
+        '''Create a empty and default config file in the local filesystem'''
+
+        conf = configparser.ConfigParser()
+        conf['MAIN'] = {
+                            'setup' : 'no',
+                            }
+
+        conf['SKYBIAN'] = {
+                            'verified' : 'no',
+                            'file' : '',
+                            'version' : '',
+                            }
+
+        conf['NET'] = {
+                            'configured' : 'no',
+                            'gw' : '192.168.0.1',
+                            'dns' : '1.0.0.1, 1.1.1.1',
+                            'manager' : '192.168.0.2',
+                            'count' : '2',
+                            }
+
+        conf['IMAGES'] = {
+                            'generated' : 'no',
+                            'image0' : ''
+                            }
+
+        if passit is False:
+            self.config = conf
+            self.save_config()
+        else:
+            return conf
+
+    def save_config(self):
+        '''Save the configuration in the filesystem'''
+
+        with open(self.config_file, 'wt') as configfile:
+            ret = self.config.write(configfile)
+            logging.debug("Configuration Saved/Updated")
+
+
+    def update_images_in_config(self, images):
+        '''Get the list of images built and update the config file with them'''
+
+        # no parameters passed
+        if len(images) is 0:
+            return
+
+        # ok, it's time to update.
+        self.config['IMAGES']['generated'] = 'yes'
+        logging.debug("IMAGES section needs update")
+
+        # images...
+        for i in range(len(images)):
+            self.config['IMAGES']['image{}'.format(i)] = os.path.join(self.localPathBuild, images[i])
+
+        # save config file.
+        self.save_config()
 
 # load the instance
 Skyflash.instance = Skyflash()

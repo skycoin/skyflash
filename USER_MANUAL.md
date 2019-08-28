@@ -50,7 +50,7 @@ If the app finds any problem on any of this two operations (mainly due to corrup
 
 ### About folders and magic
 
-We incorporated a magic effect into Skyflash to ease your life, go & close the app at this point and re-open it... you will see it knows that it has already a Skybian base image and it will show ready for steps #2 & #3
+We incorporated a magic effect into Skyflash to ease your life, go & close the app at this point and re-open it... you will see it knows that it has already a Skybian base image and it will show ready for next steps.
 
 The magic resides in the Skyflash app folder, once you run it for the first time it will create a folder named Skyflash in a specific place depending on your OS:
 
@@ -60,11 +60,13 @@ The magic resides in the Skyflash app folder, once you run it for the first time
 | Linux | ~/Skyflash | Inside your home directory |
 | MacOS | ~/Skyflash | Inside your home directory |
 
-Please take a moment to find this folder, inside it you will find at least a `Downloads` folder and a file called Skyflash.log
+Please take a moment to find this folder, inside it you will find at least this:
 
-Mac OS users may get confused as some times there is no Home directory bookmark in finder, simply search for the Documents folder in Finder and press `cmd + up key` that's your home folder, now you can drag it to the bookmarks; inside it you will see a Skyflash folder.
+- A `Downloads` folder: here will reside the downloaded Skybian image, it's extracted image and checksums
+- A file called `skyflash.log`: this is the log of actions with debug info in case of troubles or if reporting a bug
+- A file called `skyflash.conf`: this file holds the configurations state of the software between runs
 
-The download folder is the place where the app put the downloaded & extracted base images plus some other files, the Skyflash.log file is just that: the log file for all operations & you will love it if you get in trouble at some point.
+Mac OS users may get confused as some times there is no Home directory bookmark in finder, simply search for the Documents folder in Finder and press `cmd + up` and that's your home folder, now you can drag it to the bookmarks; inside it you will see a Skyflash folder.
 
 This folder will also be the default place for your custom Skybian images _(you can change this later)_, so don't forget it.
 
@@ -115,9 +117,9 @@ When this process finish you will have the images in your selected Skybian folde
 
 ![Ready to flash the images](/images/flashing-start.png)
 
-You may want to flash the image now or later, if you want to do it now then you may follow the steps below, if not we recommend [BalenaEtcher](https://www.balena.io/etcher/) a multi-platform flashing tool that will do the task once you have the images generated.
+The flash process can be done now or later, simply close the app and re-open it, it will pick up where it left.
 
-**A word of warning:** once you generate the images and close Skyflash you will not be able to use Skyflash to burn the same images unless you re-generate the images. For this reason we recommend to have a copy of BalenaEtcher at hand to burn the previously generated images.
+But a word of warning here: if you build more than one set of images with different configs _(for example for two different miners with different network configs)_ Skyflash will only remember the las one used. if it's your case we recommend to have a copy of BalenaEtcher at hand to burn the generated images not remembered by skyflash
 
 To start the flashing process you need to select the proper device, and image in the combo boxes, but first a needed warning:
 
@@ -137,12 +139,14 @@ Once the flashing of that device ends a popup dialog will explain that you can n
 
 ### SD Cards and flash process duration
 
-The flash process depends on the speed of your SD card, using Class 10 or higher class cards is mandatory or you will risk your data with an failed card due to wear out or experience low performance.
+The flash process time depends on the speed of your SD card & hardware, using Class 10 or higher uSD cards is mandatory or you will risk your data with a failed card due to wear out or experience low performance, also some cheap USB uSD card adapters are prone to have low speeds
 
-But yes, flashing one card can take about 3 to 5 minutes depending on flash class & specs.
+The status bar shows you the write speed and the estimate time left _(check the image above)_ the example image is taken while flashing a card via a USB-C hub from Lenovo with a A-DATA Class 10 uSD card, top hardware speed is reached as you can see, as usual you experience may vary
+
+Flashing one card can take about 2 to 6 minutes depending on flash class & hardware specs, again the speed limit is always set by the hardware used
 
 ## Why skyflash ask for credentials or privileged operations?
 
-Flashing to a uSD Card is a privileged operation and Skyflash has built a mechanism to get that privileges at some point.
+Flashing an image to a uSD Card is a privileged operation and Skyflash has built a mechanism to get that privileges at some point
 
-Depending on your operating system you will see a credential asking box sooner or later, in Windows the privilege asking happens at the start of the app, on Linux on the start of each flash operation.
+Depending on your operating system you will see a credential asking box sooner or later, in Windows the privilege asking happens at the start of the app, on Linux/osx on the start of each flash operation

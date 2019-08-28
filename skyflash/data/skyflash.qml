@@ -104,7 +104,6 @@ ApplicationWindow {
         standardButtons: StandardButton.Yes | StandardButton.No
 
         onYes: {
-            console.log("User accepted")
             skf.imagesBuild(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text, "no")
         }
 
@@ -151,7 +150,7 @@ ApplicationWindow {
             }
 
             MenuItem {
-                text: "About."
+                text: "About"
                 onTriggered: aboutDiag.open()
             }
         }
@@ -289,6 +288,8 @@ ApplicationWindow {
                         txtNodes.enabled = false
                         // net details are not shown
                         networkDetails.visible = false
+                        // tell the app we have checked the checkbox
+                        skf.defaultNetwork(true)
                     } else {
                         // enable the fields for edit
                         txtGateway.enabled = true
@@ -297,6 +298,8 @@ ApplicationWindow {
                         txtNodes.enabled = true
                         // net details are shown
                         networkDetails.visible = true
+                        // tell the app we have un-checked the checkbox
+                        skf.defaultNetwork(false)
                     }
 
                     // if you change the config of the network and the
@@ -399,6 +402,7 @@ ApplicationWindow {
                     onClicked: {
                         // call skyflash to build the images
                         skf.builtImagesPath(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text)
+                        btBuild.enabled = false
                     }
                 }
 
@@ -629,10 +633,24 @@ ApplicationWindow {
             boxBuild.visible = false
         }
 
+        // set the download button to visible after the update of the skybian URL
+        // needed if the internet is slow and the user click the download button earlier
+        onSDB: {
+            btDown.visible = true
+            btDown.text = "Download"
+            btDown.tooltip = "Click here to download the base Skybian image from the official site"
+        }
+
         // show network config
         onNetConfig: {
             // set next step visible
             boxNetwork.visible = true
+        }
+
+        // force the default network configs to a checked/unchecked status from the app
+        onNetDefaultBox: {
+            ckbDefaultNetwork.checked = status
+            console.log("Network check box status:", status)
         }
 
         // show build images config
@@ -712,7 +730,8 @@ ApplicationWindow {
         onBFinished: {
             buildProgressBars.visible = false
             boxFlash.visible = true
-            btBuild.enabled = false
+            // re-enable the build button
+            btBuild.enabled = true
         }
 
         // flash data percent
