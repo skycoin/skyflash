@@ -24,10 +24,12 @@ Dates must be YEAR-MONTH-DAY
 
 - Some UI improvements and fixes: reformat the about box, fix the grammar of a sentences and delay the browser popup after the "new version of skyflash" is detected.
 - Configuration load between runs now relays on a config file rather than a dynamic detection (see deprecated section), this for local skybian file and version and app status
+- State detection of the app upgraded, now we use a configuration file (skyflash.conf) on the work folder to store the app state and vars
 
 ### Added
 
 - Now the flashing process shows the write speed and the time left (both as average of the whole flash process)
+- Users can now flash already built images upon app start (no more need to re-built to flash)
 
 ### Deprecated
 
