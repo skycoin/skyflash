@@ -24,7 +24,7 @@ To see more detailed instructions on how to use the Skyflash utility please visi
 
 If you are eager to build it yourself take into account that the base OS for dev is Ubuntu 18.04 LTS, but most of it works on OSX also if you tweak some items _(see notes below)_
 
-The project use the GNU Make to test and build so you can as for help like this `make help`:
+The project use the GNU Make to test and build so you can ask for help like this `make help`:
 
 ```
 $ make help
