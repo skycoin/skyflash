@@ -150,7 +150,7 @@ ApplicationWindow {
             }
 
             MenuItem {
-                text: "About."
+                text: "About"
                 onTriggered: aboutDiag.open()
             }
         }
