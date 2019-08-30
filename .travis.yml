@@ -61,11 +61,10 @@ deploy:
   - provider: releases
     api_key: $OAUTH
     file_glob: true
-    file:
-      - "final/*"
     draft: true
     overwrite: true
     skip_cleanup: true
     on:
-      all_branches: true
-      condition: "$TRAVIS_BRANCH =~ ^master$|^release-.*$"
+      tags: true
+    file:
+      - "final/*"
