@@ -52,7 +52,8 @@ notifications:
 
 # make the apps for each OS
 before_deploy:
-  - ./travis/before_deploy.sh $TARGETOS
+  - export VERSION="$(git describe --tags --exact-match HEAD 2> /dev/null)"
+  - ./travis/before_deploy.sh ${TARGETOS} ${VERSION}
   - ls -l ./final/
 
 # deploy to Github
