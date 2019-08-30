@@ -58,32 +58,34 @@ As you can see the options are self explanatory, just a few must know notes:
 
 If you plan to work on the project or just generate your own binaries using travis deploy mechanism you need to follow a few steps to do so.
 
-0. Clone the repository in a personal or org repository (default develop one is at [Simelo organization in Github](https://github.com/simelo/skyflash)) and check travis has take over it and is building it on simple commits from your side.
+0. Clone the repository in a personal or organizational repository (default develop one is at [Simelo organization in Github](https://github.com/simelo/skyflash)) and check travis has take over it and is building it on simple commits from your side.
 0. Create a [Personal Access Token](https://github.com/settings/tokens) in your Github repository to allow the deploy action on release conditions, copy the token value to the clipboard.
 0. Go to your travis builds for this repository and look for the settings, set the token generated as a environment variable named OAUTH
 
-With this settings in place, you can push to the master or release-* branches of your repository and Travis will generate a deploy action on completion to your repository in Github.
+With this settings in place, you can push to both local and official repository with no fuzz
 
 ### Releases
 
 To do a release you must follow these steps:
 
-0. Clone the repository develop branch in a personal or org repository (default develop one is at [Simelo organization in Github](https://github.com/simelo/skyflash)) follow the above section to configure your repository to produce releases on your repository
+0. Clone the repository develop branch in a personal or organizational repository (default develop one is at [Simelo organization in Github](https://github.com/simelo/skyflash)) follow the above section to configure your repository to produce releases on your repository
 0. Check if there are commits on the skycoin/master that must be applied to your develop branch (hot fixes or security ones), apply them and fix any merge issues
 0. Create a release-v#.#.# branch in your repository from the develop branch, this will be the release playground, the numbers are the next logical release, see [CHANGELOG](CHANGELOG.md) file to see what's next
-0. Use your develop branch to hold the latest code and use release-v#.#.# branch to trigger builds in your repository, it will produce (via travis) 3 new draft releases in your github repository each time you commit to it
 0. Check any pending issues in order to close them if possible on this release cycle (use local branches and at the end mix them with develop)
-0. Update the new version number in the `setup.py`, `skyflash/data/skyflash.qml` & `skyflash/utils.py` files.
-0. Update the `CHANGELOG.md` file with any needed info and move the `Unreleased` part to the new release version.
-0. Review & update the `README.md` file for any needed updates or changes that need attention in the front page.
-0. Push changes to your release-v#.#.# brach and wait for travis to validate all the changes.
-0. On success, check the draft release is published on the repository, download the releases files and test them.
-0. If problems are found with raise issues where needed (skyflash/skybian) and fix them before continue with the next step.
+0. From this point forward work on the release-v#.#.# branch
+0. Update the new version number in the `setup.py`, `skyflash/data/skyflash.qml` & `skyflash/utils.py` files
+0. Update the `CHANGELOG.md` file with any needed info and move the `Unreleased` part to the new release version
+0. Review & update the `README.md` file for any needed updates or changes that need attention in the front page
+0. Push changes to your release-v#.#.# brach and wait for travis to validate all the changes
+0. Tag the actual point as `Skyflash_v#.#.#-rc` and push this tag to your repository
+0. On success, check the draft release is published on the repository, download the releases files and test them
+0. If problems are found with raise issues where needed (skyflash/skybian) and fix them before continue with the next step
 0. After all problems are solved and work as expected update the `version.txt` file with the version number, like this: v0.0.4
+0. Remove the local & remote tag in created in the previous steps
 0. Raise a PR against master branch in the skycoin repository, solve any issues and merge it (or wait for a privileged user to do it)
-0. Wait for travis completion and check the release files are published on the Github repository under releases.
-0. Edit & comment the release with the changes in CHANGELOG.md that match this release, change status from Draft to Official release.
-0. Merge master into develop.
+0. After solving the issues and travis validation of them, tag the actual point with the version number you wrote on the version.txt and push it
+0. Waith for deploy to finish, go to Github and edit & comment the release with the changes in CHANGELOG.md that match this release, change status from Draft to Official release
+0. Merge master into develop
 0. Check if there is needed to raise issues & PR on the following repositories:
 
     * [Skybian](https://github.com/skycoin/skybian): if needed.

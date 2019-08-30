@@ -1,0 +1,7 @@
+PyQt5 >= 5.12.1
+PyQt5-sip >= 4.19.15
+sip >= 4.19.6
+wmi >= 1.4.8
+requests >= 2.18.0
+# This dependency is only for windows, it crash the process in osx/linux
+pywin32 >= 223

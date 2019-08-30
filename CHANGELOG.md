@@ -25,11 +25,14 @@ Dates must be YEAR-MONTH-DAY
 - Some UI improvements and fixes: reformat the about box, fix the grammar of a sentences and delay the browser popup after the "new version of skyflash" is detected.
 - Configuration load between runs now relays on a config file rather than a dynamic detection (see deprecated section), this for local skybian file and version and app status
 - State detection of the app upgraded, now we use a configuration file (skyflash.conf) on the work folder to store the app state and vars
+- Deployment and release procedure, see section Added below.
+- Name change for the different release apps per OS, the name mask is as follows: Skyflash_${version}_${OS}_${ARCH}.{extension_by_os}, for example: Skyflash_v0.0.5-beta_windows.exe
 
 ### Added
 
 - Now the flashing process shows the write speed and the time left (both as average of the whole flash process)
 - Users can now flash already built images upon app start (no more need to re-built to flash)
+- Now the deploy into Github happens with just one artifact under a tag and with the 3 apps for the different OS
 
 ### Deprecated
 

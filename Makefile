@@ -64,21 +64,25 @@ win-flasher-dev: ## Create the flasher tool for windows (no internet needed if y
 	cd win-build && docker run --rm -v "$(PWDWIN):/src/" pyinstaller-win64py3:skyflash
 
 win: clean win-flasher ## Create a windows static app (for travis only)
+	mv requirements.txt requirements_lin.txt && cp requirements_win.txt requirements.txt
 	docker run --rm -v "$(PWD):/src/" cdrx/pyinstaller-windows 
+	mv requirements_lin.txt requirements.txt
 	cd dist/windows && 7z a skyfwi.7z skyflash-gui/
 	cp win-build/7zSD.sfx dist/windows/
 	cp win-build/sfx_config.txt dist/windows/
-	cd dist/windows && cat 7zSD.sfx sfx_config.txt skyfwi.7z > Skyflash.exe
-	mv dist/windows/*.exe final/
+	cd dist/windows && cat 7zSD.sfx sfx_config.txt skyfwi.7z > skyflash.exe
+	mv dist/windows/skyflash.exe final/
 	ls -lh final/
 
 win-dev: clean win-flasher-dev ## Create a windows static app using local dev tools (no internet needed if you run "make deps-windows" already)
+	mv requirements.txt requirements_lin.txt && cp requirements_win.txt requirements.txt
 	docker run --rm -v "$(PWD):/src/" pyinstaller-win64py3:skyflash
+	mv requirements_lin.txt requirements.txt
 	cd dist/windows && 7z a skyfwi.7z skyflash-gui/
 	cp win-build/7zSD.sfx dist/windows/
 	cp win-build/sfx_config.txt dist/windows/
-	cd dist/windows && cat 7zSD.sfx sfx_config.txt skyfwi.7z > Skyflash.exe
-	mv dist/windows/*.exe final/
+	cd dist/windows && cat 7zSD.sfx sfx_config.txt skyfwi.7z > skyflash.exe
+	mv dist/windows/skyflash.exe final/
 	ls -lh final/
 
 posix-streamer: ## Create the linux/macos streamer to help with the flashing
@@ -87,14 +91,15 @@ posix-streamer: ## Create the linux/macos streamer to help with the flashing
 
 linux-static: clean posix-streamer ## Create a linux amd64 compatible static (portable) app
 	python3 -m PyInstaller skyflash-gui.spec
-	cd dist && gzip skyflash-gui
-	mv dist/skyflash-gui.gz final/skyflash-gui_linux64-static.gz
+	cd dist && mv skyflash-gui skyflash && gzip skyflash
+	mv dist/skyflash.gz final/
 	ls -lh final/
 
 macos-app: clean posix-streamer ## Create the macos standalone app
 	python3 -m PyInstaller skyflash-gui.spec
-	cd dist && tar -cvzf skyflash-app.tgz skyflash-gui.app
-	mv dist/skyflash-app.tgz final/skyflash-macos-app.tgz
+	cd dist && mv skyflash-gui.app skyflash.app
+	cd dist && tar -cvzf skyflash.tgz skyflash.app
+	mv dist/skyflash.tgz final/
 	ls -lh final/
 
 help:
