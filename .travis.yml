@@ -1,3 +1,4 @@
+# main build matrix
 matrix:
   include:
     - name: "Xenial Linux with Python 3.6"
@@ -8,8 +9,6 @@ matrix:
       language: python
       python:
         - "3.6"
-      before_install: 
-        - python3 --version ; pip3 --version
       # Specific OS selection
       env: TARGETOS=linux
 
@@ -17,8 +16,6 @@ matrix:
       os: osx
       osx_image: xcode10.2
       language: shell
-      before_install: 
-        - python3 --version ; pip3 --version
       env: TARGETOS=osx
 
     - name: "Windows (Wine over Ubuntu Xenial) with Python 3.6"
@@ -29,61 +26,46 @@ matrix:
       language: python
       python:
         - "3.6"
-      before_install:
-        - python3 --version ; pip3 --version
       services:
         - docker
       env: TARGETOS=windows
 
-# install dependencies depending on the OS
+# Showing the python3 & pip versions for debug
+before_install:
+  - echo "Getting python & pip version"
+  - python3 --version
+  - pip3 --version
+
+# install dependencies depending on the particular OS
 install: 
   - ./travis/install.sh $TARGETOS
 
+# build & test scripts
 script:
   - make init
   - make build
 
+# notifications (only via telegram)
 notifications:
   email: false
   webhooks: https://fathomless-fjord-24024.herokuapp.com/notify
 
+# make the apps for each OS
 before_deploy:
   - ./travis/before_deploy.sh $TARGETOS
+  - ls -l ./final/
 
-# deploy step
+# deploy to Github
 deploy:
   # deploy on linux
   - provider: releases
     api_key: $OAUTH
     file_glob: true
     file:
-      - "final/*linux64-static.gz"
+      - "final/*"
     draft: true
+    overwrite: true
     skip_cleanup: true
     on:
       all_branches: true
-      condition: "$TARGETOS = linux && $TRAVIS_BRANCH =~ ^master$|^release-.*$"
-  
-  # deploy on macos
-  - provider: releases
-    api_key: $OAUTH
-    file_glob: true
-    file:
-      - "final/*-app.tgz"
-    draft: true
-    skip_cleanup: true
-    on:
-      all_branches: true
-      condition: "$TARGETOS = osx && $TRAVIS_BRANCH =~ ^master$|^release-.*$"
-  
-  # deploy on windows
-  - provider: releases
-    api_key: $OAUTH
-    file_glob: true
-    file:
-      - "final/*.exe"
-    draft: true
-    skip_cleanup: true
-    on:
-      all_branches: true
-      condition: "$TARGETOS = windows && $TRAVIS_BRANCH =~ ^master$|^release-.*$"
+      condition: "$TRAVIS_BRANCH =~ ^master$|^release-.*$"
