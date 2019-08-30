@@ -27,5 +27,5 @@ if [ ${1} = 'windows' ]; then
     make win
 
     # rename the final app
-    mv final/skyflash.exe final/Skyflash_${2}_${1}_amd64.gz
+    mv final/skyflash.exe final/Skyflash_${2}_${1}_amd64.exe
 fi

@@ -97,7 +97,7 @@ linux-static: clean posix-streamer ## Create a linux amd64 compatible static (po
 
 macos-app: clean posix-streamer ## Create the macos standalone app
 	python3 -m PyInstaller skyflash-gui.spec
-	cd dist mv skyflash-gui.app skyflash.app
+	cd dist && mv skyflash-gui.app skyflash.app
 	cd dist && tar -cvzf skyflash.tgz skyflash.app
 	mv dist/skyflash.tgz final/
 	ls -lh final/
