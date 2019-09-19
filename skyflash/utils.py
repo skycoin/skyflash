@@ -279,9 +279,10 @@ def windowsDevices():
     return data
 
 def linuxMediaDevices():
-    ''' List the media devices that are removable in liunux
+    ''' List the media devices that are removable in linux
 
     If the major number is 8, that indicates it to be a disk device.
+    Also see issue #85, there are major type 179 also in some cards
 
     The minor number is the partitions on the same device:
     - 0 means the entire disk
@@ -303,7 +304,7 @@ def linuxMediaDevices():
             device_name = words[3]
 
             # disk devices by device name, not partitions
-            if (major_number == 8) and not (minor_number % 16):
+            if ((major_number == 8) or (major_number == 179)) and not (minor_number % 16):
                 devices.append("/dev/" + device_name)
 
         # data return
