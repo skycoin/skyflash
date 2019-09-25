@@ -231,6 +231,13 @@ ApplicationWindow {
                 Label {
                     id: lbImageComment
                     Layout.fillWidth: true
+                    onLinkActivated: Qt.openUrlExternally(link)
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.NoButton
+                        cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    }
+
                     text: ""
                 }
             }

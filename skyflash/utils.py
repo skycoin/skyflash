@@ -59,25 +59,29 @@ def splitDNS(dnsString):
     return dns
 
 def shortenPath(fullpath, ccount):
-    '''Shorten a passed FS path to a char count size'''
+    '''Shorten a passed FS path to a char count size
+
+    If ccount is -1 then return the last part of the path
+    '''
 
     fpath = fullpath.split(os.sep)
     fpath.reverse()
     spath = fpath[0]
 
-    # cycle from back to start to fit on ccount
-    for item in fpath:
-        if item == fpath[0]:
-            # filename
-            spath = item
-        else:
-            # folders
-            tspath = item + os.sep + spath
-            if len(tspath) > ccount:
-                spath = "..." + os.sep + spath
-                break
+    if ccount != -1:
+        # cycle from back to start to fit on ccount
+        for item in fpath:
+            if item == fpath[0]:
+                # filename
+                spath = item
             else:
-                spath = tspath
+                # folders
+                tspath = item + os.sep + spath
+                if len(tspath) > ccount:
+                    spath = "..." + os.sep + spath
+                    break
+                else:
+                    spath = tspath
 
     # spath has the final shorted path
     return spath

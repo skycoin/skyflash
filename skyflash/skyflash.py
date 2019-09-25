@@ -1918,8 +1918,8 @@ To flash the next image just follow these steps:
                     self.skybianFileVersion = self.config['SKYBIAN']['version']
 
                     self.extractionOK = True
-                    self.setStatus.emit("Using local file: {}".format(shortenPath(self.skybianFile, 20)))
-                    self.dData.emit("Using file {}".format(shortenPath(self.skybianFile, 20)))
+                    self.setStatus.emit("Using local file: {}".format(shortenPath(self.skybianFile, -1)))
+                    self.dData.emit("Open the <a href='file://{}'>work image folder</a>".format(self.localPathBuild))
                     self.netConfig.emit()
                     self.buildImages.emit()
 
