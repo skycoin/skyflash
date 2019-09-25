@@ -127,6 +127,7 @@ ApplicationWindow {
 
         onRejected: {
             sbText.text = "You need to choose a folder, cancelling the build."
+            btBuild.enabled = true
         }
     }
 
@@ -231,6 +232,14 @@ ApplicationWindow {
                 Label {
                     id: lbImageComment
                     Layout.fillWidth: true
+
+                    onLinkActivated: Qt.openUrlExternally(link)
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.NoButton
+                        cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    }
+
                     text: ""
                 }
             }
@@ -408,6 +417,15 @@ ApplicationWindow {
 
                 Label {
                     id: lbBuild
+                    Layout.fillWidth: true
+
+                    onLinkActivated: Qt.openUrlExternally(link)
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.NoButton
+                        cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    }
+
                     text: ""
                 }
             }
