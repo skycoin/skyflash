@@ -28,6 +28,9 @@ Dates must be YEAR-MONTH-DAY
 - Deployment and release procedure, see section Added below.
 - Name change for the different release apps per OS, the name mask is as follows: Skyflash_${version}_${OS}_${ARCH}.{extension_by_os}, for example: Skyflash_v0.0.5-beta_windows.exe
 - Improved the Linux SD card detection code, adding block devices with major type 179 and prevent devices named as mmcblk to being masked by the algorithm even if they are tagged as non removable
+- Improved the info shown in the labels next to the 'Browse [skybian image]' and 'Build image' buttons, now with more useful and logic infos
+- Status bar infos also updated with more useful info
+- Fixed a bug about the build button being disabled if you refuse to use any directory to build the images
 
 ### Added
 
