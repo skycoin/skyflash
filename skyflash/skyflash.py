@@ -534,7 +534,6 @@ To flash the next image just follow these steps:
                 # valid
                 self.skybianUpdated = True
                 self.skybianUrl = data
-                self.setStatus.emit("Skybian download source updated...")
                 self.sDB.emit()
                 logging.debug("Skybian download source updated...")
 
@@ -548,6 +547,9 @@ To flash the next image just follow these steps:
                         self.uiWarning.emit("New version of Skybian", "We have detected a new version of Skybian, please download the new version")
                         eraseOldVersions(self.localPathDownloads, "---")
                         self.sStart.emit()
+                        self.setStatus.emit("Skybian version outdated, you need to upgrade it")
+                    else:
+                        self.setStatus.emit("Skybian version is up to date")
             else:
                 # tried but failed
                 self.skybianUpdated = None
@@ -562,7 +564,7 @@ To flash the next image just follow these steps:
             logging.debug("Using the default Skybian download source")
         else:
             # already
-            logging.debug("Skybian URL already updated...")
+            logging.debug("Skybian URL already updated")
 
     @pyqtSlot()
     def downloadSkybian(self):
