@@ -373,7 +373,7 @@ class Skyflash(QObject):
         '''
 
         self.setStatus.emit("Images build was a success, next step is flashing!")
-        self.bData.emit("All images were built")
+        self.bData.emit("Check <a href='file://{}'>images folder</a>".format(self.localPathBuild))
         self.bFinished.emit()
         # check for cards timer start
         self.timerStart()
@@ -1919,7 +1919,7 @@ To flash the next image just follow these steps:
 
                     self.extractionOK = True
                     self.setStatus.emit("Using local file: {}".format(shortenPath(self.skybianFile, -1)))
-                    self.dData.emit("Open the <a href='file://{}'>work image folder</a>".format(self.localPathBuild))
+                    self.dData.emit("Using: {}".format(shortenPath(self.skybianFile, -1)))
                     self.netConfig.emit()
                     self.buildImages.emit()
 
@@ -2005,6 +2005,9 @@ To flash the next image just follow these steps:
                 # notify the UI about the images
                 self.bFinished.emit()
 
+                # add the UI feedback about the image folder
+                self.bData.emit("Check the <a href='file://{}'>images folder</a>".format(self.localPathBuild))
+
                 # check for cards timer start
                 self.timerStart()
             else:
@@ -2069,7 +2072,6 @@ To flash the next image just follow these steps:
         with open(self.config_file, 'wt') as configfile:
             ret = self.config.write(configfile)
             logging.debug("Configuration Saved/Updated")
-
 
     def update_images_in_config(self, images):
         '''Get the list of images built and update the config file with them'''
