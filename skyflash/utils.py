@@ -283,32 +283,33 @@ def windowsDevices():
     return data
 
 def linuxMediaDevices():
-    ''' List the media devices that are removable in liunux
+    ''' List the media devices in this linux box
 
-    If the major number is 8, that indicates it to be a disk device.
-
-    The minor number is the partitions on the same device:
-    - 0 means the entire disk
-    - 1 is the primary
-    - 2 is extended
-    - 5 is logical partitions
-    The maximum number of partitions is 15.
-
-    Use `$ sudo fdisk -l` and `$ sudo sfdisk -l /dev/sda` for more information.
+    Based on the info from the linux kernel, see the file disk.txt
+    on the kernel tree for details
+-
+    Basically we are looking for major #8 (SCSI disks) or
+    major #179 (MMC block devices) each one has a particular
+    minor number handling, se disks.txt file mentioned earlier
     '''
 
     with open("/proc/partitions", "r") as f:
         devices = []
 
-        for line in f.readlines()[2:]:
+        for line in f.readlines()[1:]:
             words = [ word.strip() for word in line.split() ]
-            major_number = int(words[0])
-            minor_number = int(words[1])
-            device_name = words[3]
+            if len(words) > 3: 
+                major_number = int(words[0])
+                minor_number = int(words[1])
+                device_name = words[3]
 
-            # disk devices by device name, not partitions
-            if (major_number == 8) and not (minor_number % 16):
-                devices.append("/dev/" + device_name)
+                # SCSI disks (Mainly USB or scsi ones)
+                if (major_number == 8) and not (minor_number % 16):
+                    devices.append("/dev/" + device_name)
+
+                # MMC block devices (Mainly SPI or PCI internal cards)
+                if (major_number == 179) and not (minor_number % 8):
+                    devices.append("/dev/" + device_name)
 
         # data return
         return devices
@@ -419,9 +420,15 @@ def getWinDrivesInfo():
     return phydrives
 
 def getLinDrivesInfo():
-    '''Return a list of available drives in linux
-    if possible with a drive label and sizes on bytes:
+    '''Return a list of removable drives in linux, this will match
+    any USB flash or SD card
 
+    There is a catch 22 here: some mmcblk devices are not getting
+    tagged as removable media at least in linux mint, so we will
+    force the detection of any device with the mmcblk string on
+    it's name to be sure
+
+    if possible with a drive label and sizes on bytes, like this:
     [
         ('/dev/mmcblk0', '', 8388608),
         ('/dev/mmcblk1', 'BIG uSD Card', 16777216),
@@ -429,13 +436,13 @@ def getLinDrivesInfo():
     ]
     '''
 
-    # get all removable media devices in the system
+    # get all media devices in the system
     drives = linuxMediaDevices()
 
     # if we detected a drive, gather the details via lsblk
     if drives:
         d = " ".join(drives)
-        js = getDataFromCLI("lsblk -JpbI 8 {}".format(d))
+        js = getDataFromCLI("lsblk -Jpb {}".format(d))
     else:
         # TODO: warn the user
         print("No drives found, detection procedure returned no drive")
@@ -452,7 +459,7 @@ def getLinDrivesInfo():
 
     # getting data, output format is: [(drive, "LABEL", total),]
     for device in data['blockdevices']:
-        if device['rm'] == '1':
+        if (device['rm'] == '1') or ('mmcblk' in device['name']):
             name = device['name']
             cap = int(device['size'])
             mounted = ""
