@@ -27,6 +27,7 @@ Dates must be YEAR-MONTH-DAY
 - State detection of the app upgraded, now we use a configuration file (skyflash.conf) on the work folder to store the app state and vars
 - Deployment and release procedure, see section Added below.
 - Name change for the different release apps per OS, the name mask is as follows: Skyflash_${version}_${OS}_${ARCH}.{extension_by_os}, for example: Skyflash_v0.0.5-beta_windows.exe
+- Improved the Linux SD card detection code, adding block devices with major type 179 and prevent devices named as mmcblk to being masked by the algorithm even if they are tagged as non removable
 
 ### Added
 
