@@ -127,6 +127,7 @@ ApplicationWindow {
 
         onRejected: {
             sbText.text = "You need to choose a folder, cancelling the build."
+            btBuild.enabled = true
         }
     }
 
