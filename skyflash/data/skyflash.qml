@@ -22,7 +22,7 @@ ApplicationWindow {
                     <p align='center'><a href='https://github.com/skycoin/skyflash'>Skyflash</a> is the official tool to configure,<br/>\
                     build and flash the Skyminer images based on <a href='https://github.com/skycoin/skybian'>Skybian</a>.\
                     </p>\
-                    <p align='center'>Current version: <b>v0.0.5</b></p>"
+                    <p align='center'>Current version: <b>v0.0.6</b></p>"
 
             MouseArea {
                 anchors.fill: parent
