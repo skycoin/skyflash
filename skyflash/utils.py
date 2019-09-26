@@ -21,7 +21,7 @@ except:
         print("Missing python3 wmi or pywin32 modules...")
 
 # version data
-actualVersion = "v0.0.5"
+actualVersion = "v0.0.6"
 updateURL = "https://raw.githubusercontent.com/skycoin/skyflash/master/version.txt"
 skybianVersionFile = "https://raw.githubusercontent.com/skycoin/skybian/master/version.txt"
 
@@ -59,25 +59,29 @@ def splitDNS(dnsString):
     return dns
 
 def shortenPath(fullpath, ccount):
-    '''Shorten a passed FS path to a char count size'''
+    '''Shorten a passed FS path to a char count size
+
+    If ccount is -1 then return the last part of the path
+    '''
 
     fpath = fullpath.split(os.sep)
     fpath.reverse()
     spath = fpath[0]
 
-    # cycle from back to start to fit on ccount
-    for item in fpath:
-        if item == fpath[0]:
-            # filename
-            spath = item
-        else:
-            # folders
-            tspath = item + os.sep + spath
-            if len(tspath) > ccount:
-                spath = "..." + os.sep + spath
-                break
+    if ccount != -1:
+        # cycle from back to start to fit on ccount
+        for item in fpath:
+            if item == fpath[0]:
+                # filename
+                spath = item
             else:
-                spath = tspath
+                # folders
+                tspath = item + os.sep + spath
+                if len(tspath) > ccount:
+                    spath = "..." + os.sep + spath
+                    break
+                else:
+                    spath = tspath
 
     # spath has the final shorted path
     return spath
@@ -205,7 +209,7 @@ def setPath(dir):
     '''
 
     # default path for the user
-    path = os.path.expanduser('~')
+    workpath = os.path.expanduser('~')
 
     # where in the user's folder I need to put the  skybian folder:
     # linux and macos right in the home folder, windows on the document folder
@@ -214,31 +218,31 @@ def setPath(dir):
         # path has the c:\Users\[username] so we need to add the Documents folder
         # Windows has a trick for other langs beside English: Documents is the real
         # folder and other lang folders just point to that
-        path = os.path.join(path, "Documents")
+        workpath = os.path.join(workpath, "Documents")
 
     # now adding the app dir
-    path = os.path.join(path, dir)
+    workpath = os.path.join(workpath, dir)
 
     # test if the folder is already there
-    if not os.path.isdir(path):
+    if not os.path.isdir(workpath):
         # creating the folder, or not if created
-        os.makedirs(path, exist_ok=True)
+        os.makedirs(workpath, exist_ok=True)
 
-    # set downloads folder & path to checked file
-    downloads = os.path.join(path,"Downloads")
-    checked = os.path.join(downloads, ".checked")
+    # set downloads folder & path to config file
+    downloads = os.path.join(workpath,"Downloads")
+    config = os.path.join(workpath, "skyflash.conf")
 
     if not os.path.isdir(downloads):
         # creating a downloads folder inside it
         os.makedirs(downloads, exist_ok=True)
 
     # logging to console
-    print("App folder is {}".format(path))
+    print("App workfolder is {}".format(workpath))
     print("Downloads folder is {}".format(downloads))
-    print("Checked file will be {}".format(checked))
+    print("Config file is {}".format(config))
 
     # return it
-    return (path, downloads, checked)
+    return (workpath, downloads, config)
 
 def windowsDevices():
     '''This one is to get all the info about windows removable devices in
@@ -279,32 +283,33 @@ def windowsDevices():
     return data
 
 def linuxMediaDevices():
-    ''' List the media devices that are removable in liunux
+    ''' List the media devices in this linux box
 
-    If the major number is 8, that indicates it to be a disk device.
-
-    The minor number is the partitions on the same device:
-    - 0 means the entire disk
-    - 1 is the primary
-    - 2 is extended
-    - 5 is logical partitions
-    The maximum number of partitions is 15.
-
-    Use `$ sudo fdisk -l` and `$ sudo sfdisk -l /dev/sda` for more information.
+    Based on the info from the linux kernel, see the file disk.txt
+    on the kernel tree for details
+-
+    Basically we are looking for major #8 (SCSI disks) or
+    major #179 (MMC block devices) each one has a particular
+    minor number handling, se disks.txt file mentioned earlier
     '''
 
     with open("/proc/partitions", "r") as f:
         devices = []
 
-        for line in f.readlines()[2:]:
+        for line in f.readlines()[1:]:
             words = [ word.strip() for word in line.split() ]
-            major_number = int(words[0])
-            minor_number = int(words[1])
-            device_name = words[3]
+            if len(words) > 3: 
+                major_number = int(words[0])
+                minor_number = int(words[1])
+                device_name = words[3]
 
-            # disk devices by device name, not partitions
-            if (major_number == 8) and not (minor_number % 16):
-                devices.append("/dev/" + device_name)
+                # SCSI disks (Mainly USB or scsi ones)
+                if (major_number == 8) and not (minor_number % 16):
+                    devices.append("/dev/" + device_name)
+
+                # MMC block devices (Mainly SPI or PCI internal cards)
+                if (major_number == 179) and not (minor_number % 8):
+                    devices.append("/dev/" + device_name)
 
         # data return
         return devices
@@ -415,9 +420,15 @@ def getWinDrivesInfo():
     return phydrives
 
 def getLinDrivesInfo():
-    '''Return a list of available drives in linux
-    if possible with a drive label and sizes on bytes:
+    '''Return a list of removable drives in linux, this will match
+    any USB flash or SD card
 
+    There is a catch 22 here: some mmcblk devices are not getting
+    tagged as removable media at least in linux mint, so we will
+    force the detection of any device with the mmcblk string on
+    it's name to be sure
+
+    if possible with a drive label and sizes on bytes, like this:
     [
         ('/dev/mmcblk0', '', 8388608),
         ('/dev/mmcblk1', 'BIG uSD Card', 16777216),
@@ -425,13 +436,13 @@ def getLinDrivesInfo():
     ]
     '''
 
-    # get all removable media devices in the system
+    # get all media devices in the system
     drives = linuxMediaDevices()
 
     # if we detected a drive, gather the details via lsblk
     if drives:
         d = " ".join(drives)
-        js = getDataFromCLI("lsblk -JpbI 8 {}".format(d))
+        js = getDataFromCLI("lsblk -Jpb {}".format(d))
     else:
         # TODO: warn the user
         print("No drives found, detection procedure returned no drive")
@@ -448,7 +459,7 @@ def getLinDrivesInfo():
 
     # getting data, output format is: [(drive, "LABEL", total),]
     for device in data['blockdevices']:
-        if device['rm'] == '1':
+        if (device['rm'] == '1') or ('mmcblk' in device['name']):
             name = device['name']
             cap = int(device['size'])
             mounted = ""
@@ -727,17 +738,37 @@ def eraseOldVersions(dlfolder, version):
     # iterate over the file list
     flist = os.listdir(dlfolder)
     for f in flist:
-        # ignore the checkd file
-        if f == ".checked":
-            continue
-
         # DEBUG
         print("Parsing item: {}".format(f))
 
-        # erase the file of not patch the version
+        # erase the file of not match the version
         if not version in f:
             item = os.path.join(dlfolder, f)
             # DEBUG
             print("Item does not match version, erasing if file")
             if os.path.isfile(item):
                 os.unlink(item)
+
+def calc_speed_eta(size, pr, start_time, time_now):
+    '''Calculate the write speed and remaining time from a few values
+    
+    Output format must be strings ready to print, like this:
+    6.2 MBytes/s, 8 minutes 22 seconds
+    '''
+
+    try:
+        # initial calcs
+        time_delta = time_now - start_time
+        wrote = size * pr / 100
+        remains = size - wrote
+
+        # speed from the time spent in writing the actual amount
+        lspeed = wrote / time_delta
+
+        # estimated time for completion
+        leta = int(remains / lspeed)
+    
+    except ZeroDivisionError: 
+        return ("please", "wait...")
+
+    return (speed(lspeed), eta(leta)) 

@@ -30,7 +30,7 @@ from PyQt5.QtCore import QFileInfo
 from skyflash.skyflash import Skyflash
 from skyflash.utils import *
 
-# define the QT5 app at a higher level to get caught at the end bt the garbage collector.
+# define the QT5 app at a higher level to get caught at the end by the garbage collector.
 QTapp = QGuiApplication(sys.argv)
 
 # define org and name
@@ -74,11 +74,11 @@ def app():
             print("Can not find the icon of the app.")
 
         # main workspace, skyflash object
-        path, download, checked = setPath("Skyflash")
-        skyflash.localPath = path
+        workpath, download, config_file = setPath("Skyflash")
+        skyflash.localPath = workpath
         skyflash.localPathBuild = skyflash.localPath
         skyflash.localPathDownloads = download
-        skyflash.checked = checked
+        skyflash.config_file = config_file
 
         # init the logging.
         skyflash.logStart()
@@ -119,8 +119,8 @@ def app():
         # connect the engine
         engine.quit.connect(QTapp.quit)
 
-        # check to see if we can load a previous downloaded & tested image
-        skyflash.loadPrevious()
+        # load or create the config file.
+        skyflash.get_config()
 
         # check for updates
         skyflash.checkForUpdates()

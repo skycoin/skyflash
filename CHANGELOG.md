@@ -18,6 +18,30 @@ This is a note for developers about the recommended tags to keep track of the ch
 Dates must be YEAR-MONTH-DAY
 -->
 
+## v0.0.6 - 2019-09-25
+
+### Changed
+
+- Some UI improvements and fixes: reformat the about box, fix the grammar of a sentences and delay the browser popup after the "new version of skyflash" is detected.
+- Configuration load between runs now relays on a config file rather than a dynamic detection (see deprecated section), this for local skybian file and version and app status
+- State detection of the app upgraded, now we use a configuration file (skyflash.conf) on the work folder to store the app state and vars
+- Deployment and release procedure, see section Added below.
+- Name change for the different release apps per OS, the name mask is as follows: Skyflash_${version}_${OS}_${ARCH}.{extension_by_os}, for example: Skyflash_v0.0.5-beta_windows.exe
+- Improved the Linux SD card detection code, adding block devices with major type 179 and prevent devices named as mmcblk to being masked by the algorithm even if they are tagged as non removable
+- Improved the info shown in the labels next to the 'Browse [skybian image]' and 'Build image' buttons, now with more useful and logic infos
+- Status bar infos also updated with more useful info
+- Fixed a bug about the build button being disabled if you refuse to use any directory to build the images
+
+### Added
+
+- Now the flashing process shows the write speed and the time left (both as average of the whole flash process)
+- Users can now flash already built images upon app start (no more need to re-built to flash)
+- Now the deploy into Github happens with just one artifact under a tag and with the 3 apps for the different OS
+
+### Deprecated
+
+- Skyflash image detection from previous runs will be deprecated in version 0.0.7 and forward, we switched to a configparser configuration with a config file
+
 ## v0.0.5 - 2019-07-19
 
 ### Fixed

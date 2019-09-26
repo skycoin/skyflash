@@ -12,12 +12,17 @@ ApplicationWindow {
     // about dialog
     MessageDialog {
         id: aboutDiag
-        title: "About Skyflash"
+        title: "About"
         Text {
+            anchors.centerIn: parent
             textFormat: Text.RichText
             onLinkActivated: Qt.openUrlExternally(link)
             padding: 10
-            text: "<p><a href='http://github.com/skycoin/skyflash'>Skyflash</a> is the official tool to configure, build and flash the Skyminer images based on <a href='http://github.com/skycoin/skybian'>Skybian</a>.<br></p><p>Current version: v0.0.5</p>"
+            text: " <p align='center'><h1>Skycoin's Skyflash</h1></p>\
+                    <p align='center'><a href='https://github.com/skycoin/skyflash'>Skyflash</a> is the official tool to configure,<br/>\
+                    build and flash the Skyminer images based on <a href='https://github.com/skycoin/skybian'>Skybian</a>.\
+                    </p>\
+                    <p align='center'>Current version: <b>v0.0.6</b></p>"
 
             MouseArea {
                 anchors.fill: parent
@@ -61,6 +66,18 @@ ApplicationWindow {
         }
     }
 
+    // new version detected
+    MessageDialog {
+        id: newDiag
+        icon: StandardIcon.Information
+        title: "New version of Skyflash available!"
+        text: "In the startup process we found that you are using a old version of Skyflash.\nA Web page will open to show you how to upgrade."
+        onAccepted: {
+            newDiag.visible = false
+            skf.openUpdateLink()
+        }
+    }
+
     // open a local skybian base image pack
     FileDialog {
         id: fileDialog
@@ -87,7 +104,6 @@ ApplicationWindow {
         standardButtons: StandardButton.Yes | StandardButton.No
 
         onYes: {
-            console.log("User accepted")
             skf.imagesBuild(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text, "no")
         }
 
@@ -111,6 +127,7 @@ ApplicationWindow {
 
         onRejected: {
             sbText.text = "You need to choose a folder, cancelling the build."
+            btBuild.enabled = true
         }
     }
 
@@ -134,7 +151,7 @@ ApplicationWindow {
             }
 
             MenuItem {
-                text: "About."
+                text: "About"
                 onTriggered: aboutDiag.open()
             }
         }
@@ -215,6 +232,14 @@ ApplicationWindow {
                 Label {
                     id: lbImageComment
                     Layout.fillWidth: true
+
+                    onLinkActivated: Qt.openUrlExternally(link)
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.NoButton
+                        cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    }
+
                     text: ""
                 }
             }
@@ -272,6 +297,8 @@ ApplicationWindow {
                         txtNodes.enabled = false
                         // net details are not shown
                         networkDetails.visible = false
+                        // tell the app we have checked the checkbox
+                        skf.defaultNetwork(true)
                     } else {
                         // enable the fields for edit
                         txtGateway.enabled = true
@@ -280,6 +307,8 @@ ApplicationWindow {
                         txtNodes.enabled = true
                         // net details are shown
                         networkDetails.visible = true
+                        // tell the app we have un-checked the checkbox
+                        skf.defaultNetwork(false)
                     }
 
                     // if you change the config of the network and the
@@ -382,11 +411,21 @@ ApplicationWindow {
                     onClicked: {
                         // call skyflash to build the images
                         skf.builtImagesPath(txtGateway.text, txtDNS.text, txtManager.text, txtNodes.text)
+                        btBuild.enabled = false
                     }
                 }
 
                 Label {
                     id: lbBuild
+                    Layout.fillWidth: true
+
+                    onLinkActivated: Qt.openUrlExternally(link)
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.NoButton
+                        cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    }
+
                     text: ""
                 }
             }
@@ -612,10 +651,24 @@ ApplicationWindow {
             boxBuild.visible = false
         }
 
+        // set the download button to visible after the update of the skybian URL
+        // needed if the internet is slow and the user click the download button earlier
+        onSDB: {
+            btDown.visible = true
+            btDown.text = "Download"
+            btDown.tooltip = "Click here to download the base Skybian image from the official site"
+        }
+
         // show network config
         onNetConfig: {
             // set next step visible
             boxNetwork.visible = true
+        }
+
+        // force the default network configs to a checked/unchecked status from the app
+        onNetDefaultBox: {
+            ckbDefaultNetwork.checked = status
+            console.log("Network check box status:", status)
         }
 
         // show build images config
@@ -655,6 +708,11 @@ ApplicationWindow {
             errorDiag.open()
         }
 
+        // on new version detected
+        onUiNewVersion: {
+            newDiag.open()
+        }
+
         // build data passing, hints to the user
         onBData: {
             lbBuild.text = data
@@ -690,7 +748,8 @@ ApplicationWindow {
         onBFinished: {
             buildProgressBars.visible = false
             boxFlash.visible = true
-            btBuild.enabled = false
+            // re-enable the build button
+            btBuild.enabled = true
         }
 
         // flash data percent
