@@ -18,7 +18,7 @@ This is a note for developers about the recommended tags to keep track of the ch
 Dates must be YEAR-MONTH-DAY
 -->
 
-## UNRELEASED
+## v0.0.6 - 2019-09-25
 
 ### Changed
 
@@ -40,7 +40,7 @@ Dates must be YEAR-MONTH-DAY
 
 ### Deprecated
 
-- Skyflash image detection from previous runs will be deprecated in version 0.7 and forward, we switched to a configparser configuration with a config file
+- Skyflash image detection from previous runs will be deprecated in version 0.0.7 and forward, we switched to a configparser configuration with a config file
 
 ## v0.0.5 - 2019-07-19
 
